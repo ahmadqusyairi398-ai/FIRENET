@@ -1,5 +1,5 @@
 <?php
-// Mulai session untuk user (simulasi login)
+// Mulai session untuk user (simulasi login)dsdsfvgf
 session_start();
 
 // Proteksi: Hanya admin yang bisa mengakses halaman ini
