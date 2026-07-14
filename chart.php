@@ -4,17 +4,7 @@ $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 
 // Koneksi database
-$host = 'localhost';
-$dbname = 'outdoor';
-$username_db = 'root';
-$password_db = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username_db, $password_db);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Koneksi database gagal: " . $e->getMessage());
-}
+require_once 'koneksi.php';
 
 // Ambil struktur tabel data_sensor
 $columns = [];
@@ -579,7 +569,7 @@ canvas {
         <i class="fas fa-chart-line"></i>
         <span>CHART</span>
     </a>
-    <a href="Tabel.php" class="menu-btn">
+    <a href="tabel.php" class="menu-btn">
         <i class="fas fa-table"></i>
         <span>TABEL</span>
     </a>

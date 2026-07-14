@@ -397,75 +397,61 @@ const myChart = new Chart(ctx, {
     }
 });
 
-// ================= DATA DUMMY =================
-function generateDummyData() {
-    var apiStatus = Math.random() > 0.85 ? "Terdeteksi Api" : "Aman";
-    var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
-    var isDanger = (apiStatus === "Terdeteksi Api" || asapStatus === "Tinggi");
-    let suhu = (Math.random() * 30 + 20).toFixed(1);
-    let kelembapan = (Math.random() * 60 + 40).toFixed(1);
-    let tegangan = (Math.random() * 10 + 210).toFixed(1);
-    let arus = (Math.random() * 5 + 1).toFixed(2);
-    if (apiStatus === "Terdeteksi Api") {
-        suhu = (Math.random() * 25 + 40).toFixed(1);
-        kelembapan = (Math.random() * 30 + 30).toFixed(1);
-    }
-    return {
-        waktu: new Date().toLocaleTimeString(),
-        api: apiStatus, asap: asapStatus, suhu: suhu, kelembapan: kelembapan,
-        tegangan: tegangan, arus: arus, status: 'Online',
-        rssi: Math.floor(Math.random() * 40 + -80),
-        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-        isDanger: isDanger
-    };
+// ================= DATA DARI DATABASE (FETCH API) =================
+function fetchDataFromDB() {
+    fetch('api_get_data.php?device=indoor')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
+        document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
+        document.getElementById("ip").innerHTML = data.ip;
+        document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
+        
+        const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
+        document.getElementById("api").innerHTML = apiValue;
+        const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
+        document.getElementById("asap").innerHTML = asapValue;
+        document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+        document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
+        document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
+        document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
+        
+        updateLocationStatus(data.isDanger);
+        
+        const apiBox = document.getElementById('api-box');
+        const asapBox = document.getElementById('asap-box');
+        if (data.api === "Terdeteksi Api") {
+            apiBox.classList.add('pulse-animation');
+            apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else {
+            apiBox.classList.remove('pulse-animation');
+            apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+        }
+        if (data.asap === "Tinggi") {
+            asapBox.classList.add('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else {
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+        }
+        
+        dataChart.labels.push(data.waktu);
+        dataChart.datasets[0].data.push(parseFloat(data.suhu));
+        dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
+        dataChart.datasets[2].data.push(parseFloat(data.tegangan));
+        dataChart.datasets[3].data.push(parseFloat(data.arus));
+        if(dataChart.labels.length > 15) {
+            dataChart.labels.shift();
+            dataChart.datasets.forEach(ds => ds.data.shift());
+        }
+        myChart.update();
+    })
+    .catch(error => console.error("Error fetching data:", error));
 }
 
-setInterval(() => {
-    let data = generateDummyData();
-    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
-    document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-    document.getElementById("ip").innerHTML = data.ip;
-    document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
-    
-    const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
-    document.getElementById("api").innerHTML = apiValue;
-    const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
-    document.getElementById("asap").innerHTML = asapValue;
-    document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-    document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
-    document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
-    
-    updateLocationStatus(data.isDanger);
-    
-    const apiBox = document.getElementById('api-box');
-    const asapBox = document.getElementById('asap-box');
-    if (data.api === "Terdeteksi Api") {
-        apiBox.classList.add('pulse-animation');
-        apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else {
-        apiBox.classList.remove('pulse-animation');
-        apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-    }
-    if (data.asap === "Tinggi") {
-        asapBox.classList.add('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else {
-        asapBox.classList.remove('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-    }
-    
-    dataChart.labels.push(data.waktu);
-    dataChart.datasets[0].data.push(parseFloat(data.suhu));
-    dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-    dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-    dataChart.datasets[3].data.push(parseFloat(data.arus));
-    if(dataChart.labels.length > 15) {
-        dataChart.labels.shift();
-        dataChart.datasets.forEach(ds => ds.data.shift());
-    }
-    myChart.update();
-}, 2000);
+// Panggil pertama kali, lalu ulangi setiap 2 detik
+fetchDataFromDB();
+setInterval(fetchDataFromDB, 2000);
 </script>
 </body>
 </html>
