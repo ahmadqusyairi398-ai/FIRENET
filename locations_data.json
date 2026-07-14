@@ -1,0 +1,23 @@
+[
+    {
+        "id": 1,
+        "nama_lokasi": "Politeknik Negeri Balikpapan",
+        "latitude": -1.20249,
+        "longitude": 116.88708,
+        "last_update": "2026-06-10 17:54:31"
+    },
+    {
+        "id": 2,
+        "nama_lokasi": "Gedung A - Kampus Utama",
+        "latitude": -1.203,
+        "longitude": 116.8875,
+        "last_update": "2026-06-10 17:54:31"
+    },
+    {
+        "id": 3,
+        "nama_lokasi": "Laboratorium Komputer",
+        "latitude": -1.202,
+        "longitude": 116.8868,
+        "last_update": "2026-06-10 17:54:31"
+    }
+]

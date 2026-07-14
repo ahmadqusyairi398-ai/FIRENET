@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "username": "admin",
+        "password": "admin123",
+        "role": "admin",
+        "status": "approved",
+        "last_update": "2026-06-08 17:33:15"
+    },
+    {
+        "id": 2,
+        "username": "user1",
+        "password": "user123",
+        "role": "user",
+        "status": "approved",
+        "last_update": "2026-06-08 17:33:15"
+    },
+    {
+        "id": 3,
+        "username": "user2",
+        "password": "user123",
+        "role": "user",
+        "status": "approved",
+        "last_update": "2026-06-08 17:33:15"
+    },
+    {
+        "id": 4,
+        "username": "user3",
+        "password": "user123",
+        "role": "user",
+        "status": "pending",
+        "last_update": "2026-06-08 17:33:15"
+    },
+    {
+        "id": 5,
+        "username": "juan",
+        "password": "juan123",
+        "role": "user",
+        "status": "pending",
+        "last_update": "2026-06-12 16:40:02"
+    }
+]
