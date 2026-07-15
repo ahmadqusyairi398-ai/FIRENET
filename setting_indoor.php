@@ -3,7 +3,7 @@ session_start();
 
 // PROTEKSI: Hanya admin yang bisa mengakses halaman ini
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: dashboard_admin.php");
+    header("Location: dashboard_admin_indoor.php");
     exit();
 }
 
