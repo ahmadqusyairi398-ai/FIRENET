@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             // Cek apakah username sudah terdaftar
-            $stmt = $pdo->prepare("SELECT id FROM login WHERE username = ?");
+            $stmt = $pdo->prepare("SELECT id FROM pengguna WHERE username = ?");
             $stmt->execute([$username]);
             
             if ($stmt->rowCount() > 0) {
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insert data ke database (tanpa role, default user)
-                $stmt = $pdo->prepare("INSERT INTO login (username, password, created_at) VALUES (?, ?, NOW())");
+                $stmt = $pdo->prepare("INSERT INTO pengguna (username, password, created_at) VALUES (?, ?, NOW())");
                 $stmt->execute([$username, $hashed_password]);
                 
                 // Cek apakah insert berhasil

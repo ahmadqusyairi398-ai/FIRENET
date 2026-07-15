@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             // Query ke database
-            $stmt = $pdo->prepare("SELECT * FROM login WHERE username = ?");
+            $stmt = $pdo->prepare("SELECT * FROM pengguna WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
