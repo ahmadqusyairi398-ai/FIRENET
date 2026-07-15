@@ -11,7 +11,7 @@ echo "<script>console.log('Koneksi database berhasil');</script>";
 // Ambil data dari tabel data_sensor sesuai dengan struktur yang ada
 try {
     // Cek kolom apa saja yang tersedia di tabel data_sensor
-    $checkColumns = $pdo->query("SHOW COLUMNS FROM data_sensor");
+    $checkColumns = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
     $existingColumns = [];
     while($col = $checkColumns->fetch(PDO::FETCH_ASSOC)) {
         $existingColumns[] = $col['Field'];
@@ -64,7 +64,7 @@ try {
     
     echo "<script>console.log('Query: " . addslashes($query) . "');</script>";
     
-    $stmt = $pdo->prepare($query);
+    $stmt = $pdo_indoor->prepare($query);
     $stmt->execute();
     $sensorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -89,13 +89,13 @@ try {
             arah_angin VARCHAR(20) DEFAULT '-',
             co DECIMAL(6,2) DEFAULT 0
         )";
-        $pdo->exec($createTable);
+        $pdo_indoor->exec($createTable);
         
         // Ambil data setelah tabel dibuat
         $query = "SELECT id, tanggal_dan_waktu, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co 
                   FROM data_sensor 
                   ORDER BY tanggal_dan_waktu DESC";
-        $stmt = $pdo->prepare($query);
+        $stmt = $pdo_indoor->prepare($query);
         $stmt->execute();
         $sensorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
