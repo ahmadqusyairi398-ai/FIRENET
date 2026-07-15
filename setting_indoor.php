@@ -88,17 +88,17 @@ if (mysqli_num_rows($checkTable) == 0) {
 }
 
 // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
-$checkRole = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'role'");
+$checkRole = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'role'");
 if (mysqli_num_rows($checkRole) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
+    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
 }
-$checkStatus = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'status'");
+$checkStatus = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'status'");
 if (mysqli_num_rows($checkStatus) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
+    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
 }
-$checkUpdatedAt = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'updated_at'");
+$checkUpdatedAt = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'updated_at'");
 if (mysqli_num_rows($checkUpdatedAt) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
 }
 
 // ========== CEK DAN HAPUS KOLOM DEVICE JIKA ADA ==========
@@ -202,19 +202,19 @@ if (!file_exists($locationDataFile)) {
 }
 
 // ========== FUNGSI USER ==========
-function getUsers($conn_indoor)
+function getUsers($conn)
 {
     $users = [];
-    $query = mysqli_query($conn_indoor, "SELECT id, username, role, updated_at as last_update FROM login ORDER BY id DESC");
+    $query = mysqli_query($conn, "SELECT id, username, role, updated_at as last_update FROM pengguna ORDER BY id DESC");
     while ($row = mysqli_fetch_assoc($query)) {
         $users[] = $row;
     }
     return $users;
 }
 
-function countActiveAdmins($conn_indoor)
+function countActiveAdmins($conn)
 {
-    $query = mysqli_query($conn_indoor, "SELECT COUNT(*) as total FROM login WHERE role = 'admin'");
+    $query = mysqli_query($conn, "SELECT COUNT(*) as total FROM pengguna WHERE role = 'admin'");
     $row = mysqli_fetch_assoc($query);
     return $row['total'];
 }
@@ -360,12 +360,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $new_password = trim($_POST['new_password']);
         $new_role = $_POST['new_role'] ?? 'user';
         if (!empty($new_username) && !empty($new_password)) {
-            $cek = mysqli_query($conn_indoor, "SELECT id FROM login WHERE username = '$new_username'");
+            $cek = mysqli_query($conn, "SELECT id FROM pengguna WHERE username = '$new_username'");
             if (mysqli_num_rows($cek) > 0) {
                 $error_message = "Username sudah terdaftar!";
             } else {
                 $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                mysqli_query($conn_indoor, "INSERT INTO login (username, password, role, status) VALUES ('$new_username', '$password_hash', '$new_role', 'approved')");
+                mysqli_query($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())");
                 $success_message = "Akun user berhasil ditambahkan!";
             }
         } else {
@@ -380,34 +380,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $edit_password = trim($_POST['edit_password']);
         if (!empty($edit_password)) {
             $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
-            mysqli_query($conn_indoor, "UPDATE login SET username='$edit_username', password='$password_hash', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+            mysqli_query($conn, "UPDATE pengguna SET username='$edit_username', password='$password_hash', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
         } else {
-            mysqli_query($conn_indoor, "UPDATE login SET username='$edit_username', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+            mysqli_query($conn, "UPDATE pengguna SET username='$edit_username', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
         }
         $success_message = "Akun user berhasil diperbarui!";
     }
 
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
-        $checkAdmin = mysqli_query($conn_indoor, "SELECT username FROM login WHERE id = $user_id AND username = 'admin'");
+        $checkAdmin = mysqli_query($conn, "SELECT username FROM pengguna WHERE id = $user_id AND username = 'admin'");
         if (mysqli_num_rows($checkAdmin) > 0) {
             $error_message = "Tidak dapat menghapus akun admin utama!";
         } else {
-            $delete = mysqli_query($conn_indoor, "DELETE FROM login WHERE id = $user_id");
+            $delete = mysqli_query($conn, "DELETE FROM pengguna WHERE id = $user_id");
             if ($delete) {
                 $success_message = "Akun user berhasil dihapus!";
             } else {
-                $error_message = "Gagal menghapus akun: " . mysqli_error($conn_indoor);
+                $error_message = "Gagal menghapus akun: " . mysqli_error($conn);
             }
         }
     }
 }
 
 // Ambil data terbaru
-$users = getUsers($conn_indoor);
+$users = getUsers($conn);
 $locations = getLocations($locationDataFile);
 $sensorAlarmData = getSensorAlarmData($conn_indoor);
-$adminCount = countActiveAdmins($conn_indoor);
+$adminCount = countActiveAdmins($conn);
 $canAddAdmin = $adminCount < $maxAdmin;
 $totalUsers = count($users);
 ?>
