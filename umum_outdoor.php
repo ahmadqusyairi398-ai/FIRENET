@@ -488,59 +488,11 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= GENERATE DATA =================
-function generateSolarData() {
-    var hour = new Date().getHours();
-    var teganganBase = (hour >= 6 && hour <= 18) ? 12 + (Math.sin((hour - 12) * Math.PI / 12) + 1) * 6 : Math.random() * 2;
-    var tegangan = Math.max(0, teganganBase + (Math.random() - 0.5) * 1.5).toFixed(1);
-    var arusBase = teganganBase / 2.5;
-    var arus = Math.max(0, arusBase + (Math.random() - 0.5) * 1).toFixed(2);
-    var daya = (parseFloat(tegangan) * parseFloat(arus)).toFixed(1);
-    var arahArray = ['Utara', 'Timur', 'Selatan', 'Barat', 'Timur Laut', 'Barat Daya', 'Tenggara', 'Barat Laut'];
-    var arah = arahArray[Math.floor(Math.random() * arahArray.length)];
-    var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
-    var co = Math.floor(Math.random() * 50 + 10);
-    
-    // Jika asap terdeteksi, tingkatkan CO
-    if (asapStatus === "Tinggi") {
-        co = Math.floor(Math.random() * 100 + 50);
-    }
-    
-    // Jika asap tinggi, suhu naik, kelembapan turun
-    var suhu = (Math.random() * 35 + 20).toFixed(1);
-    var kelembapan = (Math.random() * 60 + 40).toFixed(1);
-    
-    if (asapStatus === "Tinggi") {
-        suhu = (Math.random() * 30 + 40).toFixed(1);
-        kelembapan = (Math.random() * 30 + 20).toFixed(1);
-    }
-    
-    var angin = (Math.random() * 20 + 5).toFixed(1);
-    
-    // Deteksi bahaya jika asap tinggi atau CO > 50
-    var isDanger = (asapStatus === "Tinggi" || co > 50);
-    
-    return {
-        waktu: new Date().toLocaleTimeString(),
-        tegangan: tegangan,
-        arus: arus,
-        daya: daya,
-        arah: arah,
-        asap: asapStatus,
-        suhu: suhu,
-        kelembapan: kelembapan,
-        angin: angin,
-        co: co,
-        status: 'Online',
-        rssi: Math.floor(Math.random() * 40 + -80),
-        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-        isDanger: isDanger
-    };
-}
-
-// ================= UPDATE DATA =================
-setInterval(() => {
-    let data = generateSolarData();
+// ================= DATA DARI DATABASE =================
+function fetchDataOutdoor() {
+    fetch('api_get_data.php?device=outdoor')
+    .then(response => response.json())
+    .then(data => {
     
     // Update status node
     document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
@@ -629,7 +581,12 @@ setInterval(() => {
         dataChart.datasets.forEach(ds => ds.data.shift()); 
     }
     myChart.update();
-}, 3000);
+    })
+    .catch(error => console.error("Error fetching outdoor data:", error));
+}
+
+fetchDataOutdoor();
+setInterval(fetchDataOutdoor, 2000);
 
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>

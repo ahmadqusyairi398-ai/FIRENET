@@ -5,18 +5,8 @@ $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 
 // Koneksi ke database
-$host = 'localhost';
-$dbname = 'outdoor';
-$username = 'root';
-$password = '';
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    echo "<script>console.log('Koneksi database berhasil');</script>";
-} catch(PDOException $e) {
-    die("Koneksi database gagal: " . $e->getMessage());
-}
+require_once 'koneksi.php';
+echo "<script>console.log('Koneksi database berhasil');</script>";
 
 // Ambil data dari tabel data_sensor sesuai dengan struktur yang ada
 try {

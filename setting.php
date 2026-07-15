@@ -11,10 +11,7 @@ $user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 
 // Koneksi Database
-$conn = mysqli_connect("localhost", "root", "", "outdoor");
-if (!$conn) {
-    die("Koneksi database gagal: " . mysqli_connect_error());
-}
+require_once 'koneksi.php';
 
 // ========== FUNGSI GET ICON SENSOR (PHP) ==========
 function getSensorIconPHP($nama)
