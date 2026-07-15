@@ -365,7 +365,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $error_message = "Username sudah terdaftar!";
             } else {
                 $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                mysqli_query($conn, "INSERT INTO pengguna (username, password, role, status) VALUES ('$new_username', '$password_hash', '$new_role', 'approved')");
+                mysqli_query($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())");
                 $success_message = "Akun user berhasil ditambahkan!";
             }
         } else {
