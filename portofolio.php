@@ -425,6 +425,7 @@ body::before {
 }
 
 .maps-container {
+    position: relative;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -437,11 +438,144 @@ body::before {
     z-index: 1;
 }
 
+/* Floating Search Bar */
+.search-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1100;
+    width: 350px;
+    max-width: calc(100% - 40px);
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(30, 25, 22, 0.9);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    padding: 10px 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+    border-color: #e85d04;
+    box-shadow: 0 4px 20px rgba(232, 93, 4, 0.4);
+    background: rgba(30, 25, 22, 0.95);
+}
+
+.search-icon {
+    color: #e85d04;
+    font-size: 16px;
+    margin-right: 12px;
+}
+
+.search-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    width: 100%;
+}
+
+.search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.clear-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.clear-btn:hover {
+    color: #e85d04;
+}
+
+.search-results {
+    background: rgba(30, 25, 22, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    margin-top: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    display: none;
+    backdrop-filter: blur(15px);
+}
+
+.search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: rgba(232, 93, 4, 0.5);
+    border-radius: 10px;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    color: #ddd;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: rgba(232, 93, 4, 0.15);
+    color: #fff;
+}
+
+.search-result-item i {
+    color: #e85d04;
+    font-size: 16px;
+}
+
+.search-result-item .loc-name {
+    font-weight: 500;
+    font-size: 14px;
+    display: block;
+}
+
+.search-result-item .loc-coords {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    display: block;
+}
+
+.no-results {
+    padding: 15px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+}
+
 /* Info koordinat di bawah peta */
 .location-info {
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
     margin-top: 20px;
     padding: 20px;
     background: rgba(0, 0, 0, 0.6);
@@ -705,14 +839,30 @@ body::before {
         <p>Koordinat pemasangan alat deteksi kebakaran</p>
     </div>
     <div class="maps-container">
+        <!-- Floating Search Bar -->
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="mapSearchInput" placeholder="Cari lokasi alat..." oninput="filterLocations()" autocomplete="off">
+                <button class="clear-btn" id="clearSearchBtn" onclick="clearSearch()" style="display: none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="search-results" id="searchResults"></div>
+        </div>
         <div id="map"></div>
     </div>
-    <!-- Hanya menampilkan koordinat di bawah peta -->
+    <!-- Menampilkan nama lokasi dan koordinat di bawah peta -->
     <div class="location-info">
+        <div class="location-info-item">
+            <i class="fas fa-map-marker-alt"></i>
+            <span class="label">Lokasi:</span>
+            <span class="value" id="locationName">-</span>
+        </div>
         <div class="location-info-item">
             <i class="fas fa-globe"></i>
             <span class="label">Koordinat:</span>
-            <span class="value">-1.202490, 116.887080</span>
+            <span class="value" id="coordValue">-1.202490, 116.887080</span>
         </div>
     </div>
 </section>
@@ -785,12 +935,14 @@ document.addEventListener('click', function(event) {
 });
 
 // ========== MAPS ==========
-// Koordinat tetap
-var fixedLat = -1.20249;
-var fixedLng = 116.88708;
+// Inisialisasi peta (pindahkan zoom control ke bottomright agar tidak terhalang search bar)
+var defaultLat = -1.20249;
+var defaultLng = 116.88708;
+var map = L.map('map', {
+    zoomControl: false
+}).setView([defaultLat, defaultLng], 16);
 
-// Inisialisasi peta
-var map = L.map('map').setView([fixedLat, fixedLng], 16);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 // Tile layer
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -803,7 +955,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 // Scale bar
 L.control.scale({ metric: true, imperial: false }).addTo(map);
 
-// Icon marker (tetap)
+// Icon marker
 var fireIcon = L.divIcon({
     html: '<div style="background: linear-gradient(135deg, #e85d04, #dc2f02); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-fire" style="color: white; font-size: 18px;"></i></div>',
     iconSize: [40, 40],
@@ -812,30 +964,190 @@ var fireIcon = L.divIcon({
     className: 'fire-marker'
 });
 
-// Marker utama
-var sensorMarker = L.marker([fixedLat, fixedLng], {
-    icon: fireIcon,
-    draggable: false
-}).addTo(map);
+// Data lokasi default (fallback)
+var locations = [
+    {
+        "id": 1,
+        "nama_lokasi": "Politeknik Negeri Balikpapan",
+        "latitude": -1.20249,
+        "longitude": 116.88708
+    },
+    {
+        "id": 2,
+        "nama_lokasi": "Gedung A - Kampus Utama",
+        "latitude": -1.203,
+        "longitude": 116.8875
+    },
+    {
+        "id": 3,
+        "nama_lokasi": "Laboratorium Komputer",
+        "latitude": -1.202,
+        "longitude": 116.8868
+    }
+];
 
-// POPUP HANYA MENAMPILKAN KOORDINAT (tanpa nama lokasi)
-sensorMarker.bindPopup(`
-    <div style="min-width: 200px; font-family: 'Poppins', sans-serif; text-align: center;">
-        <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 18px; margin-bottom: 5px;"></i>
-        <div style="font-weight: 600; font-size: 14px;">Koordinat Sensor</div>
-        <div style="font-size: 13px; background: #f0f0f0; padding: 5px; border-radius: 8px; margin-top: 5px;">
-            ${fixedLat}, ${fixedLng}
-        </div>
-    </div>
-`).openPopup();
+var markersMap = {};
 
-// Circle area radius 500 meter
-var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: '#e85d04',
-    fillColor: '#e85d04',
-    fillOpacity: 0.15,
-    radius: 500
-}).addTo(map);
+function selectLocation(id, panTo = true) {
+    var item = markersMap[id];
+    if (!item) return;
+    
+    // Update info panel
+    document.getElementById('locationName').innerText = item.data.nama_lokasi;
+    document.getElementById('coordValue').innerText = item.data.latitude.toFixed(6) + ', ' + item.data.longitude.toFixed(6);
+    
+    if (panTo) {
+        map.flyTo([item.data.latitude, item.data.longitude], 17, {
+            animate: true,
+            duration: 1.5
+        });
+        
+        // Buka popup setelah animasi terbang selesai
+        setTimeout(function() {
+            item.marker.openPopup();
+        }, 1500);
+    } else {
+        item.marker.openPopup();
+    }
+}
+
+function renderMarkers() {
+    // Bersihkan marker lama jika ada
+    for (var key in markersMap) {
+        map.removeLayer(markersMap[key].marker);
+        map.removeLayer(markersMap[key].circle);
+    }
+    markersMap = {};
+
+    locations.forEach(function(loc) {
+        // Create marker
+        var marker = L.marker([loc.latitude, loc.longitude], {
+            icon: fireIcon
+        }).addTo(map);
+        
+        // Create danger circle
+        var circle = L.circle([loc.latitude, loc.longitude], {
+            color: '#e85d04',
+            fillColor: '#e85d04',
+            fillOpacity: 0.15,
+            radius: 500
+        }).addTo(map);
+        
+        // Popup
+        var popupContent = `
+            <div style="min-width: 200px; font-family: 'Poppins', sans-serif; text-align: center;">
+                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 18px; margin-bottom: 5px;"></i>
+                <div style="font-weight: 600; font-size: 14px;">${loc.nama_lokasi}</div>
+                <div style="font-size: 13px; background: #f0f0f0; padding: 5px; border-radius: 8px; margin-top: 5px;">
+                    ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
+                </div>
+            </div>
+        `;
+        marker.bindPopup(popupContent);
+        
+        markersMap[loc.id] = {
+            marker: marker,
+            circle: circle,
+            data: loc
+        };
+        
+        marker.on('click', function() {
+            selectLocation(loc.id, false);
+        });
+    });
+}
+
+function filterLocations() {
+    var input = document.getElementById('mapSearchInput');
+    var filter = input.value.toLowerCase();
+    var resultsContainer = document.getElementById('searchResults');
+    var clearBtn = document.getElementById('clearSearchBtn');
+    
+    if (filter.length > 0) {
+        clearBtn.style.display = 'flex';
+    } else {
+        clearBtn.style.display = 'none';
+    }
+    
+    var filtered = locations.filter(function(loc) {
+        return loc.nama_lokasi.toLowerCase().includes(filter);
+    });
+    
+    resultsContainer.innerHTML = '';
+    
+    if (filter === '') {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    resultsContainer.style.display = 'block';
+    
+    if (filtered.length === 0) {
+        resultsContainer.innerHTML = '<div class="no-results">Lokasi tidak ditemukan</div>';
+        return;
+    }
+    
+    filtered.forEach(function(loc) {
+        var div = document.createElement('div');
+        div.className = 'search-result-item';
+        div.innerHTML = `
+            <i class="fas fa-map-marker-alt"></i>
+            <div>
+                <span class="loc-name">${loc.nama_lokasi}</span>
+                <span class="loc-coords">${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}</span>
+            </div>
+        `;
+        div.onclick = function() {
+            input.value = loc.nama_lokasi;
+            resultsContainer.style.display = 'none';
+            selectLocation(loc.id, true);
+        };
+        resultsContainer.appendChild(div);
+    });
+}
+
+function clearSearch() {
+    var input = document.getElementById('mapSearchInput');
+    input.value = '';
+    document.getElementById('clearSearchBtn').style.display = 'none';
+    document.getElementById('searchResults').style.display = 'none';
+}
+
+// Tutup search results saat klik diluar
+document.addEventListener('click', function(e) {
+    var container = document.querySelector('.search-container');
+    var results = document.getElementById('searchResults');
+    if (container && !container.contains(e.target)) {
+        results.style.display = 'none';
+    }
+});
+
+// Load lokasi dari JSON jika tersedia, jika gagal gunakan fallback
+function loadLocations() {
+    fetch('locations_data.json')
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (Array.isArray(data) && data.length > 0) {
+                locations = data;
+            }
+            renderMarkers();
+            if (locations.length > 0) {
+                selectLocation(locations[0].id, false);
+            }
+        })
+        .catch(function(err) {
+            console.log('Menggunakan fallback data lokasi karena:', err);
+            renderMarkers();
+            if (locations.length > 0) {
+                selectLocation(locations[0].id, false);
+            }
+        });
+}
+
+// Jalankan load data saat halaman dimuat
+window.addEventListener('DOMContentLoaded', loadLocations);
 </script>
 
 </body>
