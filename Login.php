@@ -47,7 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 // Redirect berdasarkan role
                 if ($_SESSION['role'] == 'admin') {
-                    header("Location: dashboard_admin.php");
+                    $redirect_to = "dashboard_admin.php";
+                    if (isset($_GET['redirect'])) {
+                        $redirect_type = $_GET['redirect'] === 'indoor' ? 'indoor' : 'outdoor';
+                        $_SESSION['dashboard_type'] = $redirect_type;
+                        $redirect_to .= "?type=" . $redirect_type;
+                    }
+                    header("Location: $redirect_to");
                 } else {
                     header("Location: dashboard_user.php");
                 }
@@ -64,7 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Jika sudah login, redirect ke dashboard sesuai role
 if (isset($_SESSION['username'])) {
     if ($_SESSION['role'] == 'admin') {
-        header("Location: dashboard_admin.php");
+        $redirect_to = "dashboard_admin.php";
+        if (isset($_GET['redirect'])) {
+            $redirect_type = $_GET['redirect'] === 'indoor' ? 'indoor' : 'outdoor';
+            $_SESSION['dashboard_type'] = $redirect_type;
+            $redirect_to .= "?type=" . $redirect_type;
+        }
+        header("Location: $redirect_to");
     } else {
         header("Location: dashboard_user.php");
     }
