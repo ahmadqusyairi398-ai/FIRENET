@@ -988,7 +988,10 @@ var locations = [
 
 var markersMap = {};
 
-function selectLocation(id, panTo = true) {
+function selectLocation(id, panTo) {
+    if (panTo === undefined) {
+        panTo = true;
+    }
     var item = markersMap[id];
     if (!item) return;
     
