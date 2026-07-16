@@ -20,9 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $is_indoor = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor');
 
                 if ($is_indoor) {
+                    if (!$pdo_indoor) {
+                        throw new Exception("Database INDOOR ('firenet') gagal terhubung. Pastikan nama database 'firenet' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
+                    }
                     // Untuk indoor, gunakan pdo_indoor (database firenet) dan tabel login
                     $stmt = $pdo_indoor->prepare("SELECT * FROM login WHERE username = ?");
                 } else {
+                    if (!$pdo) {
+                        throw new Exception("Database OUTDOOR ('outdoor') gagal terhubung. Pastikan nama database 'outdoor' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
+                    }
                     // Untuk outdoor (default), gunakan pdo_outdoor (database outdoor) dan tabel pengguna
                     $stmt = $pdo->prepare("SELECT * FROM pengguna WHERE username = ?");
                 }
@@ -65,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $error = "Username atau Password salah!";
             }
-        } catch(PDOException $e) {
+        } catch(Exception $e) {
             $error = "Terjadi kesalahan: " . $e->getMessage();
         }
     }
