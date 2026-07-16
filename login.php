@@ -15,8 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Username dan Password harus diisi!";
     } else {
         try {
-            // Query ke database
-            $stmt = $pdo->prepare("SELECT * FROM pengguna WHERE username = ?");
+            // Pilih koneksi database (indoor/outdoor) sesuai target login
+            $db_conn = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+            
+            // Query ke database sesuai koneksi yang dipilih
+            $stmt = $db_conn->prepare("SELECT * FROM pengguna WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             

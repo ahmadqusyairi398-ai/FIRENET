@@ -22,8 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Password minimal 6 karakter!";
     } else {
         try {
+            // Pilih koneksi database (indoor/outdoor) sesuai target registrasi
+            $db_conn = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+            
             // Cek apakah username sudah terdaftar
-            $stmt = $pdo->prepare("SELECT id FROM pengguna WHERE username = ?");
+            $stmt = $db_conn->prepare("SELECT id FROM pengguna WHERE username = ?");
             $stmt->execute([$username]);
             
             if ($stmt->rowCount() > 0) {
@@ -33,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insert data ke database (tanpa role, default user)
-                $stmt = $pdo->prepare("INSERT INTO pengguna (username, password, created_at) VALUES (?, ?, NOW())");
+                $stmt = $db_conn->prepare("INSERT INTO pengguna (username, password, created_at) VALUES (?, ?, NOW())");
                 $stmt->execute([$username, $hashed_password]);
                 
                 // Cek apakah insert berhasil
@@ -472,7 +475,7 @@ body::before {
         </form>
         
         <div class="login-link">
-            <p>Sudah punya akun? <a href="login.php">Login Now</a></p>
+            <p>Sudah punya akun? <a href="login.php<?php echo (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? '?redirect=indoor' : ''; ?>">Login Now</a></p>
             <a href="home.php" class="back-home">
                 <i class="fas fa-arrow-left"></i> Kembali ke Beranda
             </a>
@@ -622,7 +625,7 @@ Swal.fire({
     confirmButtonColor: '#16a34a',
     confirmButtonText: 'OK, Lanjutkan Login'
 }).then(() => {
-    window.location.href = 'login.php';
+    window.location.href = 'login.php<?php echo (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? "?redirect=indoor" : ""; ?>';
 });
 <?php endif; ?>
 
