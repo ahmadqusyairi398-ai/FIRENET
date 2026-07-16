@@ -12,12 +12,12 @@ $user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 
 // Tentukan tipe dashboard (indoor/outdoor)
-$dashboard_type = 'outdoor'; // default
+$dashboard_type = 'indoor'; // default
 if (isset($_GET['type'])) {
-    $dashboard_type = $_GET['type'] === 'indoor' ? 'indoor' : 'outdoor';
+    $dashboard_type = $_GET['type'] === 'outdoor' ? 'outdoor' : 'indoor';
     $_SESSION['dashboard_type'] = $dashboard_type;
 } elseif (isset($_SESSION['dashboard_type'])) {
-    $dashboard_type = $_SESSION['dashboard_type'] === 'indoor' ? 'indoor' : 'outdoor';
+    $dashboard_type = $_SESSION['dashboard_type'] === 'outdoor' ? 'outdoor' : 'indoor';
 }
 ?>
 
@@ -436,25 +436,25 @@ canvas {
 
 <div class="sidebar">
     <h3><i class="fas fa-fire"></i> FireDetector</h3>
-    <a href="dashboard_admin.php?type=outdoor" class="menu-btn <?php echo $dashboard_type === 'outdoor' ? 'active' : ''; ?>">
+    <a href="dashboard_admin.php" class="menu-btn <?php echo $dashboard_type === 'outdoor' ? 'active' : ''; ?>">
         <i class="fas fa-tree"></i>
         <span>Dashboard Outdoor</span>
         <span class="admin-badge">ADMIN</span>
     </a>
-    <a href="dashboard_admin.php?type=indoor" class="menu-btn <?php echo $dashboard_type === 'indoor' ? 'active' : ''; ?>">
+    <a href="dashboard_admin_indoor.php" class="menu-btn <?php echo $dashboard_type === 'indoor' ? 'active' : ''; ?>">
         <i class="fas fa-building"></i>
         <span>Dashboard Indoor</span>
         <span class="admin-badge">ADMIN</span>
     </a>
-    <a href="chart.php" class="menu-btn">
+    <a href="chart_indoor.php" class="menu-btn">
         <i class="fas fa-chart-line"></i>
         <span>CHART</span>
     </a>
-    <a href="tabel.php" class="menu-btn">
+    <a href="tabel_indoor.php" class="menu-btn">
         <i class="fas fa-table"></i>
         <span>TABEL</span>
     </a>
-    <a href="setting.php" class="menu-btn">
+    <a href="setting_indoor.php" class="menu-btn">
         <i class="fas fa-cog"></i>
         <span>SETTING</span>
     </a>

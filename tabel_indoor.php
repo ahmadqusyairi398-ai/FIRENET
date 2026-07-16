@@ -633,20 +633,20 @@ body::before {
 <div class="sidebar">
     <h3><i class="fas fa-fire"></i> FireNetWork</h3>
     <!-- Dashboard link mengarah ke halaman yang sesuai dengan role -->
-    <a href="<?php echo ($role == 'admin') ? 'dashboard_admin.php' : 'dashboard_user.php'; ?>" class="menu-btn">
+    <a href="<?php echo ($role == 'admin') ? 'dashboard_admin_indoor.php' : 'dashboard_user_indoor.php'; ?>" class="menu-btn">
         <i class="fas fa-tachometer-alt"></i>
         <span>Dashboard</span>
     </a>
-    <a href="chart.php" class="menu-btn">
+    <a href="chart_indoor.php" class="menu-btn">
         <i class="fas fa-chart-line"></i>
         <span>CHART</span>
     </a>
-    <a href="tabel.php" class="menu-btn active">
+    <a href="tabel_indoor.php" class="menu-btn active">
         <i class="fas fa-table"></i>
         <span>TABEL</span>
     </a>
     <?php if ($role == 'admin'): ?>
-    <a href="setting.php" class="menu-btn">
+    <a href="setting_indoor.php" class="menu-btn">
         <i class="fas fa-cog"></i>
         <span>SETTING</span>
     </a>

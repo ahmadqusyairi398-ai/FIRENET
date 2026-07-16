@@ -1003,10 +1003,10 @@ $totalUsers = count($users);
     <!-- SIDEBAR -->
     <div class="sidebar">
         <h3><i class="fas fa-cog"></i> FireNetWork</h3>
-        <a href="dashboard_admin.php" class="menu-btn"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-        <a href="chart.php" class="menu-btn"><i class="fas fa-chart-line"></i><span>CHART</span></a>
-        <a href="tabel.php" class="menu-btn"><i class="fas fa-table"></i><span>TABEL</span></a>
-        <a href="setting.php" class="menu-btn active"><i class="fas fa-cog"></i><span>SETTING</span></a>
+        <a href="dashboard_admin_indoor.php" class="menu-btn"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+        <a href="chart_indoor.php" class="menu-btn"><i class="fas fa-chart-line"></i><span>CHART</span></a>
+        <a href="tabel_indoor.php" class="menu-btn"><i class="fas fa-table"></i><span>TABEL</span></a>
+        <a href="setting_indoor.php" class="menu-btn active"><i class="fas fa-cog"></i><span>SETTING</span></a>
         <!-- Tombol Logout dengan onclick untuk membuka modal -->
         <button class="menu-btn logout" onclick="openLogoutModal()">
             <i class="fas fa-sign-out-alt"></i>

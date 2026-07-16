@@ -35,17 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
                 }
                 
-                // Redirect berdasarkan role
+                // Redirect berdasarkan role dan parameter redirect
+                $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
+                $_SESSION['dashboard_type'] = $redirect_type;
+                
                 if ($_SESSION['role'] == 'admin') {
-                    $redirect_to = "dashboard_admin.php";
-                    if (isset($_GET['redirect'])) {
-                        $redirect_type = $_GET['redirect'] === 'indoor' ? 'indoor' : 'outdoor';
-                        $_SESSION['dashboard_type'] = $redirect_type;
-                        $redirect_to .= "?type=" . $redirect_type;
-                    }
+                    $redirect_to = ($redirect_type === 'indoor') ? "dashboard_admin_indoor.php" : "dashboard_admin.php";
                     header("Location: $redirect_to");
                 } else {
-                    header("Location: dashboard_user.php");
+                    $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+                    header("Location: $redirect_to");
                 }
                 exit();
             } else {
@@ -57,18 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Jika sudah login, redirect ke dashboard sesuai role
+// Jika sudah login, redirect ke dashboard sesuai role dan parameter redirect
 if (isset($_SESSION['username'])) {
+    $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
+    $_SESSION['dashboard_type'] = $redirect_type;
+    
     if ($_SESSION['role'] == 'admin') {
-        $redirect_to = "dashboard_admin.php";
-        if (isset($_GET['redirect'])) {
-            $redirect_type = $_GET['redirect'] === 'indoor' ? 'indoor' : 'outdoor';
-            $_SESSION['dashboard_type'] = $redirect_type;
-            $redirect_to .= "?type=" . $redirect_type;
-        }
+        $redirect_to = ($redirect_type === 'indoor') ? "dashboard_admin_indoor.php" : "dashboard_admin.php";
         header("Location: $redirect_to");
     } else {
-        header("Location: dashboard_user.php");
+        $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+        header("Location: $redirect_to");
     }
     exit();
 }
