@@ -11,14 +11,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 
-// Tentukan tipe dashboard (indoor/outdoor)
-$dashboard_type = 'indoor'; // default
-if (isset($_GET['type'])) {
-    $dashboard_type = $_GET['type'] === 'outdoor' ? 'outdoor' : 'indoor';
-    $_SESSION['dashboard_type'] = $dashboard_type;
-} elseif (isset($_SESSION['dashboard_type'])) {
-    $dashboard_type = $_SESSION['dashboard_type'] === 'outdoor' ? 'outdoor' : 'indoor';
-}
+// Tentukan tipe dashboard (selalu indoor untuk berkas ini)
+$dashboard_type = 'indoor';
+$_SESSION['dashboard_type'] = 'indoor';
 ?>
 
 <!DOCTYPE html>
