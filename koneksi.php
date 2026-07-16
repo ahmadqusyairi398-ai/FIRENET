@@ -1,10 +1,27 @@
 <?php
-$host = "localhost";
-$username = "ta_user";
-$password = "rahasiaTA123!";
+// Deteksi secara otomatis apakah sedang berjalan di Localhost atau di Domain/Hosting Live
+$is_localhost = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1');
 
-$dbname_outdoor = "outdoor";
-$dbname_indoor = "firenet";
+if ($is_localhost) {
+    // ==========================================
+    // 1. KREDENSIAL DATABASE LOCALHOST (LOKAL)
+    // ==========================================
+    $host = "localhost";
+    $username = "ta_user";
+    $password = "rahasiaTA123!";
+    $dbname_outdoor = "outdoor";
+    $dbname_indoor = "firenet";
+} else {
+    // ==========================================
+    // 2. KREDENSIAL DATABASE DOMAIN (PRODUCTION)
+    // ==========================================
+    // SILAKAN UBAH bagian ini sesuai dengan data database di cPanel/Hosting Anda:
+    $host = "localhost"; 
+    $username = "ta_user"; // Masukkan username database hosting Anda di sini
+    $password = "rahasiaTA123!"; // Masukkan password database hosting Anda di sini
+    $dbname_outdoor = "outdoor"; // Masukkan nama database outdoor hosting Anda di sini
+    $dbname_indoor = "firenet"; // Masukkan nama database indoor hosting Anda di sini
+}
 
 $pdo_outdoor = null;
 $conn_outdoor = null;
@@ -35,6 +52,6 @@ $conn = $conn_outdoor ? $conn_outdoor : $conn_indoor;
 
 // Cek jika kedua koneksi gagal sama sekali
 if (!$pdo_outdoor && !$pdo_indoor) {
-    die("Error: Semua koneksi database gagal. Silakan periksa kredensial MySQL 'ta_user' Anda.");
+    die("Error: Semua koneksi database gagal. Silakan periksa kredensial database pada file koneksi.php Anda.");
 }
 ?>
