@@ -15,13 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Username dan Password harus diisi!";
     } else {
         try {
-            // Pilih koneksi database (indoor/outdoor) sesuai target login
-            $db_conn = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? $pdo_indoor : $pdo_outdoor;
-            
-            // Query ke database sesuai koneksi yang dipilih
-            $stmt = $db_conn->prepare("SELECT * FROM pengguna WHERE username = ?");
-            $stmt->execute([$username]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+          
+                // Tentukan database dan tabel berdasarkan parameter redirect
+                $is_indoor = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor');
+
+                if ($is_indoor) {
+                    // Untuk indoor, gunakan pdo_indoor (database firenet) dan tabel login
+                    $stmt = $pdo_indoor->prepare("SELECT * FROM login WHERE username = ?");
+                } else {
+                    // Untuk outdoor (default), gunakan pdo_outdoor (database outdoor) dan tabel pengguna
+                    $stmt = $pdo->prepare("SELECT * FROM pengguna WHERE username = ?");
+                }
+
+                $stmt->execute([$username]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             // Verifikasi password menggunakan password_verify() (BENAR)
             if ($user && password_verify($password, $user['password'])) {

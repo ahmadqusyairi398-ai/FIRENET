@@ -11,7 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $pdo_conn = ($target_db === 'indoor') ? $pdo_indoor : $pdo_outdoor;
     
     try {
-        $stmt = $pdo_conn->prepare("SELECT * FROM pengguna WHERE username = ?");
+        $table_name = ($target_db === 'indoor') ? 'login' : 'pengguna';
+        $stmt = $pdo_conn->prepare("SELECT * FROM $table_name WHERE username = ?");
         $stmt->execute([$test_user]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -230,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     <h2><i class="fas fa-users"></i> Daftar Pengguna di Database INDOOR (firenet)</h2>
     <?php
     try {
-        $stmt = $pdo_indoor->query("SELECT id, username, password, role FROM pengguna");
+        $stmt = $pdo_indoor->query("SELECT id, username, password, role FROM login");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         if (count($users) == 0) {
@@ -255,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             echo "</tbody></table>";
         }
     } catch (Exception $e) {
-        echo "<p style='color:red;'>Gagal membaca tabel pengguna Indoor: " . htmlspecialchars($e->getMessage()) . "</p>";
+        echo "<p style='color:red;'>Gagal membaca tabel login Indoor: " . htmlspecialchars($e->getMessage()) . "</p>";
     }
     ?>
 
