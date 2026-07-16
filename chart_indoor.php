@@ -7,6 +7,12 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 require_once 'koneksi.php';
 
 // Ambil struktur tabel data_sensor
+if (!$pdo_indoor) {
+    die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
+        <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
+        <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel, membuat database <strong>firenet</strong> di phpMyAdmin, dan mengimpor tabel-tabel yang diperlukan.</p>
+    </div>");
+}
 $columns = [];
 $colQuery = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
 while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
