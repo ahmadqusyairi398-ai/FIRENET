@@ -32,7 +32,7 @@ if ($dateColumn) $selectFields[] = "$dateColumn as waktu";
 else $selectFields[] = "'' as waktu";
 
 // Daftar sensor yang ditampilkan
-$sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'kecepatan_angin', 'arah_angin', 'co'];
+$sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'api'];
 foreach ($sensorFields as $sf) {
     if (in_array($sf, $columns)) $selectFields[] = $sf;
     else $selectFields[] = "'' as $sf";
@@ -45,7 +45,7 @@ $stmt->execute();
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Jika tabel tidak ada atau kolom baru belum ada, buat/update tabel
-if (empty($columns) || !in_array('daya', $columns) || !in_array('kecepatan_angin', $columns) || !in_array('arah_angin', $columns) || !in_array('co', $columns)) {
+if (empty($columns) || !in_array('daya', $columns) || !in_array('api', $columns)) {
     $create = "CREATE TABLE IF NOT EXISTS data_sensor (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tanggal_dan_waktu DATETIME NOT NULL,
@@ -55,18 +55,20 @@ if (empty($columns) || !in_array('daya', $columns) || !in_array('kecepatan_angin
         tegangan DECIMAL(6,2) DEFAULT 0,
         arus DECIMAL(6,2) DEFAULT 0,
         daya DECIMAL(6,2) DEFAULT 0,
-        kecepatan_angin DECIMAL(5,2) DEFAULT 0,
-        arah_angin VARCHAR(20) DEFAULT '-',
-        co DECIMAL(6,2) DEFAULT 0
+        api VARCHAR(20) DEFAULT 'Aman'
     )";
     $pdo_indoor->exec($create);
     
     // Cek dan tambahkan kolom baru jika belum ada
-    $checkColumns = ['daya', 'kecepatan_angin', 'arah_angin', 'co'];
+    $checkColumns = ['daya', 'api'];
     foreach ($checkColumns as $col) {
         $check = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE '$col'");
         if ($check->rowCount() == 0) {
-            $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN $col DECIMAL(6,2) DEFAULT 0");
+            if ($col === 'api') {
+                $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN api VARCHAR(20) DEFAULT 'Aman'");
+            } else {
+                $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN $col DECIMAL(6,2) DEFAULT 0");
+            }
         }
     }
     $rows = [];
@@ -81,8 +83,9 @@ foreach ($rows as $row) {
     if (is_numeric($asapVal)) $asapVal = floatval($asapVal);
     else $asapVal = (strtolower($asapVal) == 'tinggi' || strtolower($asapVal) == 'bahaya') ? 100 : 0;
 
-    $coVal = $row['co'];
-    if (!is_numeric($coVal)) $coVal = 0;
+    $apiVal = isset($row['api']) ? $row['api'] : 'Aman';
+    if (is_numeric($apiVal)) $apiVal = floatval($apiVal);
+    else $apiVal = (strtolower($apiVal) == 'terdeteksi api' || strtolower($apiVal) == 'bahaya' || strtolower($apiVal) == 'api') ? 100 : 0;
 
     $chartData[] = [
         'waktu' => $timestamp,
@@ -92,9 +95,7 @@ foreach ($rows as $row) {
         'tegangan' => floatval($row['tegangan']),
         'arus' => floatval($row['arus']),
         'daya' => isset($row['daya']) ? floatval($row['daya']) : 0,
-        'kecepatan_angin' => isset($row['kecepatan_angin']) ? floatval($row['kecepatan_angin']) : 0,
-        'arah_angin' => isset($row['arah_angin']) ? $row['arah_angin'] : '-',
-        'co' => $coVal
+        'api' => $apiVal
     ];
 }
 $jsonData = json_encode($chartData);
@@ -616,10 +617,9 @@ canvas {
     <!-- TAB BUTTONS -->
     <div class="sensor-tabs">
         <button class="tab-btn active" data-mode="all" onclick="setMode('all', this)">Semua Sensor</button>
-        <button class="tab-btn" data-mode="bahaya" onclick="setMode('bahaya', this)">CO & Asap</button>
+        <button class="tab-btn" data-mode="bahaya" onclick="setMode('bahaya', this)">Api & Asap</button>
         <button class="tab-btn" data-mode="env" onclick="setMode('env', this)">Suhu & Kelembapan</button>
         <button class="tab-btn" data-mode="listrik" onclick="setMode('listrik', this)">Tegangan & Arus & Daya</button>
-        <button class="tab-btn" data-mode="angin" onclick="setMode('angin', this)">Kecepatan Angin</button>
     </div>
 
     <div class="chart-card">
@@ -685,14 +685,13 @@ console.log('Data dari database:', rawData);
 
 // Konfigurasi sensor
 const sensorConfig = [
-    { id: 'co', label: 'Karbon Monoksida (CO)', color: '#9c27b0', unit: 'ppm', group: 'bahaya', min: 0, max: 100, yMax: 120 },
+    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
     { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
     { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
     { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
     { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
     { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 },
-    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200 },
-    { id: 'kecepatan_angin', label: 'Kecepatan Angin', color: '#2196F3', unit: 'm/s', group: 'angin', min: 0, max: 30, yMax: 35 }
+    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200 }
 ];
 
 let currentMode = "all";
@@ -748,8 +747,7 @@ function initDatasets() {
             hidden: sensor.group !== 'all',
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' || sensor.id === 'daya' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 
-                     (sensor.id === 'kecepatan_angin' ? 'y-angin' :
-                     (sensor.id === 'co' || sensor.id === 'asap' ? 'y-bahaya' : 'y-bahaya')))
+                     (sensor.id === 'api' || sensor.id === 'asap' ? 'y-bahaya' : 'y-bahaya'))
         });
     });
 }
@@ -789,8 +787,8 @@ function createChart(labels, dataPoints) {
                             let value = context.raw;
                             let sensor = sensorConfig.find(s => s.label === label);
                             let unit = sensor ? sensor.unit : '';
-                            if (sensor && sensor.id === 'co') {
-                                let status = value > 50 ? '🔥 BAHAYA' : (value > 35 ? '⚠️ WASPADA' : '✅ AMAN');
+                            if (sensor && sensor.id === 'api') {
+                                let status = value > 70 ? '🔥 TERDETEKSI API' : (value > 40 ? '⚠️ POTENSI' : '✅ AMAN');
                                 return `${label}: ${value} ${unit} - ${status}`;
                             }
                             if (sensor && sensor.id === 'asap') {
@@ -819,7 +817,7 @@ function createChart(labels, dataPoints) {
                     beginAtZero: true, 
                     max: 120,
                     grid: { color: 'rgba(255,107,107,0.2)', drawOnChartArea: true },
-                    title: { display: true, text: 'CO (ppm) / Asap (%)', color: '#ff6b6b' },
+                    title: { display: true, text: 'Api (%) / Asap (%)', color: '#ff6b6b' },
                     ticks: { callback: function(v) { return v; } },
                     display: true
                 },
@@ -840,16 +838,6 @@ function createChart(labels, dataPoints) {
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A) / Daya (W)', color: '#ff9800' },
                     ticks: { callback: v => v + (v > 100 ? 'W' : (v > 10 ? 'V' : 'A')) },
-                    display: false
-                },
-                'y-angin': {
-                    position: 'right', 
-                    beginAtZero: true, 
-                    max: 35,
-                    grid: { color: 'rgba(33,150,243,0.2)', drawOnChartArea: false },
-                    title: { display: true, text: 'Kecepatan Angin (m/s)', color: '#2196F3' },
-                    ticks: { callback: v => v + ' m/s' },
-                    display: false
                 }
             }
         }
@@ -863,12 +851,10 @@ function updateYAxisVisibility() {
     const yBahaya = myChart.options.scales['y-bahaya'];
     const yEnv = myChart.options.scales['y-env'];
     const yListrik = myChart.options.scales['y-listrik'];
-    const yAngin = myChart.options.scales['y-angin'];
     
     yBahaya.display = false;
     yEnv.display = false;
     yListrik.display = false;
-    yAngin.display = false;
     
     if (currentMode === 'bahaya') {
         yBahaya.display = true;
@@ -876,10 +862,8 @@ function updateYAxisVisibility() {
         yEnv.display = true;
     } else if (currentMode === 'listrik') {
         yListrik.display = true;
-    } else if (currentMode === 'angin') {
-        yAngin.display = true;
     } else {
-        let hasBahaya = false, hasEnv = false, hasListrik = false, hasAngin = false;
+        let hasBahaya = false, hasEnv = false, hasListrik = false;
         datasets.forEach(ds => {
             if (ds.hidden) return;
             const sensor = sensorConfig.find(s => s.label === ds.label);
@@ -887,19 +871,17 @@ function updateYAxisVisibility() {
                 if (sensor.group === 'bahaya') hasBahaya = true;
                 else if (sensor.group === 'env') hasEnv = true;
                 else if (sensor.group === 'listrik') hasListrik = true;
-                else if (sensor.group === 'angin') hasAngin = true;
             }
         });
         if (hasBahaya) yBahaya.display = true;
         if (hasEnv) yEnv.display = true;
         if (hasListrik) yListrik.display = true;
-        if (hasAngin) yAngin.display = true;
     }
     
     yBahaya.grid.drawOnChartArea = yBahaya.display;
     yEnv.grid.drawOnChartArea = yEnv.display;
     yListrik.grid.drawOnChartArea = yListrik.display;
-    yAngin.grid.drawOnChartArea = yAngin.display;
+}Area = yAngin.display;
     
     myChart.update();
 }
@@ -935,11 +917,10 @@ function setMode(mode, element) {
     element.classList.add('active');
     
     let visibleGroups = [];
-    if (mode === 'all') visibleGroups = ['bahaya', 'env', 'listrik', 'angin'];
+    if (mode === 'all') visibleGroups = ['bahaya', 'env', 'listrik'];
     else if (mode === 'bahaya') visibleGroups = ['bahaya'];
     else if (mode === 'env') visibleGroups = ['env'];
     else if (mode === 'listrik') visibleGroups = ['listrik'];
-    else if (mode === 'angin') visibleGroups = ['angin'];
     
     datasets.forEach((ds, idx) => {
         const sensor = sensorConfig[idx];
@@ -984,9 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tegangan: typeof row.tegangan === 'number' ? row.tegangan : 0,
         arus: typeof row.arus === 'number' ? row.arus : 0,
         daya: typeof row.daya === 'number' ? row.daya : 0,
-        kecepatan_angin: typeof row.kecepatan_angin === 'number' ? row.kecepatan_angin : 0,
-        arah_angin: row.arah_angin || '-',
-        co: typeof row.co === 'number' ? row.co : 0
+        api: typeof row.api === 'number' ? row.api : 0
     }));
     
     if (fullData.length === 0) {
