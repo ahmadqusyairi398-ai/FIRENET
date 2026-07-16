@@ -2,6 +2,13 @@
 // Mulai session untuk user (simulasi login)
 session_start();
 
+// Jika tipe dashboard adalah indoor, alihkan ke dashboard_admin_indoor.php
+if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
+    header("Location: dashboard_admin_indoor.php");
+    exit();
+}
+$_SESSION['dashboard_type'] = 'outdoor';
+
 // Proteksi: Hanya admin yang bisa mengakses halaman ini
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: login.php");

@@ -1,6 +1,13 @@
 <?php
 session_start();
 
+// Jika tipe dashboard adalah outdoor, alihkan ke setting.php
+if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'outdoor') {
+    header("Location: setting.php");
+    exit();
+}
+$_SESSION['dashboard_type'] = 'indoor';
+
 // PROTEKSI: Hanya admin yang bisa mengakses halaman ini
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: dashboard_admin_indoor.php");

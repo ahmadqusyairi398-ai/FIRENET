@@ -2,6 +2,13 @@
 // Mulai session untuk user (simulasi login)
 session_start();
 
+// Jika tipe dashboard adalah indoor, alihkan ke dashboard_user_indoor.php
+if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
+    header("Location: dashboard_user_indoor.php");
+    exit();
+}
+$_SESSION['dashboard_type'] = 'outdoor';
+
 // Jika belum login, redirect ke halaman login
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
