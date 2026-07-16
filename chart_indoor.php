@@ -881,7 +881,6 @@ function updateYAxisVisibility() {
     yBahaya.grid.drawOnChartArea = yBahaya.display;
     yEnv.grid.drawOnChartArea = yEnv.display;
     yListrik.grid.drawOnChartArea = yListrik.display;
-}Area = yAngin.display;
     
     myChart.update();
 }
