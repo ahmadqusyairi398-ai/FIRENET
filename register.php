@@ -23,10 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             // Pilih koneksi database (indoor/outdoor) sesuai target registrasi
-            $db_conn = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+            $is_indoor = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor');
+            $db_conn = $is_indoor ? $pdo_indoor : $pdo_outdoor;
+            $table_name = $is_indoor ? 'login' : 'pengguna';
             
             // Cek apakah username sudah terdaftar
-            $stmt = $db_conn->prepare("SELECT id FROM pengguna WHERE username = ?");
+            $stmt = $db_conn->prepare("SELECT id FROM $table_name WHERE username = ?");
             $stmt->execute([$username]);
             
             if ($stmt->rowCount() > 0) {
@@ -36,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
                 // Insert data ke database (tanpa role, default user)
-                $stmt = $db_conn->prepare("INSERT INTO pengguna (username, password, created_at) VALUES (?, ?, NOW())");
+                $stmt = $db_conn->prepare("INSERT INTO $table_name (username, password, created_at) VALUES (?, ?, NOW())");
                 $stmt->execute([$username, $hashed_password]);
                 
                 // Cek apakah insert berhasil
