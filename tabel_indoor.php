@@ -1,6 +1,14 @@
 <?php
 // Mulai session untuk user (simulasi login)
 session_start();
+
+// Jika tipe dashboard adalah outdoor, alihkan ke tabel.php
+if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'outdoor') {
+    header("Location: tabel.php");
+    exit();
+}
+$_SESSION['dashboard_type'] = 'indoor';
+
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 

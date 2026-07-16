@@ -1,5 +1,13 @@
 <?php
 session_start();
+
+// Jika tipe dashboard adalah outdoor, alihkan ke chart.php
+if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'outdoor') {
+    header("Location: chart.php");
+    exit();
+}
+$_SESSION['dashboard_type'] = 'indoor';
+
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 
