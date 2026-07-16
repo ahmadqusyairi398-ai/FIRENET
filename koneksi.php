@@ -17,14 +17,7 @@ try {
     $pdo_outdoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $conn_outdoor = mysqli_connect($host, $username, $password, $dbname_outdoor);
 } catch(Exception $e) {
-    // Coba fallback ke user 'root' (default XAMPP) jika 'ta_user' gagal
-    try {
-        $pdo_outdoor = new PDO("mysql:host=$host;dbname=$dbname_outdoor;charset=utf8mb4", "root", "");
-        $pdo_outdoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $conn_outdoor = mysqli_connect($host, "root", "", $dbname_outdoor);
-    } catch(Exception $e2) {
-        // Biarkan null jika gagal
-    }
+    // Koneksi outdoor dibiarkan null jika gagal, agar tidak mematikan program jika hanya mengakses indoor
 }
 
 // 2. KONEKSI DATABASE INDOOR
@@ -33,14 +26,7 @@ try {
     $pdo_indoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $conn_indoor = mysqli_connect($host, $username, $password, $dbname_indoor);
 } catch(Exception $e) {
-    // Coba fallback ke user 'root' (default XAMPP) jika 'ta_user' gagal
-    try {
-        $pdo_indoor = new PDO("mysql:host=$host;dbname=$dbname_indoor;charset=utf8mb4", "root", "");
-        $pdo_indoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $conn_indoor = mysqli_connect($host, "root", "", $dbname_indoor);
-    } catch(Exception $e2) {
-        // Biarkan null jika gagal
-    }
+    // Koneksi indoor dibiarkan null jika gagal
 }
 
 // Untuk kompatibilitas file lama, set default ke outdoor jika tersedia, jika tidak ke indoor
@@ -49,6 +35,6 @@ $conn = $conn_outdoor ? $conn_outdoor : $conn_indoor;
 
 // Cek jika kedua koneksi gagal sama sekali
 if (!$pdo_outdoor && !$pdo_indoor) {
-    die("Error: Semua koneksi database gagal. Silakan periksa MySQL di XAMPP Control Panel Anda.");
+    die("Error: Semua koneksi database gagal. Silakan periksa kredensial MySQL 'ta_user' Anda.");
 }
 ?>
