@@ -436,14 +436,9 @@ canvas {
 
 <div class="sidebar">
     <h3><i class="fas fa-fire"></i> FireDetector</h3>
-    <a href="dashboard_admin.php" class="menu-btn <?php echo $dashboard_type === 'outdoor' ? 'active' : ''; ?>">
-        <i class="fas fa-tree"></i>
-        <span>Dashboard Outdoor</span>
-        <span class="admin-badge">ADMIN</span>
-    </a>
-    <a href="dashboard_admin_indoor.php" class="menu-btn <?php echo $dashboard_type === 'indoor' ? 'active' : ''; ?>">
-        <i class="fas fa-building"></i>
-        <span>Dashboard Indoor</span>
+    <a href="dashboard_admin_indoor.php" class="menu-btn active">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Dashboard</span>
         <span class="admin-badge">ADMIN</span>
     </a>
     <a href="chart_indoor.php" class="menu-btn">
