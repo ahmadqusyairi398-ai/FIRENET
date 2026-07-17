@@ -810,7 +810,7 @@ body::before {
         
         <!-- ===== 3. PORTOFOLIO ===== -->
         <a href="portofolio.php" class="active">
-            <i class="fas fa-briefcase"></i>
+            <i class="fas fa-map-marked-alt"></i>
             Portofolio
         </a>
         
