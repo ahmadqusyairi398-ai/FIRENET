@@ -986,35 +986,35 @@ var locations = [
         "longitude": 116.88680
     },
     
-    // ===== PENAJAM PASER UTARA (5 titik) =====
+    // ===== PENAJAM PASER UTARA (5 titik - DI SEBERANG BALIKPAPAN) =====
     {
         "id": 4,
-        "nama_lokasi": "Penajam Paser Utara - Kantor Bupati",
-        "latitude": -0.3180,
+        "nama_lokasi": "Nipah-Nipah, Penajam - Kecamatan Penajam",
+        "latitude": -0.3250,
         "longitude": 116.5980
     },
     {
         "id": 5,
-        "nama_lokasi": "Penajam Paser Utara - Pusat Kota",
-        "latitude": -0.3200,
-        "longitude": 116.6000
+        "nama_lokasi": "Penajam - Pusat Kota Penajam",
+        "latitude": -0.3300,
+        "longitude": 116.6020
     },
     {
         "id": 6,
-        "nama_lokasi": "Penajam Paser Utara - Kawasan Industri",
-        "latitude": -0.3150,
-        "longitude": 116.6050
-    },
-    {
-        "id": 7,
-        "nama_lokasi": "Penajam Paser Utara - Pelabuhan",
-        "latitude": -0.3220,
+        "nama_lokasi": "Penajam - Kawasan Industri (Nipah-Nipah)",
+        "latitude": -0.3200,
         "longitude": 116.5950
     },
     {
+        "id": 7,
+        "nama_lokasi": "Penajam - Pelabuhan Penajam",
+        "latitude": -0.3350,
+        "longitude": 116.6000
+    },
+    {
         "id": 8,
-        "nama_lokasi": "Penajam Paser Utara - Kawasan Perumahan",
-        "latitude": -0.3100,
+        "nama_lokasi": "Penajam - Kawasan Perumahan",
+        "latitude": -0.3280,
         "longitude": 116.6100
     },
     
@@ -1178,7 +1178,7 @@ function initMap() {
     // Zoom ke area yang mencakup semua lokasi (Balikpapan, Penajam, Samarinda)
     var bounds = L.latLngBounds([
         [-1.22, 116.88],  // Balikpapan
-        [-0.31, 116.61],  // Penajam
+        [-0.31, 116.59],  // Penajam (Nipah-Nipah)
         [-0.50, 117.16]   // Samarinda
     ]);
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
