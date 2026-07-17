@@ -24,28 +24,14 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 // Koneksi Database
 require_once 'koneksi.php';
 
-// Gunakan koneksi indoor - cek apakah variabel tersedia
-if (isset($conn_indoor) && $conn_indoor) {
-    $conn = $conn_indoor;
-} elseif (isset($conn) && $conn) {
-    $conn = $conn;
-} else {
-    // Coba koneksi langsung jika variabel tidak tersedia
-    try {
-        $conn = new mysqli("localhost", "root", "", "firenet");
-        if ($conn->connect_error) {
-            die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
-                <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
-                <p>Error: " . $conn->connect_error . "</p>
-                <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel dan membuat database <strong>firenet</strong> di phpMyAdmin.</p>
-            </div>");
-        }
-    } catch (Exception $e) {
-        die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
-            <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
-            <p>Error: " . $e->getMessage() . "</p>
-        </div>");
-    }
+// Gunakan koneksi indoor secara ketat
+$conn = isset($conn_indoor) ? $conn_indoor : null;
+
+if (!$conn) {
+    die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
+        <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
+        <p>Silakan periksa konfigurasi database Anda pada file <code>koneksi.php</code>.</p>
+    </div>");
 }
 
 // ========== FUNGSI GET ICON SENSOR (PHP) ==========
@@ -63,8 +49,9 @@ function getSensorIconPHP($nama)
     return isset($icons[$nama]) ? $icons[$nama] : "microchip";
 }
 
-// ========== CEK DAN BUAT TABEL BATAS_SENSOR JIKA BELUM ADA ==========
+// ========== CEK DAN DIAGNOSA STRUKTUR DATABASE ==========
 try {
+    // 1. Cek & Buat tabel batas_sensor jika belum ada
     $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'batas_sensor'");
     if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
         $createTable = "CREATE TABLE batas_sensor (
@@ -79,7 +66,7 @@ try {
         )";
         mysqli_query($conn, $createTable);
 
-        // Insert data default sensor - TANPA CO
+        // Insert data default sensor
         $defaultSensors = [
             ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)'],
             ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
@@ -99,7 +86,7 @@ try {
             }
         }
     } else {
-        // CEK DAN TAMBAHKAN SENSOR BARU JIKA BELUM ADA
+        // Cek dan tambahkan sensor baru jika belum ada
         $existingSensors = [];
         $checkExisting = mysqli_query($conn, "SELECT nama_sensor FROM batas_sensor");
         if ($checkExisting) {
@@ -123,19 +110,11 @@ try {
             }
         }
         
-        // HAPUS SENSOR CO JIKA ADA
-        $checkCO = mysqli_query($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = 'CO'");
-        if ($checkCO && mysqli_num_rows($checkCO) > 0) {
-            mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = 'CO'");
-        }
+        // Hapus sensor CO jika ada
+        mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = 'CO'");
     }
-} catch (Exception $e) {
-    // Error handling untuk tabel
-    error_log("Error table: " . $e->getMessage());
-}
 
-// ========== CEK DAN BUAT TABEL LOGIN JIKA BELUM ADA ==========
-try {
+    // 2. Cek & Buat tabel login jika belum ada
     $checkLoginTable = mysqli_query($conn, "SHOW TABLES LIKE 'login'");
     if (!$checkLoginTable || mysqli_num_rows($checkLoginTable) == 0) {
         $createLoginTable = "CREATE TABLE login (
@@ -150,7 +129,7 @@ try {
         mysqli_query($conn, $createLoginTable);
     }
 
-    // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
+    // 3. Cek dan tambahkan kolom role, status, updated_at di tabel login jika belum ada
     $checkRole = mysqli_query($conn, "SHOW COLUMNS FROM login LIKE 'role'");
     if (!$checkRole || mysqli_num_rows($checkRole) == 0) {
         mysqli_query($conn, "ALTER TABLE login ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
@@ -163,14 +142,16 @@ try {
     if (!$checkUpdatedAt || mysqli_num_rows($checkUpdatedAt) == 0) {
         mysqli_query($conn, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
-} catch (Exception $e) {
-    error_log("Error login table: " . $e->getMessage());
-}
 
-// ========== CEK DAN HAPUS KOLOM DEVICE JIKA ADA ==========
-$checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
-if ($checkDevice && mysqli_num_rows($checkDevice) > 0) {
-    mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
+    // 4. Cek dan hapus kolom device di batas_sensor jika ada
+    $checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
+    if ($checkDevice && mysqli_num_rows($checkDevice) > 0) {
+        mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
+    }
+
+} catch (Throwable $e) {
+    // Log error secara internal agar tidak menghasilkan HTTP 500 ke user
+    error_log("Database initialization error: " . $e->getMessage());
 }
 
 // ========== FILE UNTUK DATA LOKASI (JSON) ==========

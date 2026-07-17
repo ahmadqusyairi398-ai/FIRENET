@@ -20,6 +20,16 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 // Koneksi Database
 require_once 'koneksi.php';
 
+// Gunakan koneksi outdoor secara ketat
+$conn = isset($conn_outdoor) ? $conn_outdoor : null;
+
+if (!$conn) {
+    die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
+        <h3>Error: Koneksi ke Database OUTDOOR ('outdoor') Gagal.</h3>
+        <p>Silakan periksa konfigurasi database Anda pada file <code>koneksi.php</code>.</p>
+    </div>");
+}
+
 // ========== FUNGSI GET ICON SENSOR (PHP) ==========
 function getSensorIconPHP($nama)
 {
@@ -37,96 +47,110 @@ function getSensorIconPHP($nama)
     return $icons[$nama] ?? "microchip";
 }
 
-// ========== CEK DAN BUAT TABEL BATAS_SENSOR JIKA BELUM ADA ==========
-$checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'batas_sensor'");
-if (mysqli_num_rows($checkTable) == 0) {
-    $createTable = "CREATE TABLE batas_sensor (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        nama_sensor VARCHAR(50) NOT NULL,
-        nilai_alarm DECIMAL(10,2) NOT NULL,
-        satuan VARCHAR(20) NOT NULL,
-        batas_min DECIMAL(10,2),
-        batas_max DECIMAL(10,2),
-        deskripsi TEXT,
-        last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )";
-    mysqli_query($conn, $createTable);
+// ========== CEK DAN DIAGNOSA STRUKTUR DATABASE ==========
+try {
+    // 1. Cek & Buat tabel batas_sensor jika belum ada
+    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'batas_sensor'");
+    if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
+        $createTable = "CREATE TABLE batas_sensor (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nama_sensor VARCHAR(50) NOT NULL,
+            nilai_alarm DECIMAL(10,2) NOT NULL,
+            satuan VARCHAR(20) NOT NULL,
+            batas_min DECIMAL(10,2),
+            batas_max DECIMAL(10,2),
+            deskripsi TEXT,
+            last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        mysqli_query($conn, $createTable);
 
-    // Insert data default sensor
-    $defaultSensors = [
-        ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
-        ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
-        ['KELEMBAPAN', 85, '%', 30, 95, 'Kelembapan udara'],
-        ['TEGANGAN', 190, 'V', 150, 250, 'Tegangan listrik'],
-        ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
-        ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
-        ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-        ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
-        ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
-    ];
+        // Insert data default sensor
+        $defaultSensors = [
+            ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
+            ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
+            ['KELEMBAPAN', 85, '%', 30, 95, 'Kelembapan udara'],
+            ['TEGANGAN', 190, 'V', 150, 250, 'Tegangan listrik'],
+            ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
+            ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
+            ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
+            ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
+            ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
+        ];
 
-    foreach ($defaultSensors as $sensor) {
-        $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-        mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
-        mysqli_stmt_execute($stmt);
-    }
-} else {
-    // CEK DAN TAMBAHKAN SENSOR BARU JIKA BELUM ADA
-    $existingSensors = [];
-    $checkExisting = mysqli_query($conn, "SELECT nama_sensor FROM batas_sensor");
-    while ($row = mysqli_fetch_assoc($checkExisting)) {
-        $existingSensors[] = $row['nama_sensor'];
-    }
-    
-    $newSensors = [
-        ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
-        ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-        ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
-        ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
-    ];
-    
-    foreach ($newSensors as $sensor) {
-        if (!in_array($sensor[0], $existingSensors)) {
+        foreach ($defaultSensors as $sensor) {
             $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
-            mysqli_stmt_execute($stmt);
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+            }
+        }
+    } else {
+        // Cek dan tambahkan sensor baru jika belum ada
+        $existingSensors = [];
+        $checkExisting = mysqli_query($conn, "SELECT nama_sensor FROM batas_sensor");
+        if ($checkExisting) {
+            while ($row = mysqli_fetch_assoc($checkExisting)) {
+                $existingSensors[] = $row['nama_sensor'];
+            }
+        }
+        
+        $newSensors = [
+            ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
+            ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
+            ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
+            ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
+        ];
+        
+        foreach ($newSensors as $sensor) {
+            if (!in_array($sensor[0], $existingSensors)) {
+                $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+                if ($stmt) {
+                    mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
+                    mysqli_stmt_execute($stmt);
+                    mysqli_stmt_close($stmt);
+                }
+            }
         }
     }
-}
 
-// ========== CEK DAN BUAT TABEL PENGGUNA JIKA BELUM ADA ==========
-$checkPenggunaTable = mysqli_query($conn, "SHOW TABLES LIKE 'pengguna'");
-if (mysqli_num_rows($checkPenggunaTable) == 0) {
-    $createPenggunaTable = "CREATE TABLE pengguna (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        role ENUM('admin','user') DEFAULT 'user',
-        status ENUM('pending','approved','rejected') DEFAULT 'approved',
-        created_at DATETIME,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )";
-    mysqli_query($conn, $createPenggunaTable);
-}
+    // 2. Cek & Buat tabel pengguna jika belum ada
+    $checkPenggunaTable = mysqli_query($conn, "SHOW TABLES LIKE 'pengguna'");
+    if (!$checkPenggunaTable || mysqli_num_rows($checkPenggunaTable) == 0) {
+        $createPenggunaTable = "CREATE TABLE pengguna (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL UNIQUE,
+            password VARCHAR(255) NOT NULL,
+            role ENUM('admin','user') DEFAULT 'user',
+            status ENUM('pending','approved','rejected') DEFAULT 'approved',
+            created_at DATETIME,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        mysqli_query($conn, $createPenggunaTable);
+    }
 
-// ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
-$checkRole = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'role'");
-if (mysqli_num_rows($checkRole) == 0) {
-    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
-}
-$checkStatus = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'status'");
-if (mysqli_num_rows($checkStatus) == 0) {
-    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
-}
-$checkUpdatedAt = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'updated_at'");
-if (mysqli_num_rows($checkUpdatedAt) == 0) {
-    mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-}
+    // 3. Cek dan tambahkan kolom role, status, updated_at di tabel pengguna jika belum ada
+    $checkRole = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'role'");
+    if (!$checkRole || mysqli_num_rows($checkRole) == 0) {
+        mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
+    }
+    $checkStatus = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'status'");
+    if (!$checkStatus || mysqli_num_rows($checkStatus) == 0) {
+        mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
+    }
+    $checkUpdatedAt = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'updated_at'");
+    if (!$checkUpdatedAt || mysqli_num_rows($checkUpdatedAt) == 0) {
+        mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    }
 
-// ========== CEK DAN HAPUS KOLOM DEVICE JIKA ADA ==========
-$checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
-if (mysqli_num_rows($checkDevice) > 0) {
-    mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
+    // 4. Cek dan hapus kolom device di batas_sensor jika ada
+    $checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
+    if ($checkDevice && mysqli_num_rows($checkDevice) > 0) {
+        mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
+    }
+
+} catch (Throwable $e) {
+    error_log("Database initialization error (outdoor): " . $e->getMessage());
 }
 
 // ========== FILE UNTUK DATA LOKASI (JSON) ==========
