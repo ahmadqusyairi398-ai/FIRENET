@@ -49,9 +49,9 @@ try {
 
 // 2. KONEKSI DATABASE INDOOR
 try {
-    $pdo_indoor = new PDO("mysql:host=$host;dbname=$dbname_indoor;charset=utf8mb4", $username, $password);
+    $pdo_indoor = new PDO("mysql:host=$host;dbname=$dbname_firenet;charset=utf8mb4", $username, $password);
     $pdo_indoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn_indoor = mysqli_connect($host, $username, $password, $dbname_indoor);
+    $conn_indoor = mysqli_connect($host, $username, $password, $dbname_firenet);
 } catch(Exception $e) {
     // Koneksi indoor dibiarkan null jika gagal
 }
