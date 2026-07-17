@@ -695,7 +695,7 @@ body::before {
         
         <!-- ===== 3. PORTOFOLIO ===== -->
         <a href="portofolio.php">
-            <i class="fas fa-map-location-dot"></i>
+            <i class="fas fa-map-location"></i>
             Portofolio
         </a>
         
