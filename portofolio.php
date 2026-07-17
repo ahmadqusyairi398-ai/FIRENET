@@ -1021,15 +1021,15 @@ var locations = [
     // ===== SAMARINDA (2 titik) =====
     {
         "id": 9,
-        "nama_lokasi": "Samarinda - Pusat Kota",
-        "latitude": -0.5022,
-        "longitude": 117.1535
+        "nama_lokasi": "Auditorium 22 Dzulhijjah UINSI - Samarinda",
+        "latitude": -0.565490,
+        "longitude": 117.109518
     },
     {
         "id": 10,
-        "nama_lokasi": "Samarinda - Kawasan Bisnis",
-        "latitude": -0.4980,
-        "longitude": 117.1580
+        "nama_lokasi": "Parkiran Gedung Rektoran UNMUL - Samarinda",
+        "latitude": -0.468266,
+        "longitude": 117.154293
     }
 ];
 
