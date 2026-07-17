@@ -20,7 +20,10 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 // Koneksi Database
 require_once 'koneksi.php';
 
-if (!$conn_indoor) {
+// Gunakan koneksi indoor
+$conn = $conn_indoor;
+
+if (!$conn) {
     die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
         <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
         <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel, membuat database <strong>firenet</strong> di phpMyAdmin, dan mengimpor tabel-tabel yang diperlukan.</p>
@@ -37,13 +40,13 @@ function getSensorIconPHP($nama)
         "TEGANGAN" => "bolt",
         "ARUS" => "charging-station",
         "DAYA" => "solar-panel",
-        
+        "API" => "fire"
     ];
     return $icons[$nama] ?? "microchip";
 }
 
 // ========== CEK DAN BUAT TABEL BATAS_SENSOR JIKA BELUM ADA ==========
-$checkTable = mysqli_query($conn_indoor, "SHOW TABLES LIKE 'batas_sensor'");
+$checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'batas_sensor'");
 if (mysqli_num_rows($checkTable) == 0) {
     $createTable = "CREATE TABLE batas_sensor (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,28 +58,53 @@ if (mysqli_num_rows($checkTable) == 0) {
         deskripsi TEXT,
         last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )";
-    mysqli_query($conn_indoor, $createTable);
+    mysqli_query($conn, $createTable);
 
-    // Insert data default sensor
+    // Insert data default sensor - TANPA CO
     $defaultSensors = [
+        ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)'],
         ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
         ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
         ['KELEMBAPAN', 85, '%', 30, 95, 'Kelembapan udara'],
         ['TEGANGAN', 190, 'V', 150, 250, 'Tegangan listrik'],
         ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
         ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
-        
     ];
 
     foreach ($defaultSensors as $sensor) {
-        $stmt = mysqli_prepare($conn_indoor, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
         mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
         mysqli_stmt_execute($stmt);
     }
-} 
+} else {
+    // CEK DAN TAMBAHKAN SENSOR BARU JIKA BELUM ADA
+    $existingSensors = [];
+    $checkExisting = mysqli_query($conn, "SELECT nama_sensor FROM batas_sensor");
+    while ($row = mysqli_fetch_assoc($checkExisting)) {
+        $existingSensors[] = $row['nama_sensor'];
+    }
+    
+    $newSensors = [
+        ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)']
+    ];
+    
+    foreach ($newSensors as $sensor) {
+        if (!in_array($sensor[0], $existingSensors)) {
+            $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+            mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
+            mysqli_stmt_execute($stmt);
+        }
+    }
+    
+    // HAPUS SENSOR CO JIKA ADA
+    $checkCO = mysqli_query($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = 'CO'");
+    if (mysqli_num_rows($checkCO) > 0) {
+        mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = 'CO'");
+    }
+}
 
 // ========== CEK DAN BUAT TABEL LOGIN JIKA BELUM ADA ==========
-$checkLoginTable = mysqli_query($conn_indoor, "SHOW TABLES LIKE 'login'");
+$checkLoginTable = mysqli_query($conn, "SHOW TABLES LIKE 'login'");
 if (mysqli_num_rows($checkLoginTable) == 0) {
     $createLoginTable = "CREATE TABLE login (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,27 +115,27 @@ if (mysqli_num_rows($checkLoginTable) == 0) {
         created_at DATETIME,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )";
-    mysqli_query($conn_indoor, $createLoginTable);
+    mysqli_query($conn, $createLoginTable);
 }
 
 // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
-$checkRole = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'role'");
+$checkRole = mysqli_query($conn, "SHOW COLUMNS FROM login LIKE 'role'");
 if (mysqli_num_rows($checkRole) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
+    mysqli_query($conn, "ALTER TABLE login ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
 }
-$checkStatus = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'status'");
+$checkStatus = mysqli_query($conn, "SHOW COLUMNS FROM login LIKE 'status'");
 if (mysqli_num_rows($checkStatus) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
+    mysqli_query($conn, "ALTER TABLE login ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
 }
-$checkUpdatedAt = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'updated_at'");
+$checkUpdatedAt = mysqli_query($conn, "SHOW COLUMNS FROM login LIKE 'updated_at'");
 if (mysqli_num_rows($checkUpdatedAt) == 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    mysqli_query($conn, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
 }
 
 // ========== CEK DAN HAPUS KOLOM DEVICE JIKA ADA ==========
-$checkDevice = mysqli_query($conn_indoor, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
+$checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
 if (mysqli_num_rows($checkDevice) > 0) {
-    mysqli_query($conn_indoor, "ALTER TABLE batas_sensor DROP COLUMN device");
+    mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
 }
 
 // ========== FILE UNTUK DATA LOKASI (JSON) ==========
@@ -232,20 +260,20 @@ function countActiveAdmins($conn)
 }
 
 // ========== FUNGSI UNTUK BATAS SENSOR ==========
-function getSensorAlarmData($conn_indoor)
+function getSensorAlarmData($conn)
 {
     $sensors = [];
     $sql = "SELECT * FROM batas_sensor ORDER BY id ASC";
-    $query = mysqli_query($conn_indoor, $sql);
+    $query = mysqli_query($conn, $sql);
     while ($row = mysqli_fetch_assoc($query)) {
         $sensors[] = $row;
     }
     return $sensors;
 }
 
-function updateSensorAlarm($conn_indoor, $id, $nilai_alarm, $batas_min, $batas_max)
+function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max)
 {
-    $stmt = mysqli_prepare($conn_indoor, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, last_update = NOW() WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, last_update = NOW() WHERE id = ?");
     mysqli_stmt_bind_param($stmt, "dddi", $nilai_alarm, $batas_min, $batas_max, $id);
     return mysqli_stmt_execute($stmt);
 }
@@ -260,11 +288,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_sensor'])) {
     $deskripsi = trim($_POST['deskripsi'] ?? '');
     
     if (!empty($nama_sensor) && !empty($satuan)) {
-        $check = mysqli_query($conn_indoor, "SELECT id FROM batas_sensor WHERE nama_sensor = '$nama_sensor'");
+        $check = mysqli_query($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = '$nama_sensor'");
         if (mysqli_num_rows($check) > 0) {
             $error_message = "Sensor '$nama_sensor' sudah terdaftar!";
         } else {
-            $stmt = mysqli_prepare($conn_indoor, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
             mysqli_stmt_bind_param($stmt, "sdsdds", $nama_sensor, $nilai_alarm, $satuan, $batas_min, $batas_max, $deskripsi);
             if (mysqli_stmt_execute($stmt)) {
                 $success_message = "Sensor '$nama_sensor' berhasil ditambahkan!";
@@ -278,7 +306,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_sensor'])) {
 }
 
 $maxAdmin = 2;
-$adminCount = countActiveAdmins($conn_indoor);
+$adminCount = countActiveAdmins($conn);
 $canAddAdmin = $adminCount < $maxAdmin;
 
 // ========== PROSES POST ==========
@@ -295,12 +323,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($batas_min >= $batas_max) {
             $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
         } else {
-            $checkQuery = mysqli_query($conn_indoor, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
+            $checkQuery = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
             $sensor = mysqli_fetch_assoc($checkQuery);
 
             if ($sensor) {
                 if ($new_value >= $batas_min && $new_value <= $batas_max) {
-                    if (updateSensorAlarm($conn_indoor, $sensor_id, $new_value, $batas_min, $batas_max)) {
+                    if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max)) {
                         $success_message = "Nilai alarm dan batas range {$sensor['nama_sensor']} berhasil diupdate!";
                     } else {
                         $error_message = "Gagal mengupdate nilai alarm!";
@@ -372,12 +400,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $new_password = trim($_POST['new_password']);
         $new_role = $_POST['new_role'] ?? 'user';
         if (!empty($new_username) && !empty($new_password)) {
-            $cek = mysqli_query($conn_indoor, "SELECT id FROM login WHERE username = '$new_username'");
+            $cek = mysqli_query($conn, "SELECT id FROM login WHERE username = '$new_username'");
             if ($cek && mysqli_num_rows($cek) > 0) {
                 $error_message = "Username sudah terdaftar!";
             } else {
                 $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                mysqli_query($conn_indoor, "INSERT INTO login (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())");
+                mysqli_query($conn, "INSERT INTO login (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())");
                 $success_message = "Akun user berhasil ditambahkan!";
             }
         } else {
@@ -392,34 +420,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $edit_password = trim($_POST['edit_password']);
         if (!empty($edit_password)) {
             $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
-            mysqli_query($conn_indoor, "UPDATE login SET username='$edit_username', password='$password_hash', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+            mysqli_query($conn, "UPDATE login SET username='$edit_username', password='$password_hash', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
         } else {
-            mysqli_query($conn_indoor, "UPDATE login SET username='$edit_username', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+            mysqli_query($conn, "UPDATE login SET username='$edit_username', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
         }
         $success_message = "Akun user berhasil diperbarui!";
     }
 
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
-        $checkAdmin = mysqli_query($conn_indoor, "SELECT username FROM login WHERE id = $user_id AND username = 'admin'");
+        $checkAdmin = mysqli_query($conn, "SELECT username FROM login WHERE id = $user_id AND username = 'admin'");
         if ($checkAdmin && mysqli_num_rows($checkAdmin) > 0) {
             $error_message = "Tidak dapat menghapus akun admin utama!";
         } else {
-            $delete = mysqli_query($conn_indoor, "DELETE FROM login WHERE id = $user_id");
+            $delete = mysqli_query($conn, "DELETE FROM login WHERE id = $user_id");
             if ($delete) {
                 $success_message = "Akun user berhasil dihapus!";
             } else {
-                $error_message = "Gagal menghapus akun: " . mysqli_error($conn_indoor);
+                $error_message = "Gagal menghapus akun: " . mysqli_error($conn);
             }
         }
     }
 }
 
 // Ambil data terbaru
-$users = getUsers($conn_indoor);
+$users = getUsers($conn);
 $locations = getLocations($locationDataFile);
-$sensorAlarmData = getSensorAlarmData($conn_indoor);
-$adminCount = countActiveAdmins($conn_indoor);
+$sensorAlarmData = getSensorAlarmData($conn);
+$adminCount = countActiveAdmins($conn);
 $canAddAdmin = $adminCount < $maxAdmin;
 $totalUsers = count($users);
 ?>
@@ -1079,12 +1107,12 @@ $totalUsers = count($users);
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td>
-                                            <i class="fas fa-<?= getSensorIconPHP($sensor['nama_sensor']) ?>" style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#00b4db' ?>;"></i>
+                                            <i class="fas fa-<?= getSensorIconPHP($sensor['nama_sensor']) ?>" style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'API']) ? '#dc3545' : '#00b4db' ?>;"></i>
                                             <strong><?= htmlspecialchars($sensor['nama_sensor']) ?></strong>
                                             <br><small style="color:#666;"><?= htmlspecialchars($sensor['deskripsi']) ?></small>
                                         </td>
                                         <td>
-                                            <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#1e3c72' ?>;">
+                                            <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'API']) ? '#dc3545' : '#1e3c72' ?>;">
                                                 <?= number_format($sensor['nilai_alarm'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?>
                                             </strong>
                                         </td>
