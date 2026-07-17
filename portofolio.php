@@ -989,7 +989,7 @@ var locations = [
     // ===== PENAJAM PASER UTARA (5 titik - UPDATE TERBARU) =====
     {
         "id": 4,
-        "nama_lokasi": "Pelabuhan Speed - Penajam",
+        "nama_lokasi": "Pelabuhan Speed Boad - Penajam",
         "latitude": -1.243118,
         "longitude": 116.777328
     },
