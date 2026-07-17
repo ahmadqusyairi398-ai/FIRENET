@@ -11,7 +11,7 @@ $_SESSION['dashboard_type'] = 'indoor';
 
 // Jika belum login, redirect ke halaman login
 if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
+    header("Location: login.php?redirect=indoor");
     exit();
 }
 

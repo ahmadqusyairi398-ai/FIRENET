@@ -5,6 +5,7 @@ session_start();
 require_once 'koneksi.php';
 
 $error = '';
+$is_indoor = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor');
 
 // Proses Login
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -15,14 +16,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Username dan Password harus diisi!";
     } else {
         try {
-          
-                // Tentukan database dan tabel berdasarkan parameter redirect
-                $is_indoor = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor');
-
-                if ($is_indoor) {
-                    if (!$pdo_indoor) {
-                        throw new Exception("Database INDOOR ('firenet') gagal terhubung. Pastikan nama database 'firenet' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
-                    }
+            if ($is_indoor) {
+                if (!$pdo_indoor) {
+                    throw new Exception("Database INDOOR ('firenet') gagal terhubung. Pastikan nama database 'firenet' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
+                }
                     // Untuk indoor, gunakan pdo_indoor (database firenet) dan tabel login
                     $stmt = $pdo_indoor->prepare("SELECT * FROM login WHERE username = ?");
                 } else {
@@ -482,12 +479,27 @@ body::before {
 
 <div class="login-container">
     <div class="login-header">
-        <i class="fas fa-sign-in-alt"></i>
-        <h1>LOGIN</h1>
-        <p>Silakan masuk ke akun Anda</p>
+        <?php if ($is_indoor): ?>
+            <i class="fas fa-building" style="color: #ffb703; text-shadow: 0 0 10px rgba(255,183,3,0.5);"></i>
+            <h1>LOGIN INDOOR</h1>
+            <p>Sistem Deteksi & Monitoring Indoor</p>
+        <?php else: ?>
+            <i class="fas fa-tree" style="color: #2ec4b6; text-shadow: 0 0 10px rgba(46,196,182,0.5);"></i>
+            <h1>LOGIN OUTDOOR</h1>
+            <p>Sistem Deteksi & Monitoring Outdoor</p>
+        <?php endif; ?>
     </div>
     
     <div class="login-form">
+        <!-- Toggle Tabs -->
+        <div class="login-tabs" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 15px;">
+            <a href="login.php?redirect=indoor" class="tab-btn" style="flex: 1; text-align: center; padding: 12px 10px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; <?= $is_indoor ? 'background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; box-shadow: 0 4px 10px rgba(30,60,114,0.25);' : 'background: rgba(0,0,0,0.05); color: #555;' ?>">
+                <i class="fas fa-building"></i> Indoor
+            </a>
+            <a href="login.php?redirect=outdoor" class="tab-btn" style="flex: 1; text-align: center; padding: 12px 10px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; <?= !$is_indoor ? 'background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; box-shadow: 0 4px 10px rgba(30,60,114,0.25);' : 'background: rgba(0,0,0,0.05); color: #555;' ?>">
+                <i class="fas fa-tree"></i> Outdoor
+            </a>
+        </div>
         
         <?php if ($error): ?>
         <div class="alert alert-error">

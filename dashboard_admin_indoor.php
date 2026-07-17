@@ -11,7 +11,7 @@ $_SESSION['dashboard_type'] = 'indoor';
 
 // Proteksi: Hanya admin yang bisa mengakses halaman ini
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: login.php");
+    header("Location: login.php?redirect=indoor");
     exit();
 }
 
