@@ -3,41 +3,107 @@ session_start();
 require_once 'koneksi.php';
 
 $test_result = '';
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] === 'test_login') {
-    $target_db = $_POST['target_db'] === 'indoor' ? 'indoor' : 'outdoor';
-    $test_user = trim($_POST['username']);
-    $test_pass = $_POST['password'];
-    
-    $pdo_conn = ($target_db === 'indoor') ? $pdo_indoor : $pdo_outdoor;
-    
-    try {
-        $table_name = ($target_db === 'indoor') ? 'login' : 'pengguna';
-        $stmt = $pdo_conn->prepare("SELECT * FROM $table_name WHERE username = ?");
-        $stmt->execute([$test_user]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'test_login') {
+        $target_db = $_POST['target_db'] === 'indoor' ? 'indoor' : 'outdoor';
+        $test_user = trim($_POST['username']);
+        $test_pass = $_POST['password'];
         
-        if (!$user) {
-            $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Username <code>" . htmlspecialchars($test_user) . "</code> tidak ditemukan di database <strong>" . strtoupper($target_db) . "</strong>.</div>";
-        } else {
-            $db_pass = $user['password'];
-            $is_hashed = (strpos($db_pass, '$2y$') === 0 || strpos($db_pass, '$2a$') === 0);
+        $pdo_conn = ($target_db === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+        
+        try {
+            $table_name = ($target_db === 'indoor') ? 'login' : 'pengguna';
+            $stmt = $pdo_conn->prepare("SELECT * FROM $table_name WHERE username = ?");
+            $stmt->execute([$test_user]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if (!$is_hashed) {
-                if ($test_pass === $db_pass) {
-                    $test_result = "<div class='alert alert-warning'><strong>Gagal:</strong> Password cocok secara teks biasa (Plain Text), tetapi <strong>sistem menggunakan password_verify()</strong>. Di database, password harus di-hash (misalnya dengan <code>password_hash()</code>). Ubah password di database menjadi hash bcrypt!</div>";
-                } else {
-                    $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Password salah, dan format password di database bukan format hash (Plain Text).</div>";
-                }
+            if (!$user) {
+                $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Username <code>" . htmlspecialchars($test_user) . "</code> tidak ditemukan di database <strong>" . strtoupper($target_db) . "</strong>.</div>";
             } else {
-                if (password_verify($test_pass, $db_pass)) {
-                    $test_result = "<div class='alert alert-success'><strong>Berhasil!</strong> Autentikasi sukses untuk username <code>" . htmlspecialchars($test_user) . "</code> di database <strong>" . strtoupper($target_db) . "</strong>. Role: <code>" . htmlspecialchars($user['role'] ?? 'tidak diatur (default ke user)') . "</code>.</div>";
+                $db_pass = $user['password'];
+                $is_hashed = (strpos($db_pass, '$2y$') === 0 || strpos($db_pass, '$2a$') === 0);
+                
+                if (!$is_hashed) {
+                    if ($test_pass === $db_pass) {
+                        $test_result = "<div class='alert alert-warning'><strong>Gagal:</strong> Password cocok secara teks biasa (Plain Text), tetapi <strong>sistem menggunakan password_verify()</strong>. Di database, password harus di-hash (misalnya dengan <code>password_hash()</code>). Ubah password di database menjadi hash bcrypt!</div>";
+                    } else {
+                        $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Password salah, dan format password di database bukan format hash (Plain Text).</div>";
+                    }
                 } else {
-                    $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Password tidak cocok dengan hash yang ada di database.</div>";
+                    if (password_verify($test_pass, $db_pass)) {
+                        $test_result = "<div class='alert alert-success'><strong>Berhasil!</strong> Autentikasi sukses untuk username <code>" . htmlspecialchars($test_user) . "</code> di database <strong>" . strtoupper($target_db) . "</strong>. Role: <code>" . htmlspecialchars($user['role'] ?? 'tidak diatur (default ke user)') . "</code>.</div>";
+                    } else {
+                        $test_result = "<div class='alert alert-danger'><strong>Gagal:</strong> Password tidak cocok dengan hash yang ada di database.</div>";
+                    }
                 }
             }
+        } catch (PDOException $e) {
+            $test_result = "<div class='alert alert-danger'><strong>Error:</strong> " . $e->getMessage() . "</div>";
         }
-    } catch (PDOException $e) {
-        $test_result = "<div class='alert alert-danger'><strong>Error:</strong> " . $e->getMessage() . "</div>";
+    } else if ($_POST['action'] === 'create_user') {
+        $target_db = $_POST['target_db'] === 'indoor' ? 'indoor' : 'outdoor';
+        $new_user = trim($_POST['new_username']);
+        $new_pass = $_POST['new_password'];
+        $new_role = $_POST['new_role'] === 'admin' ? 'admin' : 'user';
+        
+        $pdo_conn = ($target_db === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+        
+        try {
+            if (!$pdo_conn) {
+                throw new Exception("Koneksi database gagal. Periksa koneksi.php Anda.");
+            }
+            $table_name = ($target_db === 'indoor') ? 'login' : 'pengguna';
+            
+            // Cek apakah username sudah ada
+            $stmt = $pdo_conn->prepare("SELECT id FROM $table_name WHERE username = ?");
+            $stmt->execute([$new_user]);
+            $exists = $stmt->fetch();
+            
+            // Hash password dengan Bcrypt
+            $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+            
+            // Cek struktur kolom tabel
+            $columns = [];
+            $colQuery = $pdo_conn->query("SHOW COLUMNS FROM $table_name");
+            while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
+                $columns[] = $col['Field'];
+            }
+            
+            if ($exists) {
+                // Update password dan role (jika kolom ada)
+                if (in_array('role', $columns)) {
+                    $stmt = $pdo_conn->prepare("UPDATE $table_name SET password = ?, role = ? WHERE username = ?");
+                    $stmt->execute([$hashed, $new_role, $new_user]);
+                } else {
+                    $stmt = $pdo_conn->prepare("UPDATE $table_name SET password = ? WHERE username = ?");
+                    $stmt->execute([$hashed, $new_user]);
+                }
+                $test_result = "<div class='alert alert-success'><strong>Berhasil:</strong> Akun <code>" . htmlspecialchars($new_user) . "</code> di database <strong>" . strtoupper($target_db) . "</strong> telah diperbarui dengan password ter-hash yang baru!</div>";
+            } else {
+                // Insert baru
+                if (in_array('role', $columns)) {
+                    // Cek created_at
+                    if (in_array('created_at', $columns)) {
+                        $stmt = $pdo_conn->prepare("INSERT INTO $table_name (username, password, role, created_at) VALUES (?, ?, ?, NOW())");
+                        $stmt->execute([$new_user, $hashed, $new_role]);
+                    } else {
+                        $stmt = $pdo_conn->prepare("INSERT INTO $table_name (username, password, role) VALUES (?, ?, ?)");
+                        $stmt->execute([$new_user, $hashed, $new_role]);
+                    }
+                } else {
+                    if (in_array('created_at', $columns)) {
+                        $stmt = $pdo_conn->prepare("INSERT INTO $table_name (username, password, created_at) VALUES (?, ?, NOW())");
+                        $stmt->execute([$new_user, $hashed]);
+                    } else {
+                        $stmt = $pdo_conn->prepare("INSERT INTO $table_name (username, password) VALUES (?, ?)");
+                        $stmt->execute([$new_user, $hashed]);
+                    }
+                }
+                $test_result = "<div class='alert alert-success'><strong>Berhasil:</strong> Akun <code>" . htmlspecialchars($new_user) . "</code> di database <strong>" . strtoupper($target_db) . "</strong> berhasil dibuat dengan password ter-hash!</div>";
+            }
+        } catch (Exception $e) {
+            $test_result = "<div class='alert alert-danger'><strong>Error Pembuatan Akun:</strong> " . $e->getMessage() . "</div>";
+        }
     }
 }
 ?>
@@ -279,6 +345,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             <input type="password" name="password" id="password" required>
         </div>
         <button type="submit">Uji Autentikasi</button>
+    </form>
+
+    <h2><i class="fas fa-user-plus"></i> Tambah / Perbarui Akun Pengguna</h2>
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Gunakan form ini untuk membuat user baru atau memperbarui password user lama yang belum ter-hash (Bcrypt) di database.</p>
+    <form method="POST" action="">
+        <input type="hidden" name="action" value="create_user">
+        <div class="form-group">
+            <label for="new_target_db">Pilih Database Target</label>
+            <select name="target_db" id="new_target_db">
+                <option value="indoor">INDOOR (firenet)</option>
+                <option value="outdoor">OUTDOOR (outdoor)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="new_username">Username Baru / Lama</label>
+            <input type="text" name="new_username" id="new_username" required>
+        </div>
+        <div class="form-group">
+            <label for="new_password">Password</label>
+            <input type="password" name="new_password" id="new_password" required>
+        </div>
+        <div class="form-group">
+            <label for="new_role">Role</label>
+            <select name="new_role" id="new_role">
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+            </select>
+        </div>
+        <button type="submit" style="background: #2ec4b6;">Buat / Update Akun</button>
     </form>
 
     <?= $test_result ?>
