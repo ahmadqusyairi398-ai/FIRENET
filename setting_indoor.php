@@ -281,7 +281,17 @@ function getSensorAlarmData($conn)
         $query = mysqli_query($conn, $sql);
         if ($query) {
             while ($row = mysqli_fetch_assoc($query)) {
-                $sensors[] = $row;
+                // Pastikan semua nilai memiliki default jika NULL
+                $sensors[] = [
+                    'id' => isset($row['id']) ? $row['id'] : 0,
+                    'nama_sensor' => isset($row['nama_sensor']) ? $row['nama_sensor'] : '-',
+                    'nilai_alarm' => isset($row['nilai_alarm']) ? floatval($row['nilai_alarm']) : 0,
+                    'satuan' => isset($row['satuan']) ? $row['satuan'] : '',
+                    'batas_min' => isset($row['batas_min']) ? floatval($row['batas_min']) : 0,
+                    'batas_max' => isset($row['batas_max']) ? floatval($row['batas_max']) : 100,
+                    'deskripsi' => isset($row['deskripsi']) ? $row['deskripsi'] : '',
+                    'last_update' => isset($row['last_update']) ? $row['last_update'] : date('Y-m-d H:i:s')
+                ];
             }
         }
     }
@@ -1132,30 +1142,41 @@ $totalUsers = count($users);
                         <tbody>
                             <?php if (count($sensorAlarmData) > 0): ?>
                                 <?php foreach ($sensorAlarmData as $index => $sensor): ?>
+                                    <?php 
+                                    // Handle null values dengan aman
+                                    $nama_sensor = isset($sensor['nama_sensor']) ? htmlspecialchars($sensor['nama_sensor']) : '-';
+                                    $deskripsi = isset($sensor['deskripsi']) ? htmlspecialchars($sensor['deskripsi']) : '';
+                                    $satuan = isset($sensor['satuan']) ? htmlspecialchars($sensor['satuan']) : '';
+                                    $nilai_alarm = isset($sensor['nilai_alarm']) ? number_format(floatval($sensor['nilai_alarm']), 2) : '0.00';
+                                    $batas_min = isset($sensor['batas_min']) ? number_format(floatval($sensor['batas_min']), 2) : '0.00';
+                                    $batas_max = isset($sensor['batas_max']) ? number_format(floatval($sensor['batas_max']), 2) : '0.00';
+                                    $last_update = isset($sensor['last_update']) ? $sensor['last_update'] : '-';
+                                    $sensor_id = isset($sensor['id']) ? $sensor['id'] : 0;
+                                    ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td>
-                                            <i class="fas fa-<?= getSensorIconPHP($sensor['nama_sensor']) ?>" style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'API']) ? '#dc3545' : '#00b4db' ?>;"></i>
-                                            <strong><?= htmlspecialchars($sensor['nama_sensor']) ?></strong>
-                                            <br><small style="color:#666;"><?= htmlspecialchars($sensor['deskripsi']) ?></small>
+                                            <i class="fas fa-<?= getSensorIconPHP($nama_sensor) ?>" style="color: <?= in_array($nama_sensor, ['ASAP', 'API']) ? '#dc3545' : '#00b4db' ?>;"></i>
+                                            <strong><?= $nama_sensor ?></strong>
+                                            <br><small style="color:#666;"><?= $deskripsi ?></small>
                                         </td>
                                         <td>
-                                            <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'API']) ? '#dc3545' : '#1e3c72' ?>;">
-                                                <?= number_format($sensor['nilai_alarm'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?>
+                                            <strong style="color: <?= in_array($nama_sensor, ['ASAP', 'API']) ? '#dc3545' : '#1e3c72' ?>;">
+                                                <?= $nilai_alarm ?> <?= $satuan ?>
                                             </strong>
                                         </td>
-                                        <td><?= htmlspecialchars($sensor['satuan']) ?></td>
-                                        <td><?= number_format($sensor['batas_min'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
-                                        <td><?= number_format($sensor['batas_max'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
-                                        <td><?= $sensor['last_update'] ?></td>
+                                        <td><?= $satuan ?></td>
+                                        <td><?= $batas_min ?> <?= $satuan ?></td>
+                                        <td><?= $batas_max ?> <?= $satuan ?></td>
+                                        <td><?= $last_update ?></td>
                                         <td>
                                             <button type="button" class="btn-warning btn-edit-alarm" 
-                                                data-id="<?= $sensor['id'] ?>"
-                                                data-nama="<?= htmlspecialchars($sensor['nama_sensor']) ?>"
-                                                data-nilai="<?= $sensor['nilai_alarm'] ?>"
-                                                data-satuan="<?= htmlspecialchars($sensor['satuan']) ?>"
-                                                data-min="<?= $sensor['batas_min'] ?>"
-                                                data-max="<?= $sensor['batas_max'] ?>">
+                                                data-id="<?= $sensor_id ?>"
+                                                data-nama="<?= $nama_sensor ?>"
+                                                data-nilai="<?= isset($sensor['nilai_alarm']) ? $sensor['nilai_alarm'] : 0 ?>"
+                                                data-satuan="<?= $satuan ?>"
+                                                data-min="<?= isset($sensor['batas_min']) ? $sensor['batas_min'] : 0 ?>"
+                                                data-max="<?= isset($sensor['batas_max']) ? $sensor['batas_max'] : 0 ?>">
                                                 <i class="fas fa-edit"></i> EDIT
                                             </button>
                                         </td>
@@ -1541,6 +1562,14 @@ $totalUsers = count($users);
         // ========== FUNGSI OPEN EDIT ALARM MODAL ==========
         function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
             try {
+                // Set default values if null or undefined
+                id = id || 0;
+                nama = nama || '-';
+                nilai = nilai || 0;
+                satuan = satuan || '';
+                min = min || 0;
+                max = max || 100;
+                
                 document.getElementById('edit_sensor_id').value = id;
                 document.getElementById('edit_sensor_name').value = nama;
                 document.getElementById('edit_batas_min').value = min;
