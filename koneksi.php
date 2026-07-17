@@ -18,10 +18,10 @@ if ($is_localhost) {
     // Silakan sesuaikan dengan database yang Anda buat di cPanel/Hosting Anda.
     // Biasanya di cPanel terdapat prefix nama pengguna, contoh: inovasij_firenet
     $host = "localhost"; 
-    $username = "inovasij_ta_user"; // UBAH: Sesuaikan dengan nama user database Anda di cPanel
+    $username = "ta_user"; // UBAH: Sesuaikan dengan nama user database Anda di cPanel
     $password = "rahasiaTA123!";   // UBAH: Masukkan password user database Anda
-    $dbname_outdoor = "inovasij_outdoor"; // UBAH: Sesuaikan dengan nama database outdoor Anda
-    $dbname_indoor = "inovasij_firenet";   // UBAH: Sesuaikan dengan nama database indoor Anda
+    $dbname_outdoor = "outdoor"; // UBAH: Sesuaikan dengan nama database outdoor Anda
+    $dbname_indoor = "firenet";   // UBAH: Sesuaikan dengan nama database indoor Anda
 } else {
     // ==========================================================
     // 3. KREDENSIAL DATABASE DOMAIN LAIN (PRODUCTION)
