@@ -935,12 +935,12 @@ document.addEventListener('click', function(event) {
 });
 
 // ========== MAPS ==========
-// Inisialisasi peta (pindahkan zoom control ke bottomright agar tidak terhalang search bar)
+// Inisialisasi peta
 var defaultLat = -1.20249;
 var defaultLng = 116.88708;
 var map = L.map('map', {
     zoomControl: false
-}).setView([defaultLat, defaultLng], 16);
+}).setView([defaultLat, defaultLng], 10);
 
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -964,25 +964,72 @@ var fireIcon = L.divIcon({
     className: 'fire-marker'
 });
 
-// Data lokasi default (fallback)
+// ========== DATA LOKASI LENGKAP ==========
 var locations = [
+    // ===== POLITEKNIK NEGERI BALIKPAPAN (3 titik) =====
     {
         "id": 1,
-        "nama_lokasi": "Politeknik Negeri Balikpapan",
+        "nama_lokasi": "Politeknik Negeri Balikpapan - Kampus Utama",
         "latitude": -1.20249,
         "longitude": 116.88708
     },
     {
         "id": 2,
         "nama_lokasi": "Gedung A - Kampus Utama",
-        "latitude": -1.203,
-        "longitude": 116.8875
+        "latitude": -1.20300,
+        "longitude": 116.88750
     },
     {
         "id": 3,
-        "nama_lokasi": "Laboratorium Komputer",
-        "latitude": -1.202,
-        "longitude": 116.8868
+        "nama_lokasi": "Laboratorium Komputer - Kampus Utama",
+        "latitude": -1.20200,
+        "longitude": 116.88680
+    },
+    
+    // ===== PENAJAM PASER UTARA (5 titik) =====
+    {
+        "id": 4,
+        "nama_lokasi": "Penajam Paser Utara - Kantor Bupati",
+        "latitude": -0.3180,
+        "longitude": 116.5980
+    },
+    {
+        "id": 5,
+        "nama_lokasi": "Penajam Paser Utara - Pusat Kota",
+        "latitude": -0.3200,
+        "longitude": 116.6000
+    },
+    {
+        "id": 6,
+        "nama_lokasi": "Penajam Paser Utara - Kawasan Industri",
+        "latitude": -0.3150,
+        "longitude": 116.6050
+    },
+    {
+        "id": 7,
+        "nama_lokasi": "Penajam Paser Utara - Pelabuhan",
+        "latitude": -0.3220,
+        "longitude": 116.5950
+    },
+    {
+        "id": 8,
+        "nama_lokasi": "Penajam Paser Utara - Kawasan Perumahan",
+        "latitude": -0.3100,
+        "longitude": 116.6100
+    },
+    
+    // ===== SAMARINDA (2 titik) =====
+    {
+        "id": 9,
+        "nama_lokasi": "Samarinda - Pusat Kota",
+        "latitude": -0.5022,
+        "longitude": 117.1535
+    },
+    {
+        "id": 10,
+        "nama_lokasi": "Samarinda - Kawasan Bisnis",
+        "latitude": -0.4980,
+        "longitude": 117.1580
     }
 ];
 
@@ -1125,32 +1172,24 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Load lokasi dari JSON jika tersedia, jika gagal gunakan fallback
-function loadLocations() {
-    fetch('locations_data.json')
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (Array.isArray(data) && data.length > 0) {
-                locations = data;
-            }
-            renderMarkers();
-            if (locations.length > 0) {
-                selectLocation(locations[0].id, false);
-            }
-        })
-        .catch(function(err) {
-            console.log('Menggunakan fallback data lokasi karena:', err);
-            renderMarkers();
-            if (locations.length > 0) {
-                selectLocation(locations[0].id, false);
-            }
-        });
+// ========== INISIALISASI ==========
+function initMap() {
+    renderMarkers();
+    // Zoom ke area yang mencakup semua lokasi (Balikpapan, Penajam, Samarinda)
+    var bounds = L.latLngBounds([
+        [-1.22, 116.88],  // Balikpapan
+        [-0.31, 116.61],  // Penajam
+        [-0.50, 117.16]   // Samarinda
+    ]);
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+    
+    if (locations.length > 0) {
+        selectLocation(locations[0].id, false);
+    }
 }
 
-// Jalankan load data saat halaman dimuat
-window.addEventListener('DOMContentLoaded', loadLocations);
+// Jalankan saat halaman dimuat
+window.addEventListener('DOMContentLoaded', initMap);
 </script>
 
 </body>
