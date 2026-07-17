@@ -37,9 +37,7 @@ function getSensorIconPHP($nama)
         "TEGANGAN" => "bolt",
         "ARUS" => "charging-station",
         "DAYA" => "solar-panel",
-        "KECEPATAN ANGIN" => "wind",
-        "ARAH ANGIN" => "compass",
-        "CO" => "skull-crossbones"
+        
     ];
     return $icons[$nama] ?? "microchip";
 }
@@ -67,9 +65,7 @@ if (mysqli_num_rows($checkTable) == 0) {
         ['TEGANGAN', 190, 'V', 150, 250, 'Tegangan listrik'],
         ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
         ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
-        ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-        ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
-        ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
+        
     ];
 
     foreach ($defaultSensors as $sensor) {
@@ -77,29 +73,7 @@ if (mysqli_num_rows($checkTable) == 0) {
         mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
         mysqli_stmt_execute($stmt);
     }
-} else {
-    // CEK DAN TAMBAHKAN SENSOR BARU JIKA BELUM ADA
-    $existingSensors = [];
-    $checkExisting = mysqli_query($conn_indoor, "SELECT nama_sensor FROM batas_sensor");
-    while ($row = mysqli_fetch_assoc($checkExisting)) {
-        $existingSensors[] = $row['nama_sensor'];
-    }
-    
-    $newSensors = [
-        ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
-        ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-        ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
-        ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
-    ];
-    
-    foreach ($newSensors as $sensor) {
-        if (!in_array($sensor[0], $existingSensors)) {
-            $stmt = mysqli_prepare($conn_indoor, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt, "sdsdds", $sensor[0], $sensor[1], $sensor[2], $sensor[3], $sensor[4], $sensor[5]);
-            mysqli_stmt_execute($stmt);
-        }
-    }
-}
+} 
 
 // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
 $checkRole = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'role'");
