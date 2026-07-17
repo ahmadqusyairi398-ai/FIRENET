@@ -94,6 +94,21 @@ if (mysqli_num_rows($checkTable) == 0) {
     }
 }
 
+// ========== CEK DAN BUAT TABEL PENGGUNA JIKA BELUM ADA ==========
+$checkPenggunaTable = mysqli_query($conn, "SHOW TABLES LIKE 'pengguna'");
+if (mysqli_num_rows($checkPenggunaTable) == 0) {
+    $createPenggunaTable = "CREATE TABLE pengguna (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role ENUM('admin','user') DEFAULT 'user',
+        status ENUM('pending','approved','rejected') DEFAULT 'approved',
+        created_at DATETIME,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )";
+    mysqli_query($conn, $createPenggunaTable);
+}
+
 // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
 $checkRole = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'role'");
 if (mysqli_num_rows($checkRole) == 0) {

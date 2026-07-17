@@ -75,6 +75,21 @@ if (mysqli_num_rows($checkTable) == 0) {
     }
 } 
 
+// ========== CEK DAN BUAT TABEL LOGIN JIKA BELUM ADA ==========
+$checkLoginTable = mysqli_query($conn_indoor, "SHOW TABLES LIKE 'login'");
+if (mysqli_num_rows($checkLoginTable) == 0) {
+    $createLoginTable = "CREATE TABLE login (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role ENUM('admin','user') DEFAULT 'user',
+        status ENUM('pending','approved','rejected') DEFAULT 'approved',
+        created_at DATETIME,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )";
+    mysqli_query($conn_indoor, $createLoginTable);
+}
+
 // ========== CEK DAN TAMBAHKAN KOLOM YANG DIPERLUKAN ==========
 $checkRole = mysqli_query($conn_indoor, "SHOW COLUMNS FROM login LIKE 'role'");
 if (mysqli_num_rows($checkRole) == 0) {
