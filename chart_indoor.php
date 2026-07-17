@@ -22,44 +22,46 @@ if (!$pdo_indoor) {
     </div>");
 }
 $columns = [];
-$colQuery = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
-while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
-    $columns[] = $col['Field'];
-}
+$rows = [];
 
-// Tentukan kolom tanggal/waktu
-$dateColumn = null;
-$possibleDate = ['tanggal_dan_waktu', 'timestamp', 'created_at', 'tanggal', 'waktu', 'datetime'];
-foreach ($possibleDate as $col) {
-    if (in_array($col, $columns)) {
-        $dateColumn = $col;
-        break;
+try {
+    $colQuery = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
+    while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
+        $columns[] = $col['Field'];
     }
-}
-if (!$dateColumn && !empty($columns)) {
-    $dateColumn = $columns[0];
-}
 
-// Bangun query dengan sensor baru
-$selectFields = ['id'];
-if ($dateColumn) $selectFields[] = "$dateColumn as waktu";
-else $selectFields[] = "'' as waktu";
+    // Tentukan kolom tanggal/waktu
+    $dateColumn = null;
+    $possibleDate = ['tanggal_dan_waktu', 'timestamp', 'created_at', 'tanggal', 'waktu', 'datetime'];
+    foreach ($possibleDate as $col) {
+        if (in_array($col, $columns)) {
+            $dateColumn = $col;
+            break;
+        }
+    }
+    if (!$dateColumn && !empty($columns)) {
+        $dateColumn = $columns[0];
+    }
 
-// Daftar sensor yang ditampilkan
-$sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'api'];
-foreach ($sensorFields as $sf) {
-    if (in_array($sf, $columns)) $selectFields[] = $sf;
-    else $selectFields[] = "'' as $sf";
-}
+    // Bangun query dengan sensor baru
+    $selectFields = ['id'];
+    if ($dateColumn) $selectFields[] = "$dateColumn as waktu";
+    else $selectFields[] = "'' as waktu";
 
-$query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
-if ($dateColumn) $query .= " ORDER BY $dateColumn ASC";
-$stmt = $pdo_indoor->prepare($query);
-$stmt->execute();
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Daftar sensor yang ditampilkan
+    $sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'api'];
+    foreach ($sensorFields as $sf) {
+        if (in_array($sf, $columns)) $selectFields[] = $sf;
+        else $selectFields[] = "'' as $sf";
+    }
 
-// Jika tabel tidak ada atau kolom baru belum ada, buat/update tabel
-if (empty($columns) || !in_array('daya', $columns) || !in_array('api', $columns)) {
+    $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
+    if ($dateColumn) $query .= " ORDER BY $dateColumn ASC";
+    $stmt = $pdo_indoor->prepare($query);
+    $stmt->execute();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch(Exception $e) {
+    // Jika tabel tidak ada atau bermasalah, buat tabel baru
     $create = "CREATE TABLE IF NOT EXISTS data_sensor (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tanggal_dan_waktu DATETIME NOT NULL,
@@ -73,19 +75,33 @@ if (empty($columns) || !in_array('daya', $columns) || !in_array('api', $columns)
     )";
     $pdo_indoor->exec($create);
     
-    // Cek dan tambahkan kolom baru jika belum ada
+    // Ambil ulang kolom setelah tabel dibuat
+    try {
+        $colQuery = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
+        while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
+            $columns[] = $col['Field'];
+        }
+    } catch(Exception $ex) {
+        // Abaikan jika gagal
+    }
+}
+
+// Cek dan tambahkan kolom baru jika belum ada
+if (!empty($columns)) {
     $checkColumns = ['daya', 'api'];
     foreach ($checkColumns as $col) {
-        $check = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE '$col'");
-        if ($check->rowCount() == 0) {
-            if ($col === 'api') {
-                $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN api VARCHAR(20) DEFAULT 'Aman'");
-            } else {
-                $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN $col DECIMAL(6,2) DEFAULT 0");
+        if (!in_array($col, $columns)) {
+            try {
+                if ($col === 'api') {
+                    $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN api VARCHAR(20) DEFAULT 'Aman'");
+                } else {
+                    $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN $col DECIMAL(6,2) DEFAULT 0");
+                }
+            } catch(Exception $ex) {
+                // Abaikan jika gagal
             }
         }
     }
-    $rows = [];
 }
 
 // Konversi data ke format numerik untuk grafik
