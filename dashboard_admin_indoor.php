@@ -27,7 +27,7 @@ $dashboard_type = 'indoor';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Admin - Fire Detection</title>
+<title>Dashboard Admin Indoor - Fire Detection</title>
 
 <!-- Chart JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -254,10 +254,8 @@ body::before {
 .box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
 .box b { display: block; font-size: 20px; margin-top: 5px; }
 .box small { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
-.box.solar-box { background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); }
+.box.api-box { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); }
 .box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
-.box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
-.box.angin-box { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -468,11 +466,7 @@ canvas {
     <div class="header">
         <div class="header-left">
             <h2>
-                <?php if ($dashboard_type === 'indoor'): ?>
-                    <i class="fas fa-building"></i> Dashboard Monitoring Indoor
-                <?php else: ?>
-                    <i class="fas fa-tree"></i> Dashboard Monitoring Outdoor
-                <?php endif; ?>
+                <i class="fas fa-building"></i> Dashboard Monitoring Indoor
             </h2>
             
             <!-- Status Node di dalam Header -->
@@ -509,52 +503,21 @@ canvas {
     <!-- ============================================================ -->
     <div class="card">
         <h3>
-            <?php if ($dashboard_type === 'indoor'): ?>
-                <i class="fas fa-building"></i> Data Sensor Real Time (Indoor)
-            <?php else: ?>
-                <i class="fas fa-solar-panel"></i> Data Sensor Outdoor
-            <?php endif; ?>
+            <i class="fas fa-building"></i> Data Sensor Real Time (Indoor)
             <span id="waktu" style="font-size:12px; color:#666;">-</span>
         </h3>
         <div class="grid">
-            <?php if ($dashboard_type === 'indoor'): ?>
-                <!-- Indoor Sensors -->
-                <div class="box api-box" id="api-box"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api">-</b></div>
-                <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap">-</b></div>
-                <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
-                <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
-                <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Listrik</div><b id="tegangan">-</b><small>V AC</small></div>
-                <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Listrik</div><b id="arus">-</b><small>A</small></div>
-            <?php else: ?>
-                <!-- Outdoor Sensors -->
-                <!-- Solar Panel Sensors -->
-                <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan">-</b><small>V DC</small></div>
-                <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus">-</b><small>A DC</small></div>
-                <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya">-</b><small>Watt</small></div>
-                
-                <!-- Wind Sensors -->
-                <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah">-</b></div>
-                <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin">-</b></div>
-                
-                <!-- Asap Sensor -->
-                <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Asap</div><b id="asap">-</b></div>
-                
-                <!-- Environment Sensors -->
-                <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
-                <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
-                
-                <!-- Gas Sensor -->
-                <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co">-</b></div>
-            <?php endif; ?>
+            <!-- Indoor Sensors -->
+            <div class="box api-box" id="api-box"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api">-</b></div>
+            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap">-</b></div>
+            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
+            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
+            <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Listrik</div><b id="tegangan">-</b><small>V AC</small></div>
+            <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Listrik</div><b id="arus">-</b><small>A</small></div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
-            <?php if ($dashboard_type === 'indoor'): ?>
-                <i class="fas fa-building" style="color: #0083b0;"></i>
-                <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Sensor terpasang di dalam gedung untuk deteksi dini kebakaran.</span>
-            <?php else: ?>
-                <i class="fas fa-info-circle" style="color: #0083b0;"></i>
-                <span style="color: #1e3c72; font-size: 13px;"><strong>Sistem Deteksi Dini Kebakaran</strong> - Sensor terpasang di area rawan kebakaran.</span>
-            <?php endif; ?>
+            <i class="fas fa-building" style="color: #0083b0;"></i>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Sensor terpasang di dalam gedung untuk deteksi dini kebakaran.</span>
         </div>
     </div>
 
@@ -570,7 +533,7 @@ canvas {
     <!-- ========== 4. MAPS / LOKASI ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat (<?php echo $dashboard_type === 'indoor' ? 'Indoor' : 'Outdoor'; ?>) <span style="font-size: 12px; color: #666; margin-left: auto;"><?php echo $dashboard_type === 'indoor' ? 'Gedung Perkantoran' : 'Area Terbuka'; ?></span></h3>
+        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat (Indoor) <span style="font-size: 12px; color: #666; margin-left: auto;">Gedung Perkantoran</span></h3>
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
@@ -579,9 +542,9 @@ canvas {
                 <span class="value" id="coordinates">-1.202490, 116.887080</span>
             </div>
             <div class="location-info-item">
-                <i class="<?php echo $dashboard_type === 'indoor' ? 'fas fa-building' : 'fas fa-tree'; ?>"></i>
+                <i class="fas fa-building"></i>
                 <span class="label">Zona:</span>
-                <span class="value" id="zone"><?php echo $dashboard_type === 'indoor' ? 'Zona Indoor (Gedung)' : 'Zona Outdoor (Area Terbuka)'; ?></span>
+                <span class="value" id="zone">Zona Indoor (Gedung)</span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-flag-checkered"></i>
@@ -645,8 +608,6 @@ document.addEventListener('keydown', function(e) {
 var fixedLat = -1.20249;
 var fixedLng = 116.88708;
 
-const dashboardType = '<?php echo $dashboard_type; ?>';
-
 // Inisialisasi peta
 var map = L.map('map').setView([fixedLat, fixedLng], 15);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -656,57 +617,37 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     minZoom: 3
 }).addTo(map);
 
-// Icon marker
-let safeIcon, dangerIcon;
+// Icon marker untuk Indoor
+var safeIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-building" style="color: white; font-size: 18px;"></i></div>',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    className: 'indoor-marker'
+});
 
-if (dashboardType === 'indoor') {
-    safeIcon = L.divIcon({
-        html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-building" style="color: white; font-size: 18px;"></i></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-        className: 'indoor-marker'
-    });
-    
-    dangerIcon = L.divIcon({
-        html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-        className: 'indoor-marker-danger'
-    });
-} else {
-    safeIcon = L.divIcon({
-        html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-check-circle" style="color: white; font-size: 20px;"></i></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-        className: 'safe-marker'
-    });
-    
-    dangerIcon = L.divIcon({
-        html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -20],
-        className: 'danger-marker'
-    });
-}
+var dangerIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    className: 'indoor-marker-danger'
+});
 
 // Marker awal dengan icon aman
 var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
 
 // POPUP
 sensorMarker.bindPopup(`
-    <b>${dashboardType === 'indoor' ? '🏢 Indoor Sensor' : '🔥 Fire Detector'}</b><br>
+    <b>🏢 Indoor Sensor</b><br>
     <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
     Status: <span style="color: #28a745;">Aktif - Normal</span>
 `).openPopup();
 
-// Circle zone
+// Circle zone - Warna Orange untuk Indoor
 var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: (dashboardType === 'indoor') ? '#e85d04' : '#28a745',
-    fillColor: (dashboardType === 'indoor') ? '#e85d04' : '#28a745',
+    color: '#e85d04',
+    fillColor: '#e85d04',
     fillOpacity: 0.1,
     radius: 500
 }).addTo(map);
@@ -730,20 +671,19 @@ function updateLocationStatus(isDanger) {
             Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
         `).openPopup();
     } else {
-        let zoneColor = (dashboardType === 'indoor') ? '#e85d04' : '#28a745';
         dangerZone.setStyle({ 
-            color: zoneColor, 
-            fillColor: zoneColor, 
+            color: '#e85d04', 
+            fillColor: '#e85d04', 
             fillOpacity: 0.1 
         });
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
-        document.getElementById('zone').innerHTML = (dashboardType === 'indoor') ? 'Zona Indoor (Gedung)' : 'Zona Outdoor (Area Terbuka)';
+        document.getElementById('zone').innerHTML = 'Zona Indoor (Gedung)';
         
         sensorMarker.setIcon(safeIcon);
         
         sensorMarker.bindPopup(`
-            <b>${dashboardType === 'indoor' ? '🏢 Indoor Sensor' : '🔥 Fire Detector'}</b><br>
+            <b>🏢 Indoor Sensor</b><br>
             <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
             Status: <span style="color: #28a745;">Aktif - Normal</span>
         `).openPopup();
@@ -752,32 +692,16 @@ function updateLocationStatus(isDanger) {
 
 // ================= CHART =================
 const ctx = document.getElementById('myChart').getContext('2d');
-let dataChart;
-
-if (dashboardType === 'indoor') {
-    dataChart = {
-        labels: [],
-        datasets: [
-            { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Tegangan (V)', data: [], borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Arus (A)', data: [], borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true }
-        ]
-    };
-} else {
-    dataChart = { 
-        labels: [], 
-        datasets: [
-            { label: 'Tegangan Panel Surya (V)', data: [], borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Arus Panel Surya (A)', data: [], borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Daya Panel Surya (W)', data: [], borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'Kecepatan Angin (m/s)', data: [], borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-            { label: 'CO (ppm)', data: [], borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
-        ] 
-    };
-}
+let dataChart = {
+    labels: [],
+    datasets: [
+        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Tegangan (V)', data: [], borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Arus (A)', data: [], borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Status Api', data: [], borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+    ]
+};
 
 const myChart = new Chart(ctx, { 
     type: 'line', 
@@ -798,11 +722,12 @@ const myChart = new Chart(ctx, {
                         let unit = '';
                         if (label.includes('Tegangan')) unit = ' V';
                         else if (label.includes('Arus')) unit = ' A';
-                        else if (label.includes('Daya')) unit = ' W';
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
-                        else if (label.includes('Angin')) unit = ' m/s';
-                        else if (label.includes('CO')) unit = ' ppm';
+                        else if (label.includes('Status Api')) {
+                            let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
+                            return `${label}: ${status}`;
+                        }
                         return `${label}: ${value}${unit}`;
                     }
                 }
@@ -811,6 +736,7 @@ const myChart = new Chart(ctx, {
         scales: { 
             y: { 
                 beginAtZero: true, 
+                max: 100,
                 grid: { color: 'rgba(0,0,0,0.05)' }, 
                 title: { display: true, text: 'Nilai Sensor' } 
             }, 
@@ -824,206 +750,91 @@ const myChart = new Chart(ctx, {
 
 // ================= GENERATE DATA =================
 function generateData() {
-    if (dashboardType === 'indoor') {
-        var apiStatus = Math.random() > 0.85 ? "Terdeteksi Api" : "Aman";
-        var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
-        var isDanger = (apiStatus === "Terdeteksi Api" || asapStatus === "Tinggi");
-        let suhu = (Math.random() * 30 + 20).toFixed(1);
-        let kelembapan = (Math.random() * 60 + 40).toFixed(1);
-        let tegangan = (Math.random() * 10 + 210).toFixed(1);
-        let arus = (Math.random() * 5 + 1).toFixed(2);
-        if (apiStatus === "Terdeteksi Api") {
-            suhu = (Math.random() * 25 + 40).toFixed(1);
-            kelembapan = (Math.random() * 30 + 30).toFixed(1);
-        }
-        return {
-            waktu: new Date().toLocaleTimeString(),
-            api: apiStatus, 
-            asap: asapStatus, 
-            suhu: suhu, 
-            kelembapan: kelembapan,
-            tegangan: tegangan, 
-            arus: arus, 
-            status: 'Online',
-            rssi: Math.floor(Math.random() * 40 + -80),
-            ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-            isDanger: isDanger
-        };
-    } else {
-        var hour = new Date().getHours();
-        var teganganBase = (hour >= 6 && hour <= 18) ? 12 + (Math.sin((hour - 12) * Math.PI / 12) + 1) * 6 : Math.random() * 2;
-        var tegangan = Math.max(0, teganganBase + (Math.random() - 0.5) * 1.5).toFixed(1);
-        var arusBase = teganganBase / 2.5;
-        var arus = Math.max(0, arusBase + (Math.random() - 0.5) * 1).toFixed(2);
-        var daya = (parseFloat(tegangan) * parseFloat(arus)).toFixed(1);
-        var arahArray = ['Utara', 'Timur', 'Selatan', 'Barat', 'Timur Laut', 'Barat Daya', 'Tenggara', 'Barat Laut'];
-        var arah = arahArray[Math.floor(Math.random() * arahArray.length)];
-        var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
-        var co = Math.floor(Math.random() * 50 + 10);
-        
-        if (asapStatus === "Tinggi") {
-            co = Math.floor(Math.random() * 100 + 50);
-        }
-        
-        var suhu = (Math.random() * 35 + 20).toFixed(1);
-        var kelembapan = (Math.random() * 60 + 40).toFixed(1);
-        
-        if (asapStatus === "Tinggi") {
-            suhu = (Math.random() * 30 + 40).toFixed(1);
-            kelembapan = (Math.random() * 30 + 20).toFixed(1);
-        }
-        
-        var angin = (Math.random() * 20 + 5).toFixed(1);
-        var isDanger = (asapStatus === "Tinggi" || co > 50);
-        
-        return {
-            waktu: new Date().toLocaleTimeString(),
-            tegangan: tegangan,
-            arus: arus,
-            daya: daya,
-            arah: arah,
-            asap: asapStatus,
-            suhu: suhu,
-            kelembapan: kelembapan,
-            angin: angin,
-            co: co,
-            status: 'Online',
-            rssi: Math.floor(Math.random() * 40 + -80),
-            ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-            isDanger: isDanger
-        };
+    var apiStatus = Math.random() > 0.85 ? "Terdeteksi Api" : "Aman";
+    var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
+    var isDanger = (apiStatus === "Terdeteksi Api" || asapStatus === "Tinggi");
+    let suhu = (Math.random() * 30 + 20).toFixed(1);
+    let kelembapan = (Math.random() * 60 + 40).toFixed(1);
+    let tegangan = (Math.random() * 10 + 210).toFixed(1);
+    let arus = (Math.random() * 5 + 1).toFixed(2);
+    if (apiStatus === "Terdeteksi Api") {
+        suhu = (Math.random() * 25 + 40).toFixed(1);
+        kelembapan = (Math.random() * 30 + 30).toFixed(1);
     }
+    return {
+        waktu: new Date().toLocaleTimeString(),
+        api: apiStatus, 
+        asap: asapStatus, 
+        suhu: suhu, 
+        kelembapan: kelembapan,
+        tegangan: tegangan, 
+        arus: arus, 
+        status: 'Online',
+        rssi: Math.floor(Math.random() * 40 + -80),
+        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
+        isDanger: isDanger,
+        apiValue: apiStatus === "Terdeteksi Api" ? 1 : 0
+    };
 }
 
 // ================= UPDATE DATA =================
 function updateDashboard() {
-    fetch('api_get_data.php?device=' + dashboardType)
-        .then(response => response.json())
-        .then(data => {
-            // Update status node di header
-            document.getElementById("status").innerHTML = `<i class="fas fa-circle ${data.status.includes('Online') ? 'status-online' : 'status-offline'}"></i> ${data.status}`;
-            document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-            document.getElementById("ip").innerHTML = data.ip;
-            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
-            
-            if (dashboardType === 'indoor') {
-                const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
-                document.getElementById("api").innerHTML = apiValue;
-                
-                const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
-                document.getElementById("asap").innerHTML = asapValue;
-                
-                document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-                document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-                document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
-                document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
-                
-                const apiBox = document.getElementById('api-box');
-                const asapBox = document.getElementById('asap-box');
-                
-                if (data.api === "Terdeteksi Api") {
-                    apiBox.classList.add('pulse-animation');
-                    apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-                } else {
-                    apiBox.classList.remove('pulse-animation');
-                    apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-                }
-                
-                if (data.asap === "Tinggi") {
-                    asapBox.classList.add('pulse-animation');
-                    asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-                } else {
-                    asapBox.classList.remove('pulse-animation');
-                    asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-                }
-                
-                // Update chart
-                dataChart.labels.push(data.waktu);
-                dataChart.datasets[0].data.push(parseFloat(data.suhu));
-                dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-                dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-                dataChart.datasets[3].data.push(parseFloat(data.arus));
-                
-            } else {
-                document.getElementById("tegangan").innerHTML = `${data.tegangan} V`;
-                document.getElementById("arus").innerHTML = `${data.arus} A`;
-                document.getElementById("daya").innerHTML = `${data.daya} W`;
-                
-                var arahIcon = {
-                    'Utara': 'up',
-                    'Selatan': 'down',
-                    'Timur': 'right',
-                    'Barat': 'left',
-                    'Timur Laut': 'up-right',
-                    'Barat Daya': 'down-left',
-                    'Tenggara': 'down-right',
-                    'Barat Laut': 'up-left'
-                };
-                document.getElementById("arah").innerHTML = `<i class="fas fa-arrow-${arahIcon[data.arah] || 'right'}"></i> ${data.arah}`;
-                document.getElementById("kecepatan_angin").innerHTML = `${data.angin} m/s <i class="fas fa-wind"></i>`;
-                
-                var asapElement = document.getElementById("asap");
-                var asapBox = document.getElementById('asap-box');
-                if (data.asap === "Tinggi") {
-                    asapElement.innerHTML = '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)';
-                    asapElement.className = 'status-bahaya';
-                    asapBox.classList.add('pulse-animation');
-                    asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-                } else {
-                    asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
-                    asapElement.className = 'status-aman';
-                    asapBox.classList.remove('pulse-animation');
-                    asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-                }
-                
-                var coElement = document.getElementById("co");
-                var coBox = document.getElementById('co-box');
-                var coValue = data.co;
-                if (coValue > 50) {
-                    coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (BAHAYA!)`;
-                    coElement.className = 'status-bahaya';
-                    coBox.classList.add('pulse-animation');
-                    coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-                } else if (coValue > 35) {
-                    coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
-                    coElement.className = 'status-bahaya';
-                    coBox.classList.remove('pulse-animation');
-                    coBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-                } else {
-                    coElement.innerHTML = `${coValue} ppm <i class="fas fa-industry"></i>`;
-                    coElement.className = 'status-aman';
-                    coBox.classList.remove('pulse-animation');
-                    coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
-                }
-                
-                document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-                document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-                
-                // Update chart
-                dataChart.labels.push(data.waktu);
-                dataChart.datasets[0].data.push(parseFloat(data.tegangan));
-                dataChart.datasets[1].data.push(parseFloat(data.arus));
-                dataChart.datasets[2].data.push(parseFloat(data.daya));
-                dataChart.datasets[3].data.push(parseFloat(data.suhu));
-                dataChart.datasets[4].data.push(parseFloat(data.kelembapan));
-                dataChart.datasets[5].data.push(parseFloat(data.angin));
-                dataChart.datasets[6].data.push(data.co);
-            }
-            
-            // Update location status
-            updateLocationStatus(data.isDanger);
-            
-            if(dataChart.labels.length > 20) { 
-                dataChart.labels.shift(); 
-                dataChart.datasets.forEach(ds => ds.data.shift()); 
-            }
-            myChart.update();
-        })
-        .catch(error => {
-            console.error('Error fetching sensor data:', error);
-            // Fallback status if API is down
-            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-offline" style="color: #dc3545;"></i> Offline (Error API)`;
-        });
+    let data = generateData();
+    
+    // Update status node di header
+    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
+    document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
+    document.getElementById("ip").innerHTML = data.ip;
+    document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
+    
+    // Update sensor data
+    const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
+    document.getElementById("api").innerHTML = apiValue;
+    
+    const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
+    document.getElementById("asap").innerHTML = asapValue;
+    
+    document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
+    document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
+    document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
+    
+    // Update box styles
+    const apiBox = document.getElementById('api-box');
+    const asapBox = document.getElementById('asap-box');
+    
+    if (data.api === "Terdeteksi Api") {
+        apiBox.classList.add('pulse-animation');
+        apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+    } else {
+        apiBox.classList.remove('pulse-animation');
+        apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+    }
+    
+    if (data.asap === "Tinggi") {
+        asapBox.classList.add('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+    } else {
+        asapBox.classList.remove('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+    }
+    
+    // Update location status
+    updateLocationStatus(data.isDanger);
+    
+    // Update chart
+    dataChart.labels.push(data.waktu);
+    dataChart.datasets[0].data.push(parseFloat(data.suhu));
+    dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
+    dataChart.datasets[2].data.push(parseFloat(data.tegangan));
+    dataChart.datasets[3].data.push(parseFloat(data.arus));
+    dataChart.datasets[4].data.push(data.apiValue);
+    
+    if(dataChart.labels.length > 20) { 
+        dataChart.labels.shift(); 
+        dataChart.datasets.forEach(ds => ds.data.shift()); 
+    }
+    myChart.update();
 }
 
 // Jalankan update pertama kali dan setiap 3 detik

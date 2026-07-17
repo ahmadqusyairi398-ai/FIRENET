@@ -11,16 +11,26 @@ if ($is_localhost) {
     $password = "rahasiaTA123!";
     $dbname_outdoor = "outdoor";
     $dbname_indoor = "firenet";
-} else {
-    // ==========================================
-    // 2. KREDENSIAL DATABASE DOMAIN (PRODUCTION)
-    // ==========================================
-    // SILAKAN UBAH bagian ini sesuai dengan data database di cPanel/Hosting Anda:
+} else if (strpos($_SERVER['HTTP_HOST'], 'inovasijre.com') !== false) {
+    // ==========================================================
+    // 2. KREDENSIAL DATABASE LIVE DOMAIN (inovasijre.com)
+    // ==========================================================
+    // Silakan sesuaikan dengan database yang Anda buat di cPanel/Hosting Anda.
+    // Biasanya di cPanel terdapat prefix nama pengguna, contoh: inovasij_firenet
     $host = "localhost"; 
-    $username = "ta_user"; // Masukkan username database hosting Anda di sini
-    $password = "rahasiaTA123!"; // Masukkan password database hosting Anda di sini
-    $dbname_outdoor = "outdoor"; // Masukkan nama database outdoor hosting Anda di sini
-    $dbname_indoor = "firenet"; // Masukkan nama database indoor hosting Anda di sini
+    $username = "inovasij_ta_user"; // UBAH: Sesuaikan dengan nama user database Anda di cPanel
+    $password = "rahasiaTA123!";   // UBAH: Masukkan password user database Anda
+    $dbname_outdoor = "inovasij_outdoor"; // UBAH: Sesuaikan dengan nama database outdoor Anda
+    $dbname_indoor = "inovasij_firenet";   // UBAH: Sesuaikan dengan nama database indoor Anda
+} else {
+    // ==========================================================
+    // 3. KREDENSIAL DATABASE DOMAIN LAIN (PRODUCTION)
+    // ==========================================================
+    $host = "localhost"; 
+    $username = "ta_user"; 
+    $password = "rahasiaTA123!"; 
+    $dbname_outdoor = "outdoor"; 
+    $dbname_indoor = "firenet"; 
 }
 
 $pdo_outdoor = null;
