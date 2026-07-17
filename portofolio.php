@@ -986,36 +986,36 @@ var locations = [
         "longitude": 116.88680
     },
     
-    // ===== PENAJAM PASER UTARA (5 titik - DI SEBERANG BALIKPAPAN) =====
+    // ===== PENAJAM PASER UTARA (5 titik - UPDATE TERBARU) =====
     {
         "id": 4,
-        "nama_lokasi": "Nipah-Nipah, Penajam - Kecamatan Penajam",
-        "latitude": -0.3250,
-        "longitude": 116.5980
+        "nama_lokasi": "Pelabuhan Speed - Penajam",
+        "latitude": -1.243118,
+        "longitude": 116.777328
     },
     {
         "id": 5,
-        "nama_lokasi": "Penajam - Pusat Kota Penajam",
-        "latitude": -0.3300,
-        "longitude": 116.6020
+        "nama_lokasi": "Parkiran PT ASDP - Penajam",
+        "latitude": -1.243705,
+        "longitude": 116.776796
     },
     {
         "id": 6,
-        "nama_lokasi": "Penajam - Kawasan Industri (Nipah-Nipah)",
-        "latitude": -0.3200,
-        "longitude": 116.5950
+        "nama_lokasi": "Halaman Kantor Pos - Penajam",
+        "latitude": -1.246185,
+        "longitude": 116.776064
     },
     {
         "id": 7,
-        "nama_lokasi": "Penajam - Pelabuhan Penajam",
-        "latitude": -0.3350,
-        "longitude": 116.6000
+        "nama_lokasi": "Perumahan Paser Alam Permai - Penajam",
+        "latitude": -1.261549,
+        "longitude": 116.767770
     },
     {
         "id": 8,
-        "nama_lokasi": "Penajam - Kawasan Perumahan",
-        "latitude": -0.3280,
-        "longitude": 116.6100
+        "nama_lokasi": "Sekolah Tahfizh Plus Khoiru Ummah - Penajam",
+        "latitude": -1.264167,
+        "longitude": 116.764911
     },
     
     // ===== SAMARINDA (2 titik) =====
@@ -1178,7 +1178,7 @@ function initMap() {
     // Zoom ke area yang mencakup semua lokasi (Balikpapan, Penajam, Samarinda)
     var bounds = L.latLngBounds([
         [-1.22, 116.88],  // Balikpapan
-        [-0.31, 116.59],  // Penajam (Nipah-Nipah)
+        [-1.27, 116.76],  // Penajam (lokasi terbaru)
         [-0.50, 117.16]   // Samarinda
     ]);
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
