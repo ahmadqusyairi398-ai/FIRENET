@@ -222,15 +222,14 @@ body::before {
 }
 .card h3 i { color: #00b4db; }
 
-/* ========== GRID SENSOR ========== */
+/* ========== GRID SENSOR (4 SENSOR) ========== */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 15px;
 }
 .box {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
-    padding: 20px;
+    padding: 25px 20px;
     border-radius: 12px;
     text-align: center;
     color: white;
@@ -238,14 +237,24 @@ body::before {
     backdrop-filter: blur(5px);
 }
 .box:hover { transform: scale(1.02); }
-.box i { font-size: 32px; margin-bottom: 10px; display: block; }
+.box i { font-size: 36px; margin-bottom: 12px; display: block; }
 .box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-.box b { display: block; font-size: 20px; margin-top: 5px; }
-.box small { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
-.box.solar-box { background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); }
-.box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
-.box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
-.box.angin-box { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
+.box b { display: block; font-size: 24px; margin-top: 5px; }
+.box small { display: block; font-size: 12px; opacity: 0.8; margin-top: 2px; }
+
+/* Warna khusus untuk masing-masing sensor */
+.box.daya-box { 
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); 
+}
+.box.suhu-box { 
+    background: linear-gradient(135deg, rgba(255, 99, 132, 0.9), rgba(255, 59, 48, 0.9)); 
+}
+.box.asap-box { 
+    background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); 
+}
+.box.kelembapan-box { 
+    background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(52, 152, 219, 0.9)); 
+}
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -401,13 +410,19 @@ canvas {
 }
 
 /* ========== RESPONSIVE ========== */
+@media (max-width: 992px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .sidebar { width: 80px; padding: 20px 10px; }
     .sidebar h3 { font-size: 12px; }
     .menu-btn span { display: none; }
     .menu-btn i { margin: 0; }
     .main { padding: 15px; }
-    .grid { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
     #map { height: 250px; }
     .location-info { flex-direction: column; align-items: flex-start; gap: 10px; }
     .header { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -476,33 +491,45 @@ canvas {
     </div>
 
     <!-- ============================================================ -->
-    <!-- ========== DATA SENSOR ========== -->
+    <!-- ========== 4 SENSOR UTAMA ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-solar-panel"></i> Data Sensor Outdoor <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
+        <h3><i class="fas fa-microchip"></i> Sensor Monitoring Outdoor <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
         <div class="grid">
-            <!-- Solar Panel Sensors -->
-            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan">-</b><small>V DC</small></div>
-            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus">-</b><small>A DC</small></div>
-            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya">-</b><small>Watt</small></div>
+            <!-- Sensor Daya Panel Surya -->
+            <div class="box daya-box">
+                <i class="fas fa-solar-panel"></i>
+                <div class="sensor-label">Daya Panel Surya</div>
+                <b id="daya">-</b>
+                <small>Watt</small>
+            </div>
             
-            <!-- Wind Sensors -->
-            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah">-</b></div>
-            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin">-</b></div>
+            <!-- Sensor Suhu -->
+            <div class="box suhu-box">
+                <i class="fas fa-temperature-high"></i>
+                <div class="sensor-label">Suhu</div>
+                <b id="suhu">-</b>
+                <small>°C</small>
+            </div>
             
-            <!-- Asap Sensor -->
-            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Asap</div><b id="asap">-</b></div>
+            <!-- Sensor Asap -->
+            <div class="box asap-box" id="asap-box">
+                <i class="fas fa-smog"></i>
+                <div class="sensor-label">Asap</div>
+                <b id="asap">-</b>
+            </div>
             
-            <!-- Environment Sensors -->
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
-            
-            <!-- Gas Sensor -->
-            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co">-</b></div>
+            <!-- Sensor Kelembapan -->
+            <div class="box kelembapan-box">
+                <i class="fas fa-tint"></i>
+                <div class="sensor-label">Kelembapan</div>
+                <b id="kelembapan">-</b>
+                <small>%</small>
+            </div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-tree" style="color: #0083b0;"></i>
-            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - Sensor terpasang di area terbuka untuk deteksi dini kebakaran hutan/lahan.</span>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - 4 sensor utama untuk deteksi dini kebakaran hutan/lahan.</span>
         </div>
     </div>
 
@@ -680,18 +707,48 @@ function updateLocationStatus(isDanger) {
     }
 }
 
-// ================= CHART =================
+// ================= CHART (4 SENSOR) =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = { 
     labels: [], 
     datasets: [
-        { label: 'Tegangan Panel Surya (V)', data: [], borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus Panel Surya (A)', data: [], borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Daya Panel Surya (W)', data: [], borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kecepatan Angin (m/s)', data: [], borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'CO (ppm)', data: [], borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { 
+            label: 'Daya Panel Surya (W)', 
+            data: [], 
+            borderColor: '#ffc107', 
+            backgroundColor: 'rgba(255,193,7,0.1)', 
+            borderWidth: 2, 
+            tension: 0.4, 
+            fill: true 
+        },
+        { 
+            label: 'Suhu (°C)', 
+            data: [], 
+            borderColor: '#ff6b6b', 
+            backgroundColor: 'rgba(255,107,107,0.1)', 
+            borderWidth: 2, 
+            tension: 0.4, 
+            fill: true 
+        },
+        { 
+            label: 'Kelembapan (%)', 
+            data: [], 
+            borderColor: '#4ecdc4', 
+            backgroundColor: 'rgba(78,205,196,0.1)', 
+            borderWidth: 2, 
+            tension: 0.4, 
+            fill: true 
+        },
+        { 
+            label: 'Asap', 
+            data: [], 
+            borderColor: '#ff9f43', 
+            backgroundColor: 'rgba(255,159,67,0.1)', 
+            borderWidth: 2, 
+            tension: 0.4, 
+            fill: true,
+            borderDash: [5, 5]
+        }
     ] 
 };
 
@@ -712,13 +769,13 @@ const myChart = new Chart(ctx, {
                         let label = context.dataset.label || '';
                         let value = context.raw;
                         let unit = '';
-                        if (label.includes('Tegangan')) unit = ' V';
-                        else if (label.includes('Arus')) unit = ' A';
-                        else if (label.includes('Daya')) unit = ' W';
+                        if (label.includes('Daya')) unit = ' W';
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
-                        else if (label.includes('Angin')) unit = ' m/s';
-                        else if (label.includes('CO')) unit = ' ppm';
+                        else if (label.includes('Asap')) {
+                            if (value === 1) return 'Asap: Tinggi ⚠️';
+                            return 'Asap: Normal ✅';
+                        }
                         return `${label}: ${value}${unit}`;
                     }
                 }
@@ -750,81 +807,43 @@ function fetchDataOutdoor() {
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
     
-    // Update solar panel data
-    document.getElementById("tegangan").innerHTML = `${data.tegangan} V`;
-    document.getElementById("arus").innerHTML = `${data.arus} A`;
+    // Update Daya Panel Surya
     document.getElementById("daya").innerHTML = `${data.daya} W`;
     
-    // Update wind data
-    var arahIcon = {
-        'Utara': 'up',
-        'Selatan': 'down',
-        'Timur': 'right',
-        'Barat': 'left',
-        'Timur Laut': 'up-right',
-        'Barat Daya': 'down-left',
-        'Tenggara': 'down-right',
-        'Barat Laut': 'up-left'
-    };
-    document.getElementById("arah").innerHTML = `<i class="fas fa-arrow-${arahIcon[data.arah] || 'right'}"></i> ${data.arah}`;
-    document.getElementById("kecepatan_angin").innerHTML = `${data.angin} m/s <i class="fas fa-wind"></i>`;
+    // Update Suhu
+    document.getElementById("suhu").innerHTML = `${data.suhu} °C`;
     
     // Update Asap status
     var asapElement = document.getElementById("asap");
     var asapBox = document.getElementById('asap-box');
     if (data.asap === "Tinggi") {
-        asapElement.innerHTML = '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)';
+        asapElement.innerHTML = '⚠️ Tinggi';
         asapElement.className = 'status-bahaya';
         asapBox.classList.add('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
     } else {
-        asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
+        asapElement.innerHTML = '✅ Normal';
         asapElement.className = 'status-aman';
         asapBox.classList.remove('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
     }
     
-    // Update CO status
-    var coElement = document.getElementById("co");
-    var coBox = document.getElementById('co-box');
-    var coValue = data.co;
-    if (coValue > 50) {
-        coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (BAHAYA!)`;
-        coElement.className = 'status-bahaya';
-        coBox.classList.add('pulse-animation');
-        coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else if (coValue > 35) {
-        coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
-        coElement.className = 'status-bahaya';
-        coBox.classList.remove('pulse-animation');
-        coBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-    } else {
-        coElement.innerHTML = `${coValue} ppm <i class="fas fa-industry"></i>`;
-        coElement.className = 'status-aman';
-        coBox.classList.remove('pulse-animation');
-        coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
-    }
+    // Update Kelembapan
+    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
     
-    // Update environment data
-    document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-    
-    // Update location status - HANYA 1 LOKASI
+    // Update location status
     if (data.isDanger) {
         updateLocationStatus(true);
     } else {
         updateLocationStatus(false);
     }
     
-    // Update chart
+    // Update chart - Asap diubah menjadi 1 (Tinggi) atau 0 (Normal)
+    var asapValue = data.asap === "Tinggi" ? 1 : 0;
+    
     dataChart.labels.push(data.waktu);
-    dataChart.datasets[0].data.push(parseFloat(data.tegangan));
-    dataChart.datasets[1].data.push(parseFloat(data.arus));
-    dataChart.datasets[2].data.push(parseFloat(data.daya));
-    dataChart.datasets[3].data.push(parseFloat(data.suhu));
-    dataChart.datasets[4].data.push(parseFloat(data.kelembapan));
-    dataChart.datasets[5].data.push(parseFloat(data.angin));
-    dataChart.datasets[6].data.push(data.co);
+    dataChart.datasets[0].data.push(parseFloat(data.daya));
+    dataChart.datasets[1].data.push(parseFloat(data.suhu));
+    dataChart.datasets[2].data.push(parseFloat(data.kelembapan));
+    dataChart.datasets[3].data.push(asapValue);
     
     if(dataChart.labels.length > 20) { 
         dataChart.labels.shift(); 
@@ -835,8 +854,34 @@ function fetchDataOutdoor() {
     .catch(error => console.error("Error fetching outdoor data:", error));
 }
 
-fetchDataOutdoor();
-setInterval(fetchDataOutdoor, 3000);
+// Data dummy untuk testing jika API tidak tersedia
+function generateDummyData() {
+    // Hanya untuk testing - bisa dihapus jika API sudah berjalan
+    var data = {
+        status: 'Online',
+        rssi: Math.floor(Math.random() * 40 + -80),
+        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
+        waktu: new Date().toLocaleTimeString(),
+        daya: (Math.random() * 100 + 50).toFixed(1),
+        suhu: (Math.random() * 35 + 20).toFixed(1),
+        kelembapan: (Math.random() * 60 + 40).toFixed(1),
+        asap: Math.random() > 0.8 ? "Tinggi" : "Normal",
+        isDanger: Math.random() > 0.85
+    };
+    return data;
+}
+
+// Gunakan data dummy jika fetch gagal
+function fetchWithFallback() {
+    fetchDataOutdoor();
+    // Jika ingin menggunakan dummy data saja, ganti dengan:
+    // updateUI(generateDummyData());
+}
+
+// Jalankan pertama kali
+fetchWithFallback();
+// Update setiap 3 detik
+setInterval(fetchWithFallback, 3000);
 
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>
