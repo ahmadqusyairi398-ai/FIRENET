@@ -1,5 +1,10 @@
 <?php
 session_start();
+
+// Set tipe dashboard sebagai outdoor
+$_SESSION['dashboard_type'] = 'outdoor';
+
+// Ambil data user dari session
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 ?>
@@ -77,56 +82,125 @@ body::before {
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    font-size: 14px;
 }
 .menu-btn i { width: 24px; font-size: 18px; }
 .menu-btn:hover { background: rgba(255,255,255,0.3); transform: translateX(5px); }
 .menu-btn.active { background: linear-gradient(135deg, #00b4db, #0083b0); }
 .logout { margin-top: 40px; background: rgba(220, 53, 69, 0.8); }
 .logout:hover { background: #dc3545; }
+.user-badge {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: auto;
+}
 .main {
     flex: 1;
     padding: 20px 30px;
     overflow-y: auto;
     height: 100vh;
 }
+
+/* ========== HEADER + NODE STATUS GABUNGAN ========== */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
-    padding: 15px 25px;
+    padding: 12px 25px;
     border-radius: 15px;
     margin-bottom: 25px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 10px;
 }
-.header h2 { color: #1e3c72; font-size: 24px; }
-.header-right { display: flex; align-items: center; gap: 15px; }
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.header-left h2 {
+    color: #1e3c72;
+    font-size: 20px;
+}
+.header-left h2 i {
+    color: #e85d04;
+}
+
+/* Status Node di dalam Header */
+.node-status-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 5px 15px;
+    border-radius: 50px;
+    flex-wrap: wrap;
+}
+.status-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #555;
+}
+.status-item-header i { font-size: 11px; }
+.status-item-header .value {
+    font-weight: 600;
+    color: #1e3c72;
+    font-size: 12px;
+}
+.status-online { color: #28a745; }
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 .user-info {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: linear-gradient(135deg, #667eea, #764ba2);
-    padding: 8px 20px;
+    padding: 6px 16px;
     border-radius: 50px;
     color: white;
     font-weight: bold;
+    font-size: 13px;
+}
+.user-info i { font-size: 16px; }
+.user-tag {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 9px;
+    margin-left: 5px;
 }
 .btn-home-header {
-    background: rgba(34, 6, 244, 0.2);
-    color: white;
+    background: rgba(34, 6, 244, 0.15);
+    color: #1e3c72;
     border: none;
-    padding: 8px 18px;
+    padding: 6px 14px;
     border-radius: 50px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 12px;
     transition: all 0.3s;
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
-.btn-home-header:hover { background: rgba(255, 255, 255, 0.45); transform: translateY(-2px); }
+.btn-home-header:hover { background: rgba(34, 6, 244, 0.3); transform: translateY(-2px); }
+
 .card {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
@@ -147,22 +221,8 @@ body::before {
     gap: 10px;
 }
 .card h3 i { color: #00b4db; }
-.node-status {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-top: 10px;
-}
-.status-item {
-    background: rgba(248, 249, 250, 0.8);
-    padding: 12px;
-    border-radius: 10px;
-    text-align: center;
-}
-.status-item i { font-size: 24px; margin-bottom: 8px; display: block; }
-.status-item .label { font-size: 12px; color: #555; margin-bottom: 5px; }
-.status-item .value { font-size: 18px; font-weight: bold; color: #1e3c72; }
-.status-online { color: #28a745; }
+
+/* ========== GRID SENSOR ========== */
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -186,6 +246,7 @@ body::before {
 .box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
 .box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
 .box.angin-box { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
+
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.02); opacity: 0.9; box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); }
@@ -197,6 +258,8 @@ body::before {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
 }
+
+/* ========== MAP ========== */
 .map-container {
     margin-top: 10px;
     border-radius: 12px;
@@ -204,7 +267,7 @@ body::before {
     border: 1px solid rgba(224, 224, 224, 0.5);
 }
 #map {
-    height: 400px;
+    height: 350px;
     width: 100%;
     border-radius: 12px;
     z-index: 1;
@@ -225,9 +288,11 @@ body::before {
     gap: 10px;
     font-size: 14px;
 }
-.location-info-item i { font-size: 18px; color: #e85d04; }
+.location-info-item i { font-size: 18px; color: #dc2626; }
 .location-info-item .label { color: #555; }
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
+
+/* ========== CHART ========== */
 .chart-container { margin-top: 10px; }
 canvas {
     max-height: 400px;
@@ -236,6 +301,106 @@ canvas {
     border-radius: 10px;
     padding: 10px;
 }
+
+/* ========== MODAL LOGOUT SEDERHANA ========== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-box {
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    border-radius: 20px;
+    padding: 40px 35px 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal-icon {
+    font-size: 48px;
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.modal-box h2 {
+    color: #1e3c72;
+    font-size: 22px;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-modal {
+    padding: 12px 35px;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-cancel {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.btn-cancel:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
+
+.btn-logout-confirm {
+    background: linear-gradient(135deg, #dc3545, #b91c1c);
+    color: white;
+}
+
+.btn-logout-confirm:hover {
+    background: linear-gradient(135deg, #c82333, #a71d2a);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .sidebar { width: 80px; padding: 20px 10px; }
     .sidebar h3 { font-size: 12px; }
@@ -243,10 +408,16 @@ canvas {
     .menu-btn i { margin: 0; }
     .main { padding: 15px; }
     .grid { grid-template-columns: repeat(2, 1fr); }
-    .node-status { grid-template-columns: 1fr; }
-    #map { height: 300px; }
+    #map { height: 250px; }
     .location-info { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .header-right { flex-direction: column; gap: 8px; }
+    .header { flex-direction: column; align-items: stretch; gap: 10px; }
+    .header-left { flex-direction: column; align-items: stretch; }
+    .node-status-header { justify-content: center; }
+    .header-right { justify-content: center; flex-wrap: wrap; }
+    .btn-home-header { padding: 6px 12px; font-size: 12px; }
+    .modal-box { padding: 30px 20px; }
+    .modal-buttons { flex-direction: column; }
+    .btn-modal { justify-content: center; }
 }
 </style>
 </head>
@@ -258,6 +429,7 @@ canvas {
     <a href="umum_outdoor.php" class="menu-btn active">
         <i class="fas fa-tachometer-alt"></i>
         <span>Dashboard Outdoor</span>
+        <span class="user-badge">OUTDOOR</span>
     </a>
     <a href="home.php" class="menu-btn logout">
         <i class="fas fa-home"></i>
@@ -267,25 +439,84 @@ canvas {
 
 <!-- MAIN CONTENT -->
 <div class="main">
+    <!-- ============================================================ -->
+    <!-- ========== HEADER + NODE STATUS GABUNGAN ========== -->
+    <!-- ============================================================ -->
     <div class="header">
-        <h2><i class="fas fa-tree"></i> Dashboard Monitoring Outdoor</h2>
+        <div class="header-left">
+            <h2><i class="fas fa-tree"></i> Dashboard Outdoor</h2>
+            
+            <!-- Status Node di dalam Header -->
+            <div class="node-status-header">
+                <div class="status-item-header">
+                    <i class="fas fa-circle status-online"></i>
+                    <span>Status:</span>
+                    <span class="value" id="status">-</span>
+                </div>
+                <div class="status-item-header">
+                    <i class="fas fa-signal"></i>
+                    <span>RSSI:</span>
+                    <span class="value" id="rssi">-</span>
+                </div>
+                <div class="status-item-header">
+                    <i class="fas fa-network-wired"></i>
+                    <span>IP:</span>
+                    <span class="value" id="ip">-</span>
+                </div>
+            </div>
+        </div>
+        
         <div class="header-right">
-            <!-- BUTTON HOME DIHAPUS -->
-            <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo <?= htmlspecialchars($user) ?></span></div>
+            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span><?= htmlspecialchars($user) ?><span class="user-tag">User</span></span>
+            </div>
         </div>
     </div>
 
-    <!-- NODE STATUS -->
+    <!-- ============================================================ -->
+    <!-- ========== DATA SENSOR ========== -->
+    <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-microchip"></i> Status Node Outdoor</h3>
-        <div class="node-status">
-            <div class="status-item"><i class="fas fa-circle status-online"></i><div class="label">Status</div><div class="value" id="status">-</div></div>
-            <div class="status-item"><i class="fas fa-signal"></i><div class="label">RSSI</div><div class="value" id="rssi">-</div></div>
-            <div class="status-item"><i class="fas fa-network-wired"></i><div class="label">IP Address</div><div class="value" id="ip">-</div></div>
+        <h3><i class="fas fa-solar-panel"></i> Data Sensor Outdoor <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
+        <div class="grid">
+            <!-- Solar Panel Sensors -->
+            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan">-</b><small>V DC</small></div>
+            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus">-</b><small>A DC</small></div>
+            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya">-</b><small>Watt</small></div>
+            
+            <!-- Wind Sensors -->
+            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah">-</b></div>
+            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin">-</b></div>
+            
+            <!-- Asap Sensor -->
+            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Asap</div><b id="asap">-</b></div>
+            
+            <!-- Environment Sensors -->
+            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
+            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
+            
+            <!-- Gas Sensor -->
+            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co">-</b></div>
+        </div>
+        <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-tree" style="color: #0083b0;"></i>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - Sensor terpasang di area terbuka untuk deteksi dini kebakaran hutan/lahan.</span>
         </div>
     </div>
 
-    <!-- LOKASI / MAP CARD -->
+    <!-- ============================================================ -->
+    <!-- ========== GRAFIK REAL TIME SENSOR ========== -->
+    <!-- ============================================================ -->
+    <div class="card">
+        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <div class="chart-container"><canvas id="myChart"></canvas></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ========== MAPS / LOKASI ========== -->
+    <!-- ============================================================ -->
     <div class="card">
         <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat (Outdoor) <span style="font-size: 12px; color: #666; margin-left: auto;">Area Terbuka</span></h3>
         <div class="map-container"><div id="map"></div></div>
@@ -308,43 +539,56 @@ canvas {
         </div>
     </div>
 
-    <!-- SENSOR DATA - TANPA SENSOR API -->
-    <div class="card">
-        <h3><i class="fas fa-solar-panel"></i> Data Sensor Outdoor <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
-        <div class="grid">
-            <!-- Solar Panel Sensors -->
-            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan">-</b><small>V DC</small></div>
-            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus">-</b><small>A DC</small></div>
-            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya">-</b><small>Watt</small></div>
-            
-            <!-- Wind Sensors -->
-            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah">-</b></div>
-            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin">-</b></div>
-            
-            <!-- Asap Sensor (API dihapus) -->
-            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Asap</div><b id="asap">-</b></div>
-            
-            <!-- Environment Sensors -->
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
-            
-            <!-- Gas Sensor -->
-            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co">-</b></div>
-        </div>
-        <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-tree" style="color: #0083b0;"></i>
-            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - Sensor terpasang di area terbuka untuk deteksi dini kebakaran hutan/lahan.</span>
-        </div>
-    </div>
+</div>
 
-    <!-- CHART -->
-    <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
-        <div class="chart-container"><canvas id="myChart"></canvas></div>
+<!-- ============================================================ -->
+<!-- ========== MODAL LOGOUT SEDERHANA ========== -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="logoutModal">
+    <div class="modal-box">
+        <div class="modal-icon">
+            <i class="fas fa-sign-out-alt"></i>
+        </div>
+        
+        <h2>Apakah Anda yakin keluar?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="logout.php" class="btn-modal btn-logout-confirm">
+                <i class="fas fa-sign-out-alt"></i> LOGOUT
+            </a>
+        </div>
     </div>
 </div>
 
 <script>
+// ================= FUNGSI MODAL LOGOUT =================
+function openLogoutModal() {
+    document.getElementById('logoutModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLogoutModal() {
+    document.getElementById('logoutModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Tutup modal jika klik di luar modal
+document.getElementById('logoutModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLogoutModal();
+    }
+});
+
+// Tutup modal dengan tombol ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
+        closeLogoutModal();
+    }
+});
+
 // ================= KOORDINAT STATIS (1 LOKASI) =================
 var fixedLat = -1.20249;
 var fixedLng = 116.88708;
@@ -360,7 +604,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 
 // Icon marker Outdoor - AMAN (Hijau)
 var safeIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #2e7d32, #1b5e20); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-tree" style="color: white; font-size: 18px;"></i></div>',
+    html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-tree" style="color: white; font-size: 18px;"></i></div>',
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20],
@@ -388,18 +632,20 @@ sensorMarker.bindPopup(`
 
 // Circle zone - AMAN (Hijau)
 var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: '#2e7d32',
-    fillColor: '#2e7d32',
-    fillOpacity: 0.15,
+    color: '#28a745',
+    fillColor: '#28a745',
+    fillOpacity: 0.1,
     radius: 500
 }).addTo(map);
-
-L.control.scale({ metric: true, imperial: false }).addTo(map);
 
 function updateLocationStatus(isDanger) {
     if (isDanger) {
         // Mode BAHAYA - Merah
-        dangerZone.setStyle({ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.3 });
+        dangerZone.setStyle({ 
+            color: '#dc2626', 
+            fillColor: '#dc2626', 
+            fillOpacity: 0.3 
+        });
         document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
@@ -414,7 +660,11 @@ function updateLocationStatus(isDanger) {
         `).openPopup();
     } else {
         // Mode AMAN - Hijau
-        dangerZone.setStyle({ color: '#2e7d32', fillColor: '#2e7d32', fillOpacity: 0.15 });
+        dangerZone.setStyle({ 
+            color: '#28a745', 
+            fillColor: '#28a745', 
+            fillOpacity: 0.1 
+        });
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Outdoor (Area Terbuka)';
@@ -494,7 +744,7 @@ function fetchDataOutdoor() {
     .then(response => response.json())
     .then(data => {
     
-    // Update status node
+    // Update status node di header
     document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
@@ -586,7 +836,7 @@ function fetchDataOutdoor() {
 }
 
 fetchDataOutdoor();
-setInterval(fetchDataOutdoor, 2000);
+setInterval(fetchDataOutdoor, 3000);
 
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>
