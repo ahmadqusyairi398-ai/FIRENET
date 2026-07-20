@@ -33,75 +33,75 @@ $default_locations = [
         "id" => 1,
         "id_alat" => "OUT-001",
         "nama_lokasi" => "Politeknik Negeri Balikpapan - Kampus Utama",
-        "latitude" => -1.20249,
-        "longitude" => 116.88708
+        "latitude" => -1.201888,
+        "longitude" => 116.886997
     ],
     [
         "id" => 2,
         "id_alat" => "OUT-002",
         "nama_lokasi" => "Gedung A - Kampus Utama",
-        "latitude" => -1.20300,
-        "longitude" => 116.88750
+        "latitude" => -1.201700,
+        "longitude" => 116.886944
     ],
     [
         "id" => 3,
         "id_alat" => "OUT-003",
         "nama_lokasi" => "Laboratorium Komputer - Kampus Utama",
-        "latitude" => -1.20200,
-        "longitude" => 116.88680
+        "latitude" => -1.202000,
+        "longitude" => 116.886800
     ],
     
     // ===== PENAJAM PASER UTARA (5 titik) =====
     [
         "id" => 4,
         "id_alat" => "OUT-004",
-        "nama_lokasi" => "Pelabuhan Speed Boad - Penajam",
-        "latitude" => -1.243118,
-        "longitude" => 116.777328
+        "nama_lokasi" => "Kantor Bupati Penajam Paser Utara",
+        "latitude" => -1.309914,
+        "longitude" => 116.727563
     ],
     [
         "id" => 5,
         "id_alat" => "OUT-005",
-        "nama_lokasi" => "Parkiran PT ASDP - Penajam",
-        "latitude" => -1.243705,
-        "longitude" => 116.776796
+        "nama_lokasi" => "Pelabuhan Penajam",
+        "latitude" => -1.242074,
+        "longitude" => 116.776876
     ],
     [
         "id" => 6,
         "id_alat" => "OUT-006",
-        "nama_lokasi" => "Halaman Kantor Pos - Penajam",
-        "latitude" => -1.246185,
-        "longitude" => 116.776064
+        "nama_lokasi" => "RSUD Ratu Aji Putri Botung PPU",
+        "latitude" => -1.308893,
+        "longitude" => 116.734787
     ],
     [
         "id" => 7,
         "id_alat" => "OUT-007",
-        "nama_lokasi" => "Perumahan Paser Alam Permai - Penajam",
-        "latitude" => -1.261549,
-        "longitude" => 116.767770
+        "nama_lokasi" => "Alun-Alun Penajam",
+        "latitude" => -1.309383,
+        "longitude" => 116.728334
     ],
     [
         "id" => 8,
         "id_alat" => "OUT-008",
-        "nama_lokasi" => "Sekolah Tahfizh Plus Khoiru Ummah - Penajam",
-        "latitude" => -1.264167,
-        "longitude" => 116.764911
+        "nama_lokasi" => "Kawasan Titik Nol IKN (Sepaku, PPU)",
+        "latitude" => --0.966113,
+        "longitude" => 116.702781
     ],
     
     // ===== SAMARINDA (2 titik) =====
     [
         "id" => 9,
         "id_alat" => "OUT-009",
-        "nama_lokasi" => "Auditorium 22 Dzulhijjah UINSI - Samarinda",
-        "latitude" => -0.565490,
-        "longitude" => 117.109518
+        "nama_lokasi" => "Kantor Gubernur Kaltim (Samarinda)",
+        "latitude" => 0.501219,
+        "longitude" => 117.139391
     ],
     [
         "id" => 10,
         "id_alat" => "OUT-010",
-        "nama_lokasi" => "Parkiran Gedung Rektoran UNMUL - Samarinda",
-        "latitude" => -0.468266,
-        "longitude" => 117.154293
+        "nama_lokasi" => "Masjid Islamic Center Samarinda",
+        "latitude" => -0.502952,
+        "longitude" => 117.120259
     ]
 ];
 
