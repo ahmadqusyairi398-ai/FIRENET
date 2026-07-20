@@ -27,6 +27,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $db_conn = $is_indoor ? $pdo_indoor : $pdo_outdoor;
             $table_name = $is_indoor ? 'login' : 'pengguna';
             
+            // ========== CEK DAN TAMBAHKAN KOLOM role DAN status DI TABEL login ==========
+            if ($is_indoor) {
+                try {
+                    // Cek kolom role di tabel login
+                    $stmt_check_role = $db_conn->query("SHOW COLUMNS FROM login LIKE 'role'");
+                    $role_exists = $stmt_check_role->rowCount() > 0;
+                    
+                    // Cek kolom status di tabel login
+                    $stmt_check_status = $db_conn->query("SHOW COLUMNS FROM login LIKE 'status'");
+                    $status_exists = $stmt_check_status->rowCount() > 0;
+                    
+                    // Tambahkan kolom role jika belum ada
+                    if (!$role_exists) {
+                        $db_conn->exec("ALTER TABLE login ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
+                    }
+                    
+                    // Tambahkan kolom status jika belum ada
+                    if (!$status_exists) {
+                        $db_conn->exec("ALTER TABLE login ADD COLUMN status ENUM('pending','approved','rejected') DEFAULT 'approved'");
+                    }
+                } catch (PDOException $e) {
+                    // Jika error, lanjutkan saja (mungkin kolom sudah ada)
+                    error_log("Error checking/adding columns: " . $e->getMessage());
+                }
+            }
+            
             // Cek apakah username sudah terdaftar
             $stmt = $db_conn->prepare("SELECT id FROM $table_name WHERE username = ?");
             $stmt->execute([$username]);
@@ -34,12 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($stmt->rowCount() > 0) {
                 $error = "Username sudah terdaftar! Silakan gunakan username lain.";
             } else {
-                // Hash password untuk keamanan (INI YANG BENAR)
+                // Hash password untuk keamanan
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
-                // Insert data ke database (tanpa role, default user)
-                $stmt = $db_conn->prepare("INSERT INTO $table_name (username, password, created_at) VALUES (?, ?, NOW())");
-                $stmt->execute([$username, $hashed_password]);
+                // ========== INSERT DENGAN ROLE DAN STATUS ==========
+                if ($is_indoor) {
+                    // Untuk database indoor (tabel login) - dengan role 'user' dan status 'approved'
+                    $stmt = $db_conn->prepare("INSERT INTO login (username, password, role, status) VALUES (?, ?, 'user', 'approved')");
+                    $stmt->execute([$username, $hashed_password]);
+                } else {
+                    // Untuk database outdoor (tabel pengguna) - dengan role 'user' dan status 'approved'
+                    $stmt = $db_conn->prepare("INSERT INTO pengguna (username, password, role, status, created_at) VALUES (?, ?, 'user', 'approved', NOW())");
+                    $stmt->execute([$username, $hashed_password]);
+                }
                 
                 // Cek apakah insert berhasil
                 if ($stmt->rowCount() > 0) {
@@ -323,6 +356,11 @@ body::before {
     transform: translateY(0);
 }
 
+.btn-register:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 /* Login Link */
 .login-link {
     text-align: center;
@@ -442,6 +480,15 @@ body::before {
         <div class="info-note">
             <i class="fas fa-info-circle"></i>
             Mendaftar sebagai: <span><i class="fas fa-user"></i> USER</span>
+            <?php if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor'): ?>
+                <span style="display: block; margin-top: 5px; font-size: 12px;">
+                    <i class="fas fa-building"></i> Register untuk Dashboard INDOOR
+                </span>
+            <?php else: ?>
+                <span style="display: block; margin-top: 5px; font-size: 12px;">
+                    <i class="fas fa-tree"></i> Register untuk Dashboard OUTDOOR
+                </span>
+            <?php endif; ?>
         </div>
         
         <?php if ($error): ?>
@@ -622,10 +669,32 @@ form.addEventListener('submit', function(e) {
 <?php if ($showSuccessModal): ?>
 Swal.fire({
     icon: 'success',
-    title: 'Registrasi Berhasil!',
-    html: 'Selamat datang, <strong><?= htmlspecialchars($_POST['username']) ?></strong>!<br>Anda terdaftar sebagai <strong><i class="fas fa-user"></i> USER</strong>.<br><br>Silakan login dengan akun Anda.',
+    title: 'Registrasi Berhasil! 🎉',
+    html: `
+        <div style="text-align: left; padding: 10px 0;">
+            <p style="font-size: 16px; margin-bottom: 10px;">
+                Selamat datang, <strong><?= htmlspecialchars($_POST['username']) ?></strong>! 👋
+            </p>
+            <div style="background: #f0f4ff; padding: 12px; border-radius: 8px; margin: 10px 0;">
+                <p style="margin: 5px 0;">
+                    <i class="fas fa-user" style="color: #667eea;"></i> 
+                    <strong>Role:</strong> <span style="color: #28a745;">USER</span>
+                </p>
+                <p style="margin: 5px 0;">
+                    <i class="fas fa-check-circle" style="color: #28a745;"></i> 
+                    <strong>Status:</strong> <span style="color: #28a745;">APPROVED</span>
+                </p>
+                <p style="margin: 5px 0;">
+                    <i class="fas fa-<?= (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'building' : 'tree' ?>" style="color: #667eea;"></i> 
+                    <strong>Dashboard:</strong> <?= (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'INDOOR' : 'OUTDOOR' ?>
+                </p>
+            </div>
+            <p style="font-size: 14px; color: #666;">Silakan login dengan akun Anda.</p>
+        </div>
+    `,
     confirmButtonColor: '#16a34a',
-    confirmButtonText: 'OK, Lanjutkan Login'
+    confirmButtonText: 'OK, Lanjutkan Login',
+    width: '480px'
 }).then(() => {
     window.location.href = 'login.php<?php echo (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? "?redirect=indoor" : ""; ?>';
 });
@@ -640,6 +709,15 @@ document.querySelectorAll('.input-group input').forEach(input => {
     
     input.addEventListener('blur', function() {
         this.parentElement.style.transform = 'translateX(0)';
+    });
+});
+
+// Enter key submit
+document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            form.dispatchEvent(new Event('submit'));
+        }
     });
 });
 </script>

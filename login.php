@@ -33,38 +33,93 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            // Verifikasi password menggunakan password_verify() (BENAR)
+            // Verifikasi password menggunakan password_verify()
             if ($user && password_verify($password, $user['password'])) {
-                // Set session
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['login_time'] = time();
                 
-                // Cek role dari database
-                if (isset($user['role'])) {
-                    $_SESSION['role'] = $user['role'];
-                } else {
-                    // Fallback: tentukan role berdasarkan username
-                    $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
-                }
+                // ========== CEK STATUS PENGGUNA ==========
+                // Cek apakah ada kolom status di tabel
+                $statusFieldExists = isset($user['status']);
                 
-                // Redirect berdasarkan role dan parameter redirect
-                if ($_SESSION['role'] == 'admin') {
-                    if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
-                        $redirect_to = "dashboard_admin_indoor.php";
-                        $_SESSION['dashboard_type'] = 'indoor';
+                if ($statusFieldExists) {
+                    // Jika ada kolom status, cek apakah statusnya 'approved'
+                    if ($user['status'] !== 'approved') {
+                        $statusLabel = ucfirst($user['status']);
+                        $error = "Akun Anda belum disetujui (Status: $statusLabel)!";
+                        
+                        // Jika status 'pending', beri pesan tambahan
+                        if ($user['status'] === 'pending') {
+                            $error .= " Silakan tunggu persetujuan dari admin.";
+                        }
+                        // Jika status 'rejected', beri pesan tambahan
+                        elseif ($user['status'] === 'rejected') {
+                            $error .= " Pendaftaran Anda ditolak. Hubungi admin untuk informasi lebih lanjut.";
+                        }
                     } else {
-                        $redirect_to = "dashboard_admin.php";
-                        $_SESSION['dashboard_type'] = 'outdoor';
+                        // Status approved, lanjutkan login
+                        // Set session
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['login_time'] = time();
+                        
+                        // Cek role dari database
+                        if (isset($user['role'])) {
+                            $_SESSION['role'] = $user['role'];
+                        } else {
+                            // Fallback: tentukan role berdasarkan username
+                            $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
+                        }
+                        
+                        // Redirect berdasarkan role dan parameter redirect
+                        if ($_SESSION['role'] == 'admin') {
+                            if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
+                                $redirect_to = "dashboard_admin_indoor.php";
+                                $_SESSION['dashboard_type'] = 'indoor';
+                            } else {
+                                $redirect_to = "dashboard_admin.php";
+                                $_SESSION['dashboard_type'] = 'outdoor';
+                            }
+                            header("Location: $redirect_to");
+                        } else {
+                            $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
+                            $_SESSION['dashboard_type'] = $redirect_type;
+                            $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+                            header("Location: $redirect_to");
+                        }
+                        exit();
                     }
-                    header("Location: $redirect_to");
                 } else {
-                    $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
-                    $_SESSION['dashboard_type'] = $redirect_type;
-                    $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
-                    header("Location: $redirect_to");
+                    // Jika tidak ada kolom status (tabel lama), lanjutkan login tanpa pengecekan status
+                    // Set session
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['login_time'] = time();
+                    
+                    // Cek role dari database
+                    if (isset($user['role'])) {
+                        $_SESSION['role'] = $user['role'];
+                    } else {
+                        // Fallback: tentukan role berdasarkan username
+                        $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
+                    }
+                    
+                    // Redirect berdasarkan role dan parameter redirect
+                    if ($_SESSION['role'] == 'admin') {
+                        if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
+                            $redirect_to = "dashboard_admin_indoor.php";
+                            $_SESSION['dashboard_type'] = 'indoor';
+                        } else {
+                            $redirect_to = "dashboard_admin.php";
+                            $_SESSION['dashboard_type'] = 'outdoor';
+                        }
+                        header("Location: $redirect_to");
+                    } else {
+                        $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
+                        $_SESSION['dashboard_type'] = $redirect_type;
+                        $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+                        header("Location: $redirect_to");
+                    }
+                    exit();
                 }
-                exit();
             } else {
                 $error = "Username atau Password salah!";
             }
@@ -104,6 +159,9 @@ if (isset($_SESSION['username'])) {
 
 <!-- Font Awesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -369,6 +427,11 @@ body::before {
     transform: translateY(0);
 }
 
+.btn-login:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 /* Register Link */
 .register-link {
     text-align: center;
@@ -436,6 +499,21 @@ body::before {
     color: #28a745;
 }
 
+/* Loading animation */
+.loading {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid white;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Responsive */
 @media (max-width: 576px) {
     .login-container {
@@ -453,21 +531,6 @@ body::before {
     .login-header h1 {
         font-size: 24px;
     }
-}
-
-/* Loading animation */
-.loading {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border: 2px solid white;
-    border-radius: 50%;
-    border-top-color: transparent;
-    animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -525,6 +588,7 @@ body::before {
         </form>
         
         <div class="register-link">
+            <p>Belum punya akun? <a href="register.php">Daftar di sini</a></p>
             <a href="home.php" class="back-home">
                 <i class="fas fa-arrow-left"></i> Kembali ke Beranda
             </a>
@@ -563,7 +627,8 @@ form.addEventListener('submit', function(e) {
             icon: 'warning',
             title: 'Perhatian!',
             text: 'Username dan Password harus diisi!',
-            confirmButtonColor: '#667eea'
+            confirmButtonColor: '#667eea',
+            confirmButtonText: 'OK'
         });
         return;
     }
@@ -591,6 +656,37 @@ document.getElementById('password').addEventListener('keypress', function(e) {
         form.dispatchEvent(new Event('submit'));
     }
 });
+
+// Auto focus ke field username saat halaman dimuat
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('username').focus();
+});
+
+// SweetAlert untuk menampilkan error dari PHP (jika ada)
+<?php if (!empty($error)): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    Swal.fire({
+        icon: 'error',
+        title: 'Gagal Login!',
+        text: <?= json_encode($error) ?>,
+        confirmButtonColor: '#667eea',
+        confirmButtonText: 'OK'
+    });
+});
+<?php endif; ?>
+
+<?php if (isset($_SESSION['register_success'])): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    Swal.fire({
+        icon: 'success',
+        title: 'Registrasi Berhasil!',
+        text: 'Silakan login dengan akun Anda.',
+        confirmButtonColor: '#667eea',
+        confirmButtonText: 'OK'
+    });
+});
+<?php unset($_SESSION['register_success']); ?>
+<?php endif; ?>
 </script>
 
 </body>
