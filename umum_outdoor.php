@@ -184,22 +184,6 @@ body::before {
     font-size: 9px;
     margin-left: 5px;
 }
-.btn-home-header {
-    background: rgba(34, 6, 244, 0.15);
-    color: #1e3c72;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 12px;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.btn-home-header:hover { background: rgba(34, 6, 244, 0.3); transform: translateY(-2px); }
 
 .card {
     background: rgba(255, 255, 255, 0.9);
@@ -429,7 +413,6 @@ canvas {
     .header-left { flex-direction: column; align-items: stretch; }
     .node-status-header { justify-content: center; }
     .header-right { justify-content: center; flex-wrap: wrap; }
-    .btn-home-header { padding: 6px 12px; font-size: 12px; }
     .modal-box { padding: 30px 20px; }
     .modal-buttons { flex-direction: column; }
     .btn-modal { justify-content: center; }
@@ -482,7 +465,6 @@ canvas {
         </div>
         
         <div class="header-right">
-            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span><?= htmlspecialchars($user) ?><span class="user-tag">User</span></span>
