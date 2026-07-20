@@ -62,8 +62,8 @@ try {
         $selectColumns[] = "'' as tanggal_waktu";
     }
     
-    // Tambahkan kolom lainnya - TANPA API
-    $otherColumns = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'kecepatan_angin', 'arah_angin', 'co'];
+    // Tambahkan kolom lainnya - HANYA KOLOM YANG DIPERLUKAN
+    $otherColumns = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus'];
     foreach ($otherColumns as $col) {
         if (in_array($col, $existingColumns)) {
             $selectColumns[] = $col;
@@ -99,16 +99,12 @@ try {
             suhu DECIMAL(5,2) DEFAULT 0,
             kelembapan DECIMAL(5,2) DEFAULT 0,
             tegangan DECIMAL(6,2) DEFAULT 0,
-            arus DECIMAL(6,2) DEFAULT 0,
-            daya DECIMAL(6,2) DEFAULT 0,
-            kecepatan_angin DECIMAL(5,2) DEFAULT 0,
-            arah_angin VARCHAR(20) DEFAULT '-',
-            co DECIMAL(6,2) DEFAULT 0
+            arus DECIMAL(6,2) DEFAULT 0
         )";
         $pdo_indoor->exec($createTable);
         
         // Ambil data setelah tabel dibuat
-        $query = "SELECT id, tanggal_dan_waktu, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co 
+        $query = "SELECT id, tanggal_dan_waktu, asap, suhu, kelembapan, tegangan, arus 
                   FROM data_sensor 
                   ORDER BY tanggal_dan_waktu DESC";
         $stmt = $pdo_indoor->prepare($query);
@@ -725,10 +721,6 @@ body::before {
                         <th><i class="fas fa-tint"></i> Kelembapan (%)</th>
                         <th><i class="fas fa-bolt"></i> Tegangan (V)</th>
                         <th><i class="fas fa-charging-station"></i> Arus (A)</th>
-                        <th><i class="fas fa-solar-panel"></i> Daya (W)</th>
-                        <th><i class="fas fa-wind"></i> Kecepatan Angin (m/s)</th>
-                        <th><i class="fas fa-compass"></i> Arah Angin</th>
-                        <th><i class="fas fa-skull-crossbones"></i> CO (ppm)</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -802,11 +794,7 @@ let sensorData = sensorDataPHP.map((item, index) => {
         suhu: item.suhu ? parseFloat(item.suhu).toFixed(1) : '0',
         kelembapan: item.kelembapan ? parseFloat(item.kelembapan).toFixed(1) : '0',
         tegangan: item.tegangan ? parseFloat(item.tegangan).toFixed(1) : '0',
-        arus: item.arus ? parseFloat(item.arus).toFixed(2) : '0',
-        daya: item.daya ? parseFloat(item.daya).toFixed(1) : '0',
-        kecepatan_angin: item.kecepatan_angin ? parseFloat(item.kecepatan_angin).toFixed(1) : '0',
-        arah_angin: item.arah_angin || '-',
-        co: item.co ? parseFloat(item.co).toFixed(1) : '0'
+        arus: item.arus ? parseFloat(item.arus).toFixed(2) : '0'
     };
 });
 
@@ -820,12 +808,6 @@ function getStatusClass(value, type) {
         if (value === 'Sedang') return 'status-waspada';
         return 'status-aman';
     }
-    if (type === 'co') {
-        let coValue = parseFloat(value);
-        if (coValue > 50) return 'status-bahaya';
-        if (coValue > 35) return 'status-waspada';
-        return 'status-aman';
-    }
     return '';
 }
 
@@ -834,12 +816,6 @@ function getStatusIcon(value, type) {
         if (value === 'Tinggi' || value === 'Bahaya') return '<i class="fas fa-chart-line"></i>';
         if (value === 'Sedang') return '<i class="fas fa-minus-circle"></i>';
         return '<i class="fas fa-check"></i>';
-    }
-    if (type === 'co') {
-        let coValue = parseFloat(value);
-        if (coValue > 50) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (coValue > 35) return '<i class="fas fa-exclamation-circle"></i>';
-        return '<i class="fas fa-check-circle"></i>';
     }
     return '';
 }
@@ -852,11 +828,7 @@ function updateDataTable(data) {
         `${item.suhu} °C`,
         `${item.kelembapan} %`,
         `${item.tegangan} V`,
-        `${item.arus} A`,
-        `${item.daya} W`,
-        `${item.kecepatan_angin} m/s`,
-        `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
+        `${item.arus} A`
     ]);
     if (dataTable) {
         dataTable.clear();
@@ -874,11 +846,7 @@ function initDataTable(data) {
         `${item.suhu} °C`,
         `${item.kelembapan} %`,
         `${item.tegangan} V`,
-        `${item.arus} A`,
-        `${item.daya} W`,
-        `${item.kecepatan_angin} m/s`,
-        `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
+        `${item.arus} A`
     ]);
     dataTable = $('#sensorTable').DataTable({
         data: rows,
@@ -889,11 +857,7 @@ function initDataTable(data) {
             { title: "Suhu (°C)" }, 
             { title: "Kelembapan (%)" },
             { title: "Tegangan (V)" }, 
-            { title: "Arus (A)" },
-            { title: "Daya (W)" },
-            { title: "Kecepatan Angin (m/s)" },
-            { title: "Arah Angin" },
-            { title: "CO (ppm)" }
+            { title: "Arus (A)" }
         ],
         language: {
             url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -938,9 +902,9 @@ function exportToExcel() {
     if (endDate && exportData[0]?.tanggal) exportData = exportData.filter(item => item.tanggal <= endDate);
     if (exportData.length === 0) { alert('Tidak ada data untuk diexport!'); return; }
     
-    let csv = "No,Tanggal & Waktu,Asap,Suhu (°C),Kelembapan (%),Tegangan (V),Arus (A),Daya (W),Kecepatan Angin (m/s),Arah Angin,CO (ppm)\n";
+    let csv = "No,Tanggal & Waktu,Asap,Suhu (°C),Kelembapan (%),Tegangan (V),Arus (A)\n";
     exportData.forEach((item, idx) => {
-        csv += `"${idx+1}","${item.tanggal_waktu}","${item.asap}","${item.suhu}","${item.kelembapan}","${item.tegangan}","${item.arus}","${item.daya}","${item.kecepatan_angin}","${item.arah_angin}","${item.co}"\n`;
+        csv += `"${idx+1}","${item.tanggal_waktu}","${item.asap}","${item.suhu}","${item.kelembapan}","${item.tegangan}","${item.arus}"\n`;
     });
     
     const blob = new Blob(["\uFEFF" + csv], { type: 'application/vnd.ms-excel' });
@@ -969,11 +933,7 @@ $(document).ready(function() {
                 { title: "Suhu (°C)" }, 
                 { title: "Kelembapan (%)" },
                 { title: "Tegangan (V)" }, 
-                { title: "Arus (A)" },
-                { title: "Daya (W)" },
-                { title: "Kecepatan Angin (m/s)" },
-                { title: "Arah Angin" },
-                { title: "CO (ppm)" }
+                { title: "Arus (A)" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
