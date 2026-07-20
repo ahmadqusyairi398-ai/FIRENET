@@ -1,6 +1,123 @@
 <?php
 session_start();
+require_once 'koneksi.php'; // Hubungkan ke database
+
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
+
+// ========== AMBIL DATA LOKASI DARI DATABASE ==========
+$locations_db = [];
+if ($pdo) {
+    try {
+        // Cek apakah tabel lokasi_alat ada
+        $stmt = $pdo->query("SHOW TABLES LIKE 'lokasi_alat'");
+        $tableExists = $stmt->rowCount() > 0;
+        
+        if ($tableExists) {
+            // Ambil data dari tabel lokasi_alat
+            $stmt = $pdo->query("SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+            $locations_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            // Jika tabel belum ada, gunakan data default
+            $locations_db = [];
+        }
+    } catch (PDOException $e) {
+        // Jika error, gunakan data default
+        $locations_db = [];
+    }
+}
+
+// ========== DATA LOKASI DEFAULT (FALLBACK) ==========
+$default_locations = [
+    // ===== POLITEKNIK NEGERI BALIKPAPAN (3 titik) =====
+    [
+        "id" => 1,
+        "id_alat" => "OUT-001",
+        "nama_lokasi" => "Politeknik Negeri Balikpapan - Kampus Utama",
+        "latitude" => -1.20249,
+        "longitude" => 116.88708
+    ],
+    [
+        "id" => 2,
+        "id_alat" => "OUT-002",
+        "nama_lokasi" => "Gedung A - Kampus Utama",
+        "latitude" => -1.20300,
+        "longitude" => 116.88750
+    ],
+    [
+        "id" => 3,
+        "id_alat" => "OUT-003",
+        "nama_lokasi" => "Laboratorium Komputer - Kampus Utama",
+        "latitude" => -1.20200,
+        "longitude" => 116.88680
+    ],
+    
+    // ===== PENAJAM PASER UTARA (5 titik) =====
+    [
+        "id" => 4,
+        "id_alat" => "OUT-004",
+        "nama_lokasi" => "Pelabuhan Speed Boad - Penajam",
+        "latitude" => -1.243118,
+        "longitude" => 116.777328
+    ],
+    [
+        "id" => 5,
+        "id_alat" => "OUT-005",
+        "nama_lokasi" => "Parkiran PT ASDP - Penajam",
+        "latitude" => -1.243705,
+        "longitude" => 116.776796
+    ],
+    [
+        "id" => 6,
+        "id_alat" => "OUT-006",
+        "nama_lokasi" => "Halaman Kantor Pos - Penajam",
+        "latitude" => -1.246185,
+        "longitude" => 116.776064
+    ],
+    [
+        "id" => 7,
+        "id_alat" => "OUT-007",
+        "nama_lokasi" => "Perumahan Paser Alam Permai - Penajam",
+        "latitude" => -1.261549,
+        "longitude" => 116.767770
+    ],
+    [
+        "id" => 8,
+        "id_alat" => "OUT-008",
+        "nama_lokasi" => "Sekolah Tahfizh Plus Khoiru Ummah - Penajam",
+        "latitude" => -1.264167,
+        "longitude" => 116.764911
+    ],
+    
+    // ===== SAMARINDA (2 titik) =====
+    [
+        "id" => 9,
+        "id_alat" => "OUT-009",
+        "nama_lokasi" => "Auditorium 22 Dzulhijjah UINSI - Samarinda",
+        "latitude" => -0.565490,
+        "longitude" => 117.109518
+    ],
+    [
+        "id" => 10,
+        "id_alat" => "OUT-010",
+        "nama_lokasi" => "Parkiran Gedung Rektoran UNMUL - Samarinda",
+        "latitude" => -0.468266,
+        "longitude" => 117.154293
+    ]
+];
+
+// Gunakan data dari database jika ada, jika tidak gunakan default
+$locations = (count($locations_db) > 0) ? $locations_db : $default_locations;
+
+// Pastikan semua lokasi memiliki field yang dibutuhkan
+foreach ($locations as &$loc) {
+    if (!isset($loc['id_alat'])) {
+        $loc['id_alat'] = 'ALAT-' . str_pad($loc['id'], 3, '0', STR_PAD_LEFT);
+    }
+    if (!isset($loc['nama_lokasi'])) {
+        $loc['nama_lokasi'] = 'Lokasi ' . $loc['id'];
+    }
+}
+unset($loc);
 ?>
 
 <!DOCTYPE html>
@@ -21,6 +138,7 @@ $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
+/* ========== STYLE SAMA SEPERTI SEBELUMNYA ========== */
 * {
     margin: 0;
     padding: 0;
@@ -85,7 +203,7 @@ body::before {
     color: #e85d04;
 }
 
-/* ========== MENU HAMBURGER (GARIS 3) ========== */
+/* ========== MENU HAMBURGER ========== */
 .menu-toggle {
     display: flex !important;
     font-size: 26px;
@@ -123,7 +241,7 @@ body::before {
     font-size: 24px;
 }
 
-/* ========== SIDE MENU (SLIDE FROM RIGHT) ========== */
+/* ========== SIDE MENU ========== */
 .side-menu-overlay {
     display: none;
     position: fixed;
@@ -162,7 +280,6 @@ body::before {
     right: 0;
 }
 
-/* Header Side Menu */
 .side-menu-header {
     display: flex;
     justify-content: space-between;
@@ -213,7 +330,6 @@ body::before {
     transform: rotate(90deg);
 }
 
-/* Menu Items */
 .side-menu-items {
     flex: 1;
     display: flex;
@@ -283,7 +399,7 @@ body::before {
     margin: 10px 5px;
 }
 
-/* ========== DROPDOWN MENU DI SIDE MENU ========== */
+/* ========== DROPDOWN ========== */
 .side-dropdown {
     position: relative;
 }
@@ -390,7 +506,6 @@ body::before {
     font-weight: 600;
 }
 
-/* ========== NAV MENU UTAMA (DESKTOP) - SEMBUNYIKAN ========== */
 .nav-menu {
     display: none;
 }
@@ -438,7 +553,7 @@ body::before {
     z-index: 1;
 }
 
-/* Floating Search Bar */
+/* ========== SEARCH BAR ========== */
 .search-container {
     position: absolute;
     top: 20px;
@@ -569,7 +684,7 @@ body::before {
     font-size: 14px;
 }
 
-/* Info koordinat di bawah peta */
+/* ========== LOCATION INFO ========== */
 .location-info {
     display: flex;
     justify-content: center;
@@ -645,12 +760,12 @@ body::before {
     animation: slideInRight 0.4s ease backwards;
 }
 
-.side-menu-items a:nth-child(1) { animation-delay: 0.05s; }  /* Beranda */
-.side-dropdown { animation-delay: 0.10s; }                   /* Alat */
+.side-menu-items a:nth-child(1) { animation-delay: 0.05s; }
+.side-dropdown { animation-delay: 0.10s; }
 .side-dropdown .dropbtn { animation-delay: 0.10s; }
-.side-menu-items a:nth-child(3) { animation-delay: 0.15s; }  /* Portofolio */
-.side-menu-items a:nth-child(4) { animation-delay: 0.20s; }  /* Dashboard Indoor */
-.side-menu-items a:nth-child(5) { animation-delay: 0.25s; }  /* Dashboard Outdoor */
+.side-menu-items a:nth-child(3) { animation-delay: 0.15s; }
+.side-menu-items a:nth-child(4) { animation-delay: 0.20s; }
+.side-menu-items a:nth-child(5) { animation-delay: 0.25s; }
 
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
@@ -748,24 +863,20 @@ body::before {
         <h1>FIRE<span>DETECTOR</span></h1>
     </div>
     
-    <!-- IKON HAMBURGER (GARIS 3) -->
     <div class="menu-toggle" id="menuToggle" onclick="openSideMenu()">
         <i class="fas fa-bars"></i>
     </div>
     
-    <!-- Menu Desktop - SEMBUNYIKAN -->
     <div class="nav-menu">
         <a href="home.php">Beranda</a>
         <a href="portofolio.php" class="active">Portofolio</a>
     </div>
 </nav>
 
-<!-- ========== SIDE MENU OVERLAY ========== -->
+<!-- ========== SIDE MENU ========== -->
 <div class="side-menu-overlay" id="sideMenuOverlay" onclick="closeSideMenu()"></div>
 
-<!-- ========== SIDE MENU (SLIDE FROM RIGHT) ========== -->
 <div class="side-menu" id="sideMenu">
-    <!-- Header -->
     <div class="side-menu-header">
         <div class="logo-side">
             <i class="fas fa-fire"></i>
@@ -776,18 +887,14 @@ body::before {
         </button>
     </div>
     
-    <!-- Menu Items -->
     <div class="side-menu-items">
-        <!-- Menu Label -->
         <div class="menu-label">Menu Utama</div>
         
-        <!-- ===== 1. BERANDA ===== -->
         <a href="home.php">
             <i class="fas fa-home"></i>
             Beranda
         </a>
         
-        <!-- ===== 2. ALAT (DROPDOWN) ===== -->
         <div class="side-dropdown">
             <button class="dropbtn" onclick="toggleDropdown(event)">
                 <i class="fas fa-tools"></i>
@@ -808,38 +915,32 @@ body::before {
             </div>
         </div>
         
-        <!-- ===== 3. PORTOFOLIO ===== -->
         <a href="portofolio.php" class="active">
             <i class="fas fa-map-marked-alt"></i>
             Portofolio
         </a>
         
-        <!-- ===== 4. DASHBOARD INDOOR ===== -->
         <a href="login.php?redirect=indoor">
             <i class="fas fa-building"></i>
             Dashboard Indoor
             <span class="badge">Login</span>
         </a>
         
-        <!-- ===== 5. DASHBOARD OUTDOOR ===== -->
         <a href="login.php?redirect=outdoor">
             <i class="fas fa-tree"></i>
             Dashboard Outdoor
             <span class="badge">Login</span>
         </a>
-        
     </div>
-    
 </div>
 
 <!-- ========== MAPS SECTION ========== -->
 <section class="maps-section">
     <div class="maps-title">
         <h2><i class="fas fa-map-marked-alt"></i> Lokasi Monitoring</h2>
-        <p>Koordinat pemasangan alat deteksi kebakaran</p>
+        <p>Koordinat pemasangan alat deteksi kebakaran <span style="color: #e85d04; font-weight: 600;">(<?= count($locations) ?> Lokasi)</span></p>
     </div>
     <div class="maps-container">
-        <!-- Floating Search Bar -->
         <div class="search-container">
             <div class="search-box">
                 <i class="fas fa-search search-icon"></i>
@@ -852,7 +953,6 @@ body::before {
         </div>
         <div id="map"></div>
     </div>
-    <!-- Menampilkan nama lokasi dan koordinat di bawah peta -->
     <div class="location-info">
         <div class="location-info-item">
             <i class="fas fa-map-marker-alt"></i>
@@ -862,7 +962,12 @@ body::before {
         <div class="location-info-item">
             <i class="fas fa-globe"></i>
             <span class="label">Koordinat:</span>
-            <span class="value" id="coordValue">-1.202490, 116.887080</span>
+            <span class="value" id="coordValue">-</span>
+        </div>
+        <div class="location-info-item">
+            <i class="fas fa-qrcode"></i>
+            <span class="label">ID Alat:</span>
+            <span class="value" id="alatId">-</span>
         </div>
     </div>
 </section>
@@ -874,77 +979,55 @@ body::before {
 </div>
 
 <script>
-// ========== OPEN SIDE MENU ==========
+// ========== PASS DATA PHP KE JAVASCRIPT ==========
+var locations = <?= json_encode($locations) ?>;
+
+// ========== FUNGSI SIDE MENU ==========
 function openSideMenu() {
-    const overlay = document.getElementById('sideMenuOverlay');
-    const menu = document.getElementById('sideMenu');
-    
-    overlay.classList.add('active');
-    menu.classList.add('open');
+    document.getElementById('sideMenuOverlay').classList.add('active');
+    document.getElementById('sideMenu').classList.add('open');
     document.body.style.overflow = 'hidden';
 }
 
-// ========== CLOSE SIDE MENU ==========
 function closeSideMenu() {
-    const overlay = document.getElementById('sideMenuOverlay');
-    const menu = document.getElementById('sideMenu');
-    
-    overlay.classList.remove('active');
-    menu.classList.remove('open');
+    document.getElementById('sideMenuOverlay').classList.remove('active');
+    document.getElementById('sideMenu').classList.remove('open');
     document.body.style.overflow = '';
 }
 
-// ========== TOGGLE DROPDOWN ==========
 function toggleDropdown(event) {
     event.stopPropagation();
-    const btn = event.currentTarget;
-    const content = btn.nextElementSibling;
-    const arrow = btn.querySelector('.arrow i');
+    var btn = event.currentTarget;
+    var content = btn.nextElementSibling;
+    var arrow = btn.querySelector('.arrow i');
     
     content.classList.toggle('open');
-    
-    if (content.classList.contains('open')) {
-        arrow.style.transform = 'rotate(180deg)';
-    } else {
-        arrow.style.transform = 'rotate(0deg)';
-    }
+    arrow.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
-// ========== TUTUP SIDE MENU DENGAN ESC ==========
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeSideMenu();
-    }
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSideMenu();
 });
 
-// ========== TUTUP DROPDOWN SAAT KLIK DI LUAR ==========
-document.addEventListener('click', function(event) {
-    const dropdowns = document.querySelectorAll('.side-dropdown');
-    dropdowns.forEach(function(dropdown) {
-        if (!dropdown.contains(event.target)) {
-            const content = dropdown.querySelector('.dropdown-content');
-            const arrow = dropdown.querySelector('.arrow i');
+document.addEventListener('click', function(e) {
+    document.querySelectorAll('.side-dropdown').forEach(function(dropdown) {
+        if (!dropdown.contains(e.target)) {
+            var content = dropdown.querySelector('.dropdown-content');
+            var arrow = dropdown.querySelector('.arrow i');
             if (content) {
                 content.classList.remove('open');
-                if (arrow) {
-                    arrow.style.transform = 'rotate(0deg)';
-                }
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
             }
         }
     });
 });
 
 // ========== MAPS ==========
-// Inisialisasi peta
 var defaultLat = -1.20249;
 var defaultLng = 116.88708;
-var map = L.map('map', {
-    zoomControl: false
-}).setView([defaultLat, defaultLng], 10);
-
+var map = L.map('map', { zoomControl: false }).setView([defaultLat, defaultLng], 10);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-// Tile layer
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
@@ -952,7 +1035,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     minZoom: 3
 }).addTo(map);
 
-// Scale bar
 L.control.scale({ metric: true, imperial: false }).addTo(map);
 
 // Icon marker
@@ -964,105 +1046,26 @@ var fireIcon = L.divIcon({
     className: 'fire-marker'
 });
 
-// ========== DATA LOKASI LENGKAP ==========
-var locations = [
-    // ===== POLITEKNIK NEGERI BALIKPAPAN (3 titik) =====
-    {
-        "id": 1,
-        "nama_lokasi": "Politeknik Negeri Balikpapan - Kampus Utama",
-        "latitude": -1.20249,
-        "longitude": 116.88708
-    },
-    {
-        "id": 2,
-        "nama_lokasi": "Gedung A - Kampus Utama",
-        "latitude": -1.20300,
-        "longitude": 116.88750
-    },
-    {
-        "id": 3,
-        "nama_lokasi": "Laboratorium Komputer - Kampus Utama",
-        "latitude": -1.20200,
-        "longitude": 116.88680
-    },
-    
-    // ===== PENAJAM PASER UTARA (5 titik - UPDATE TERBARU) =====
-    {
-        "id": 4,
-        "nama_lokasi": "Pelabuhan Speed Boad - Penajam",
-        "latitude": -1.243118,
-        "longitude": 116.777328
-    },
-    {
-        "id": 5,
-        "nama_lokasi": "Parkiran PT ASDP - Penajam",
-        "latitude": -1.243705,
-        "longitude": 116.776796
-    },
-    {
-        "id": 6,
-        "nama_lokasi": "Halaman Kantor Pos - Penajam",
-        "latitude": -1.246185,
-        "longitude": 116.776064
-    },
-    {
-        "id": 7,
-        "nama_lokasi": "Perumahan Paser Alam Permai - Penajam",
-        "latitude": -1.261549,
-        "longitude": 116.767770
-    },
-    {
-        "id": 8,
-        "nama_lokasi": "Sekolah Tahfizh Plus Khoiru Ummah - Penajam",
-        "latitude": -1.264167,
-        "longitude": 116.764911
-    },
-    
-    // ===== SAMARINDA (2 titik) =====
-    {
-        "id": 9,
-        "nama_lokasi": "Auditorium 22 Dzulhijjah UINSI - Samarinda",
-        "latitude": -0.565490,
-        "longitude": 117.109518
-    },
-    {
-        "id": 10,
-        "nama_lokasi": "Parkiran Gedung Rektoran UNMUL - Samarinda",
-        "latitude": -0.468266,
-        "longitude": 117.154293
-    }
-];
-
 var markersMap = {};
 
 function selectLocation(id, panTo) {
-    if (panTo === undefined) {
-        panTo = true;
-    }
+    if (panTo === undefined) panTo = true;
     var item = markersMap[id];
     if (!item) return;
     
-    // Update info panel
-    document.getElementById('locationName').innerText = item.data.nama_lokasi;
+    document.getElementById('locationName').innerText = item.data.nama_lokasi || 'Lokasi ' + id;
     document.getElementById('coordValue').innerText = item.data.latitude.toFixed(6) + ', ' + item.data.longitude.toFixed(6);
+    document.getElementById('alatId').innerText = item.data.id_alat || '-';
     
     if (panTo) {
-        map.flyTo([item.data.latitude, item.data.longitude], 17, {
-            animate: true,
-            duration: 1.5
-        });
-        
-        // Buka popup setelah animasi terbang selesai
-        setTimeout(function() {
-            item.marker.openPopup();
-        }, 1500);
+        map.flyTo([item.data.latitude, item.data.longitude], 17, { animate: true, duration: 1.5 });
+        setTimeout(function() { item.marker.openPopup(); }, 1500);
     } else {
         item.marker.openPopup();
     }
 }
 
 function renderMarkers() {
-    // Bersihkan marker lama jika ada
     for (var key in markersMap) {
         map.removeLayer(markersMap[key].marker);
         map.removeLayer(markersMap[key].circle);
@@ -1070,43 +1073,34 @@ function renderMarkers() {
     markersMap = {};
 
     locations.forEach(function(loc) {
-        // Create marker
-        var marker = L.marker([loc.latitude, loc.longitude], {
-            icon: fireIcon
-        }).addTo(map);
+        var marker = L.marker([parseFloat(loc.latitude), parseFloat(loc.longitude)], { icon: fireIcon }).addTo(map);
         
-        // Create danger circle
-        var circle = L.circle([loc.latitude, loc.longitude], {
+        var circle = L.circle([parseFloat(loc.latitude), parseFloat(loc.longitude)], {
             color: '#e85d04',
             fillColor: '#e85d04',
             fillOpacity: 0.15,
             radius: 500
         }).addTo(map);
         
-        // Popup
         var popupContent = `
             <div style="min-width: 200px; font-family: 'Poppins', sans-serif; text-align: center;">
                 <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 18px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 600; font-size: 14px;">${loc.nama_lokasi}</div>
+                <div style="font-weight: 600; font-size: 14px;">${loc.nama_lokasi || 'Lokasi ' + loc.id}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 2px;">ID: ${loc.id_alat || '-'}</div>
                 <div style="font-size: 13px; background: #f0f0f0; padding: 5px; border-radius: 8px; margin-top: 5px;">
-                    ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
+                    ${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}
                 </div>
             </div>
         `;
         marker.bindPopup(popupContent);
         
-        markersMap[loc.id] = {
-            marker: marker,
-            circle: circle,
-            data: loc
-        };
+        markersMap[loc.id] = { marker: marker, circle: circle, data: loc };
         
-        marker.on('click', function() {
-            selectLocation(loc.id, false);
-        });
+        marker.on('click', function() { selectLocation(loc.id, false); });
     });
 }
 
+// ========== SEARCH ==========
 function filterLocations() {
     var input = document.getElementById('mapSearchInput');
     var filter = input.value.toLowerCase();
@@ -1120,7 +1114,9 @@ function filterLocations() {
     }
     
     var filtered = locations.filter(function(loc) {
-        return loc.nama_lokasi.toLowerCase().includes(filter);
+        var nama = (loc.nama_lokasi || '').toLowerCase();
+        var idAlat = (loc.id_alat || '').toLowerCase();
+        return nama.includes(filter) || idAlat.includes(filter);
     });
     
     resultsContainer.innerHTML = '';
@@ -1143,12 +1139,12 @@ function filterLocations() {
         div.innerHTML = `
             <i class="fas fa-map-marker-alt"></i>
             <div>
-                <span class="loc-name">${loc.nama_lokasi}</span>
-                <span class="loc-coords">${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}</span>
+                <span class="loc-name">${loc.nama_lokasi || 'Lokasi ' + loc.id}</span>
+                <span class="loc-coords">${loc.id_alat || ''} - ${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}</span>
             </div>
         `;
         div.onclick = function() {
-            input.value = loc.nama_lokasi;
+            input.value = loc.nama_lokasi || '';
             resultsContainer.style.display = 'none';
             selectLocation(loc.id, true);
         };
@@ -1163,7 +1159,6 @@ function clearSearch() {
     document.getElementById('searchResults').style.display = 'none';
 }
 
-// Tutup search results saat klik diluar
 document.addEventListener('click', function(e) {
     var container = document.querySelector('.search-container');
     var results = document.getElementById('searchResults');
@@ -1175,21 +1170,18 @@ document.addEventListener('click', function(e) {
 // ========== INISIALISASI ==========
 function initMap() {
     renderMarkers();
-    // Zoom ke area yang mencakup semua lokasi (Balikpapan, Penajam, Samarinda)
-    var bounds = L.latLngBounds([
-        [-1.22, 116.88],  // Balikpapan
-        [-1.27, 116.76],  // Penajam (lokasi terbaru)
-        [-0.50, 117.16]   // Samarinda
-    ]);
-    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
     
     if (locations.length > 0) {
+        var bounds = L.latLngBounds([]);
+        locations.forEach(function(loc) {
+            bounds.extend([parseFloat(loc.latitude), parseFloat(loc.longitude)]);
+        });
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
         selectLocation(locations[0].id, false);
     }
 }
 
-// Jalankan saat halaman dimuat
-window.addEventListener('DOMContentLoaded', initMap);
+document.addEventListener('DOMContentLoaded', initMap);
 </script>
 
 </body>

@@ -798,16 +798,29 @@ const myChart = new Chart(ctx, {
 // ================= DATA DARI DATABASE =================
 function fetchDataOutdoor() {
     fetch('api_get_data.php?device=outdoor')
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error("Gagal mengambil data dari server");
+        return response.json();
+    })
     .then(data => {
-    
+        updateUI(data); // Tampilkan data asli dari database
+    })
+    .catch(error => {
+        console.warn("API tidak merespons, menggunakan data dummy/fallback:", error);
+        // Jika API error / belum dibuat, dasbor otomatis memakai data simulasi
+        updateUI(generateDummyData());
+    });
+}
+
+// ================= FUNGSI UPDATE UI =================
+function updateUI(data) {
     // Update status node di header
     document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
     
-    // Update Daya Panel Surya
+    // Update Sensor Daya
     document.getElementById("daya").innerHTML = `${data.daya} W`;
     
     // Update Suhu
@@ -820,23 +833,22 @@ function fetchDataOutdoor() {
         asapElement.innerHTML = '⚠️ Tinggi';
         asapElement.className = 'status-bahaya';
         asapBox.classList.add('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
     } else {
         asapElement.innerHTML = '✅ Normal';
         asapElement.className = 'status-aman';
         asapBox.classList.remove('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
     }
     
     // Update Kelembapan
     document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
     
-    // Update location status
-    if (data.isDanger) {
-        updateLocationStatus(true);
-    } else {
-        updateLocationStatus(false);
-    }
+    // Update Peta (Zona Merah / Hijau)
+    var isDanger = data.isDanger || data.asap === "Tinggi";
+    updateLocationStatus(isDanger);
     
-    // Update chart - Asap diubah menjadi 1 (Tinggi) atau 0 (Normal)
+    // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;
     
     dataChart.labels.push(data.waktu);
@@ -850,38 +862,28 @@ function fetchDataOutdoor() {
         dataChart.datasets.forEach(ds => ds.data.shift()); 
     }
     myChart.update();
-    })
-    .catch(error => console.error("Error fetching outdoor data:", error));
 }
 
-// Data dummy untuk testing jika API tidak tersedia
+// ================= DATA SIMULASI (FALLBACK) =================
 function generateDummyData() {
-    // Hanya untuk testing - bisa dihapus jika API sudah berjalan
-    var data = {
+    var isSmokeHigh = Math.random() > 0.85;
+    return {
         status: 'Online',
-        rssi: Math.floor(Math.random() * 40 + -80),
-        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
+        rssi: Math.floor(Math.random() * 30 - 80),
+        ip: '192.168.1.' + Math.floor(Math.random() * 100 + 10),
         waktu: new Date().toLocaleTimeString(),
-        daya: (Math.random() * 100 + 50).toFixed(1),
-        suhu: (Math.random() * 35 + 20).toFixed(1),
-        kelembapan: (Math.random() * 60 + 40).toFixed(1),
-        asap: Math.random() > 0.8 ? "Tinggi" : "Normal",
-        isDanger: Math.random() > 0.85
+        daya: (Math.random() * 80 + 40).toFixed(1),
+        suhu: (Math.random() * 15 + 28).toFixed(1),
+        kelembapan: (Math.random() * 30 + 50).toFixed(1),
+        asap: isSmokeHigh ? "Tinggi" : "Normal",
+        isDanger: isSmokeHigh
     };
-    return data;
 }
 
-// Gunakan data dummy jika fetch gagal
-function fetchWithFallback() {
-    fetchDataOutdoor();
-    // Jika ingin menggunakan dummy data saja, ganti dengan:
-    // updateUI(generateDummyData());
-}
-
-// Jalankan pertama kali
-fetchWithFallback();
-// Update setiap 3 detik
-setInterval(fetchWithFallback, 3000);
+// ================= JALANKAN FUNGSI =================
+// Jalankan pertama kali & refresh setiap 3 detik
+fetchDataOutdoor();
+setInterval(fetchDataOutdoor, 3000);
 
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>

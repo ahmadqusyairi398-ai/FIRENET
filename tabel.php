@@ -14,10 +14,51 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 
 // Koneksi ke database
 require_once 'koneksi.php';
-echo "<script>console.log('Koneksi database berhasil');</script>";
 
-// Ambil data dari tabel data_sensor sesuai dengan struktur yang ada
+// ========== PASTIKAN KONEKSI MENGGUNAKAN PDO OUTDOOR ==========
+if (!isset($pdo) && isset($pdo_outdoor)) {
+    $pdo = $pdo_outdoor;
+}
+
+// ========== CEK KONEKSI DATABASE ==========
+if (!$pdo) {
+    die("<div style='padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 10px; margin: 20px;'>
+            <h3><i class='fas fa-database'></i> Koneksi Database Gagal!</h3>
+            <p>Pastikan database 'outdoor' sudah ada dan konfigurasi koneksi sudah benar.</p>
+            <p>Error: " . htmlspecialchars($e->getMessage() ?? 'Koneksi gagal') . "</p>
+         </div>");
+}
+
+echo "<script>console.log('Koneksi database berhasil (Outdoor)');</script>";
+
+// ========== AMBIL DATA DARI TABEL DATA_SENSOR ==========
 try {
+    // Cek apakah tabel data_sensor ada
+    $checkTable = $pdo->query("SHOW TABLES LIKE 'data_sensor'");
+    $tableExists = $checkTable->rowCount() > 0;
+    
+    if (!$tableExists) {
+        echo "<script>console.log('Tabel data_sensor belum ada, akan dibuat...');</script>";
+        // Buat tabel data_sensor
+        $createTable = "
+        CREATE TABLE IF NOT EXISTS data_sensor (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tanggal_dan_waktu DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            asap VARCHAR(20) DEFAULT 'Normal',
+            suhu DECIMAL(5,2) DEFAULT 0,
+            kelembapan DECIMAL(5,2) DEFAULT 0,
+            tegangan DECIMAL(6,2) DEFAULT 0,
+            arus DECIMAL(6,2) DEFAULT 0,
+            daya DECIMAL(6,2) DEFAULT 0,
+            kecepatan_angin DECIMAL(5,2) DEFAULT 0,
+            arah_angin VARCHAR(20) DEFAULT '-',
+            co DECIMAL(6,2) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )";
+        $pdo->exec($createTable);
+        echo "<script>console.log('Tabel data_sensor berhasil dibuat');</script>";
+    }
+    
     // Cek kolom apa saja yang tersedia di tabel data_sensor
     $checkColumns = $pdo->query("SHOW COLUMNS FROM data_sensor");
     $existingColumns = [];
@@ -38,9 +79,9 @@ try {
         }
     }
     
-    // Jika tidak ada kolom tanggal/waktu, gunakan kolom pertama yang tersedia untuk sorting
-    if ($dateColumn === null && !empty($existingColumns)) {
-        $dateColumn = $existingColumns[0]; // Gunakan kolom pertama sebagai default
+    // Jika tidak ada kolom tanggal/waktu, gunakan 'id' untuk sorting
+    if ($dateColumn === null) {
+        $dateColumn = 'id';
     }
     
     // Bangun query berdasarkan kolom yang tersedia - TANPA SENSOR API
@@ -49,7 +90,11 @@ try {
     
     // Tambahkan kolom tanggal/waktu jika ada
     if ($dateColumn) {
-        $selectColumns[] = "$dateColumn as tanggal_waktu";
+        if ($dateColumn === 'id') {
+            $selectColumns[] = "'' as tanggal_waktu";
+        } else {
+            $selectColumns[] = "$dateColumn as tanggal_waktu";
+        }
     } else {
         $selectColumns[] = "'' as tanggal_waktu";
     }
@@ -66,8 +111,10 @@ try {
     
     $query = "SELECT " . implode(", ", $selectColumns) . " FROM data_sensor";
     
-    if ($dateColumn) {
+    if ($dateColumn && $dateColumn !== 'id') {
         $query .= " ORDER BY $dateColumn DESC";
+    } else {
+        $query .= " ORDER BY id DESC";
     }
     
     echo "<script>console.log('Query: " . addslashes($query) . "');</script>";
@@ -80,35 +127,7 @@ try {
     
 } catch(PDOException $e) {
     echo "<script>console.log('Error: " . addslashes($e->getMessage()) . "');</script>";
-    
-    // Jika tabel tidak ada, buat tabel baru dengan semua kolom yang diperlukan - TANPA API
-    if (strpos($e->getMessage(), "Table") !== false) {
-        $createTable = "
-        CREATE TABLE IF NOT EXISTS data_sensor (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            tanggal_dan_waktu DATETIME NOT NULL,
-            asap VARCHAR(20) DEFAULT 'Normal',
-            suhu DECIMAL(5,2) DEFAULT 0,
-            kelembapan DECIMAL(5,2) DEFAULT 0,
-            tegangan DECIMAL(6,2) DEFAULT 0,
-            arus DECIMAL(6,2) DEFAULT 0,
-            daya DECIMAL(6,2) DEFAULT 0,
-            kecepatan_angin DECIMAL(5,2) DEFAULT 0,
-            arah_angin VARCHAR(20) DEFAULT '-',
-            co DECIMAL(6,2) DEFAULT 0
-        )";
-        $pdo->exec($createTable);
-        
-        // Ambil data setelah tabel dibuat
-        $query = "SELECT id, tanggal_dan_waktu, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co 
-                  FROM data_sensor 
-                  ORDER BY tanggal_dan_waktu DESC";
-        $stmt = $pdo->prepare($query);
-        $stmt->execute();
-        $sensorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $sensorData = [];
-    }
+    $sensorData = [];
 }
 ?>
 

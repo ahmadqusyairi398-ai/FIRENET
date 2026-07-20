@@ -281,7 +281,9 @@ function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max)
 {
     $stmt = mysqli_prepare($conn, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, last_update = NOW() WHERE id = ?");
     mysqli_stmt_bind_param($stmt, "dddi", $nilai_alarm, $batas_min, $batas_max, $id);
-    return mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $result;
 }
 
 // ========== TAMBAH SENSOR BARU ==========
@@ -294,18 +296,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_sensor'])) {
     $deskripsi = trim($_POST['deskripsi'] ?? '');
     
     if (!empty($nama_sensor) && !empty($satuan)) {
-        $check = mysqli_query($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = '$nama_sensor'");
-        if (mysqli_num_rows($check) > 0) {
+        // Cek dengan Prepared Statement
+        $stmt_cek = mysqli_prepare($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = ?");
+        mysqli_stmt_bind_param($stmt_cek, "s", $nama_sensor);
+        mysqli_stmt_execute($stmt_cek);
+        mysqli_stmt_store_result($stmt_cek);
+        
+        if (mysqli_stmt_num_rows($stmt_cek) > 0) {
             $error_message = "Sensor '$nama_sensor' sudah terdaftar!";
         } else {
-            $stmt = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt, "sdsdds", $nama_sensor, $nilai_alarm, $satuan, $batas_min, $batas_max, $deskripsi);
-            if (mysqli_stmt_execute($stmt)) {
+            $stmt_ins = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
+            mysqli_stmt_bind_param($stmt_ins, "sdsdds", $nama_sensor, $nilai_alarm, $satuan, $batas_min, $batas_max, $deskripsi);
+            if (mysqli_stmt_execute($stmt_ins)) {
                 $success_message = "Sensor '$nama_sensor' berhasil ditambahkan!";
             } else {
                 $error_message = "Gagal menambahkan sensor!";
             }
+            mysqli_stmt_close($stmt_ins);
         }
+        mysqli_stmt_close($stmt_cek);
     } else {
         $error_message = "Nama sensor dan satuan harus diisi!";
     }
@@ -329,8 +338,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($batas_min >= $batas_max) {
             $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
         } else {
-            $checkQuery = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
-            $sensor = mysqli_fetch_assoc($checkQuery);
+            // Cek sensor dengan Prepared Statement
+            $stmt_cek = mysqli_prepare($conn, "SELECT * FROM batas_sensor WHERE id = ?");
+            mysqli_stmt_bind_param($stmt_cek, "i", $sensor_id);
+            mysqli_stmt_execute($stmt_cek);
+            $result = mysqli_stmt_get_result($stmt_cek);
+            $sensor = mysqli_fetch_assoc($result);
+            mysqli_stmt_close($stmt_cek);
 
             if ($sensor) {
                 if ($new_value >= $batas_min && $new_value <= $batas_max) {
@@ -400,51 +414,95 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $success_message = "Lokasi berhasil dihapus!";
     }
 
-    // Manajemen User
+    // ========== MANAJEMEN USER DENGAN PREPARED STATEMENT ==========
+    
+    // TAMBAH USER
     if (isset($_POST['add_user'])) {
         $new_username = trim($_POST['new_username']);
         $new_password = trim($_POST['new_password']);
         $new_role = $_POST['new_role'] ?? 'user';
+        
         if (!empty($new_username) && !empty($new_password)) {
-            $cek = mysqli_query($conn, "SELECT id FROM pengguna WHERE username = '$new_username'");
-            if (mysqli_num_rows($cek) > 0) {
+            // Prepared Statement Cek Username
+            $stmt_cek = mysqli_prepare($conn, "SELECT id FROM pengguna WHERE username = ?");
+            mysqli_stmt_bind_param($stmt_cek, "s", $new_username);
+            mysqli_stmt_execute($stmt_cek);
+            mysqli_stmt_store_result($stmt_cek);
+            
+            if (mysqli_stmt_num_rows($stmt_cek) > 0) {
                 $error_message = "Username sudah terdaftar!";
             } else {
                 $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                mysqli_query($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())");
-                $success_message = "Akun user berhasil ditambahkan!";
+                // Prepared Statement Insert
+                $stmt_ins = mysqli_prepare($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES (?, ?, ?, 'approved', NOW())");
+                mysqli_stmt_bind_param($stmt_ins, "sss", $new_username, $password_hash, $new_role);
+                if (mysqli_stmt_execute($stmt_ins)) {
+                    $success_message = "Akun user berhasil ditambahkan!";
+                } else {
+                    $error_message = "Gagal menambahkan akun: " . mysqli_error($conn);
+                }
+                mysqli_stmt_close($stmt_ins);
             }
+            mysqli_stmt_close($stmt_cek);
         } else {
             $error_message = "Username dan password harus diisi!";
         }
     }
 
+    // EDIT USER
     if (isset($_POST['edit_user'])) {
         $user_id = intval($_POST['user_id']);
         $edit_username = trim($_POST['edit_username']);
         $edit_role = $_POST['edit_role'];
         $edit_password = trim($_POST['edit_password']);
-        if (!empty($edit_password)) {
-            $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
-            mysqli_query($conn, "UPDATE pengguna SET username='$edit_username', password='$password_hash', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+        
+        if (!empty($edit_username)) {
+            if (!empty($edit_password)) {
+                // Update dengan password baru
+                $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
+                $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, password = ?, role = ?, updated_at = NOW() WHERE id = ?");
+                mysqli_stmt_bind_param($stmt_upd, "sssi", $edit_username, $password_hash, $edit_role, $user_id);
+            } else {
+                // Update tanpa password
+                $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, role = ?, updated_at = NOW() WHERE id = ?");
+                mysqli_stmt_bind_param($stmt_upd, "ssi", $edit_username, $edit_role, $user_id);
+            }
+            
+            if (mysqli_stmt_execute($stmt_upd)) {
+                $success_message = "Akun user berhasil diperbarui!";
+            } else {
+                $error_message = "Gagal memperbarui akun: " . mysqli_error($conn);
+            }
+            mysqli_stmt_close($stmt_upd);
         } else {
-            mysqli_query($conn, "UPDATE pengguna SET username='$edit_username', role='$edit_role', updated_at=NOW() WHERE id='$user_id'");
+            $error_message = "Username harus diisi!";
         }
-        $success_message = "Akun user berhasil diperbarui!";
     }
 
+    // HAPUS USER
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
-        $checkAdmin = mysqli_query($conn, "SELECT username FROM pengguna WHERE id = $user_id AND username = 'admin'");
-        if (mysqli_num_rows($checkAdmin) > 0) {
+        
+        // Cek apakah user adalah admin utama
+        $stmt_cek = mysqli_prepare($conn, "SELECT username FROM pengguna WHERE id = ?");
+        mysqli_stmt_bind_param($stmt_cek, "i", $user_id);
+        mysqli_stmt_execute($stmt_cek);
+        $result = mysqli_stmt_get_result($stmt_cek);
+        $user_data = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt_cek);
+        
+        if ($user_data && $user_data['username'] == 'admin') {
             $error_message = "Tidak dapat menghapus akun admin utama!";
         } else {
-            $delete = mysqli_query($conn, "DELETE FROM pengguna WHERE id = $user_id");
-            if ($delete) {
+            // Prepared Statement Delete
+            $stmt_del = mysqli_prepare($conn, "DELETE FROM pengguna WHERE id = ?");
+            mysqli_stmt_bind_param($stmt_del, "i", $user_id);
+            if (mysqli_stmt_execute($stmt_del)) {
                 $success_message = "Akun user berhasil dihapus!";
             } else {
                 $error_message = "Gagal menghapus akun: " . mysqli_error($conn);
             }
+            mysqli_stmt_close($stmt_del);
         }
     }
 }
@@ -1783,7 +1841,7 @@ $totalUsers = count($users);
             Swal.fire({
                 icon: 'success',
                 title: 'Berhasil!',
-                text: '<?= $success_message ?>',
+                text: '<?= addslashes($success_message) ?>',
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -1791,7 +1849,7 @@ $totalUsers = count($users);
             Swal.fire({
                 icon: 'error',
                 title: 'Gagal!',
-                text: '<?= $error_message ?>'
+                text: '<?= addslashes($error_message) ?>'
             });
         <?php endif; ?>
     </script>
