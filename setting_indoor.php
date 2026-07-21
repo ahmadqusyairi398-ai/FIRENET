@@ -48,32 +48,33 @@ function getSensorIconPHP($nama)
     return isset($icons[$nama]) ? $icons[$nama] : "microchip";
 }
 
-// ========== CEK DAN BUAT TABEL LOKASI ==========
+// ========== CEK DAN BUAT TABEL LOKASI (DISESUAIKAN DENGAN SQL) ==========
 function ensureLocationTable($conn) {
     if (!$conn) return false;
     
-    // Cek apakah tabel 'lokasi' sudah ada
-    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi'");
+    // Mengecek tabel lokasi_monitoring
+    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_monitoring'");
     if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
-        // Buat tabel lokasi
-        $createTable = "CREATE TABLE lokasi (
+        $createTable = "CREATE TABLE lokasi_monitoring (
             id INT AUTO_INCREMENT PRIMARY KEY,
+            id_alat VARCHAR(50) NOT NULL,
             latitude DECIMAL(10,8) NOT NULL,
             longitude DECIMAL(11,8) NOT NULL,
-            last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )";
         mysqli_query($conn, $createTable);
         
-        // Insert default location
+        // Insert default location (Sertakan id_alat)
         $defaultLocations = [
-            ['latitude' => -1.20249, 'longitude' => 116.88708],
-            ['latitude' => -1.20250, 'longitude' => 116.88710],
+            ['id_alat' => '001', 'latitude' => -1.20249, 'longitude' => 116.88708],
+            ['id_alat' => '002', 'latitude' => -1.20250, 'longitude' => 116.88710],
         ];
         
         foreach ($defaultLocations as $loc) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi (latitude, longitude) VALUES (?, ?)");
+            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude) VALUES (?, ?, ?)");
             if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "dd", $loc['latitude'], $loc['longitude']);
+                mysqli_stmt_bind_param($stmt, "sdd", $loc['id_alat'], $loc['latitude'], $loc['longitude']);
                 mysqli_stmt_execute($stmt);
                 mysqli_stmt_close($stmt);
             }
@@ -83,20 +84,16 @@ function ensureLocationTable($conn) {
     return true;
 }
 
-// Jalankan fungsi untuk memastikan tabel lokasi ada
+// Jalankan fungsi untuk memastikan tabel lokasi_monitoring ada
 ensureLocationTable($conn);
 
 // ========== FUNGSI CRUD UNTUK DATA LOKASI ==========
 
-/**
- * Mendapatkan semua data lokasi dari database
- * @param mysqli $conn Koneksi database
- * @return array Array berisi data lokasi
- */
 function getLocations($conn) {
     $locations = [];
     if ($conn) {
-        $query = mysqli_query($conn, "SELECT id, latitude, longitude, last_update FROM lokasi ORDER BY id ASC");
+        // Sesuaikan select dengan last_update alias dari updated_at agar tabel UI tetap terbaca
+        $query = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 $locations[] = $row;
@@ -106,18 +103,13 @@ function getLocations($conn) {
     return $locations;
 }
 
-/**
- * Menambahkan lokasi baru ke database
- * @param mysqli $conn Koneksi database
- * @param float $latitude Latitude lokasi
- * @param float $longitude Longitude lokasi
- * @return bool True jika berhasil, False jika gagal
- */
 function addLocation($conn, $latitude, $longitude) {
     if (!$conn) return false;
-    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi (latitude, longitude) VALUES (?, ?)");
+    // Beri id_alat default misal 'NEW_ALAT' (atau bisa dinamis nantinya)
+    $id_alat_default = "00" . rand(4,999); 
+    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude) VALUES (?, ?, ?)");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "dd", $latitude, $longitude);
+        mysqli_stmt_bind_param($stmt, "sdd", $id_alat_default, $latitude, $longitude);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -125,17 +117,10 @@ function addLocation($conn, $latitude, $longitude) {
     return false;
 }
 
-/**
- * Mengupdate data lokasi berdasarkan ID
- * @param mysqli $conn Koneksi database
- * @param int $id ID lokasi yang akan diupdate
- * @param float $latitude Latitude baru
- * @param float $longitude Longitude baru
- * @return bool True jika berhasil, False jika gagal
- */
 function updateLocation($conn, $id, $latitude, $longitude) {
     if (!$conn) return false;
-    $stmt = mysqli_prepare($conn, "UPDATE lokasi SET latitude = ?, longitude = ?, last_update = NOW() WHERE id = ?");
+    // Otomatis memperbarui kolom updated_at jika database support on update CURRENT_TIMESTAMP atau update manual
+    $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?");
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "ddi", $latitude, $longitude, $id);
         $result = mysqli_stmt_execute($stmt);
@@ -145,15 +130,9 @@ function updateLocation($conn, $id, $latitude, $longitude) {
     return false;
 }
 
-/**
- * Menghapus data lokasi berdasarkan ID
- * @param mysqli $conn Koneksi database
- * @param int $id ID lokasi yang akan dihapus
- * @return bool True jika berhasil, False jika gagal
- */
 function deleteLocation($conn, $id) {
     if (!$conn) return false;
-    $stmt = mysqli_prepare($conn, "DELETE FROM lokasi WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "DELETE FROM lokasi_monitoring WHERE id = ?");
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "i", $id);
         $result = mysqli_stmt_execute($stmt);
@@ -163,15 +142,9 @@ function deleteLocation($conn, $id) {
     return false;
 }
 
-/**
- * Mendapatkan satu lokasi berdasarkan ID
- * @param mysqli $conn Koneksi database
- * @param int $id ID lokasi
- * @return array|null Data lokasi atau null jika tidak ditemukan
- */
 function getLocationById($conn, $id) {
     if (!$conn) return null;
-    $stmt = mysqli_prepare($conn, "SELECT id, latitude, longitude, last_update FROM lokasi WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring WHERE id = ?");
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "i", $id);
         mysqli_stmt_execute($stmt);
@@ -1245,6 +1218,7 @@ $totalUsers = count($users);
                         <thead>
                             <tr>
                                 <th>NO</th>
+                                <th>ID ALAT</th>
                                 <th>LATITUDE</th>
                                 <th>LONGITUDE</th>
                                 <th>WAKTU UPDATE</th>
@@ -1256,6 +1230,7 @@ $totalUsers = count($users);
                                 <?php foreach ($locations as $index => $loc): ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
+                                        <td><?= isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '-' ?></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
@@ -1276,7 +1251,7 @@ $totalUsers = count($users);
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 30px; color: #999;">
+                                    <td colspan="6" style="text-align: center; padding: 30px; color: #999;">
                                         <i class="fas fa-inbox" style="font-size: 30px; display: block; margin-bottom: 10px;"></i>
                                         Tidak ada data lokasi
                                     </td>
