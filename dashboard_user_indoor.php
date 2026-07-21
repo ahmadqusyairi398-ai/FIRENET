@@ -880,10 +880,13 @@ async function updateDashboard() {
 }
 
 // ================= INISIALISASI PERTAMA KALI =================
-// Jalankan update pertama kali
+// 1. Gambar peta terlebih dahulu dengan titik default agar tidak blank
+initMap(currentLat, currentLng);
+
+// 2. Jalankan update pertama kali untuk mengambil data dari database
 updateDashboard();
 
-// Jalankan update setiap 3 detik
+// 3. Jalankan update setiap 3 detik
 setInterval(updateDashboard, 3000);
 </script>
 </body>
