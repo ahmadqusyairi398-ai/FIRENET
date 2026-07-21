@@ -93,8 +93,8 @@ $default_locations = [
         "id" => 9,
         "id_alat" => "OUT-009",
         "nama_lokasi" => "Kantor Gubernur Kaltim (Samarinda)",
-        "latitude" => 0.501219,
-        "longitude" => 117.139391
+        "latitude" => -0.501196,
+        "longitude" => 117.139408
     ],
     [
         "id" => 10,
