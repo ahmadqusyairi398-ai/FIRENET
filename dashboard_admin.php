@@ -92,6 +92,22 @@ if ($conn) {
         }
     }
 }
+
+// 5. Ambil SEMUA titik lokasi alat dari tabel lokasi_alat (database outdoor)
+$all_locations = [];
+if ($conn) {
+    $q_all_loc = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+    if ($q_all_loc) {
+        while ($r_loc = mysqli_fetch_assoc($q_all_loc)) {
+            $all_locations[] = [
+                'id' => (int)$r_loc['id'],
+                'id_alat' => $r_loc['id_alat'],
+                'lat' => (float)$r_loc['latitude'],
+                'lng' => (float)$r_loc['longitude']
+            ];
+        }
+    }
+}
 // ==========================================================
 
 // Jika tipe dashboard adalah indoor, alihkan ke dashboard_admin_indoor.php
@@ -639,7 +655,26 @@ canvas {
     <!-- ========== 4. MAPS / LOKASI ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring <span style="font-size: 12px; color: #666; margin-left: auto;">Lokasi Tetap</span></h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring</h3>
+            <span style="font-size: 12px; background: rgba(0, 180, 219, 0.1); color: #0083b0; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                Total: <?= count($all_locations) ?> Titik Lokasi
+            </span>
+        </div>
+
+        <?php if (!empty($all_locations)): ?>
+        <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+            <?php foreach ($all_locations as $loc): ?>
+            <button type="button" class="btn-loc-select <?= ($loc['id'] == 1) ? 'active' : '' ?>" 
+                    onclick="flyToLocation(<?= $loc['lat'] ?>, <?= $loc['lng'] ?>, <?= $loc['id'] ?>)" 
+                    style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($loc['id'] == 1) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($loc['id'] == 1) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
+                    id="btn-loc-<?= $loc['id'] ?>">
+                <i class="fas fa-location-dot"></i> <?= htmlspecialchars($loc['id_alat']) ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
@@ -714,9 +749,10 @@ document.addEventListener('keydown', function(e) {
 // Memasukkan nilai PHP langsung ke variabel JavaScript
 var fixedLat = <?= $db_lat; ?>;
 var fixedLng = <?= $db_lng; ?>;
+var allLocations = <?= json_encode($all_locations); ?>;
 
 // Inisialisasi peta
-var map = L.map('map').setView([fixedLat, fixedLng], 15);
+var map = L.map('map').setView([fixedLat, fixedLng], 14);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
@@ -742,23 +778,78 @@ var dangerIcon = L.divIcon({
     className: 'danger-marker'
 });
 
-// Marker awal dengan icon aman
-var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
+// Icon marker untuk lokasi titik tambahan lainnya (Biru)
+var otherIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #00b4db, #0083b0); width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-location-dot" style="color: white; font-size: 14px;"></i></div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+    className: 'other-marker'
+});
 
-// POPUP awal
-sensorMarker.bindPopup(`
-    <b>🔥 Fire Detector</b><br>
-    <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
-    Status: <span style="color: #28a745;">Aktif - Normal</span>
-`).openPopup();
+var locationMarkers = {};
+var sensorMarker = null;
+var dangerZone = null;
 
-// Circle zone - AMAN (Hijau)
-var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: '#28a745',
-    fillColor: '#28a745',
-    fillOpacity: 0.1,
-    radius: 500
-}).addTo(map);
+// Render semua titik lokasi dari database outdoor
+if (allLocations.length > 0) {
+    allLocations.forEach(function(loc) {
+        if (loc.id === 1) {
+            // Sensor utama aktif (ID 1)
+            sensorMarker = L.marker([loc.lat, loc.lng], { icon: safeIcon, draggable: false }).addTo(map);
+            sensorMarker.bindPopup(`
+                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
+                    <b>🔥 Fire Detector (${loc.id_alat})</b><br>
+                    <i class="fas fa-map-marker-alt" style="color: #28a745;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
+                    Status: <span style="color: #28a745; font-weight: bold;">Aktif - Monitoring Utama</span>
+                </div>
+            `).openPopup();
+            
+            dangerZone = L.circle([loc.lat, loc.lng], {
+                color: '#28a745',
+                fillColor: '#28a745',
+                fillOpacity: 0.1,
+                radius: 500
+            }).addTo(map);
+            
+            locationMarkers[loc.id] = sensorMarker;
+        } else {
+            // Titik lokasi lainnya dari database
+            var marker = L.marker([loc.lat, loc.lng], { icon: otherIcon }).addTo(map);
+            marker.bindPopup(`
+                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
+                    <b>📍 ${loc.id_alat}</b><br>
+                    <i class="fas fa-globe" style="color: #0083b0;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
+                    <span style="font-size: 11px; color: #666;">Titik Lokasi Database Outdoor</span>
+                </div>
+            `);
+            locationMarkers[loc.id] = marker;
+        }
+    });
+}
+
+// Fallback jika tidak ada marker utama
+if (!sensorMarker) {
+    sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
+    dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
+}
+
+// Fungsi interaktif saat memilih tombol lokasi
+function flyToLocation(lat, lng, id) {
+    map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+    if (locationMarkers[id]) {
+        locationMarkers[id].openPopup();
+    }
+    document.querySelectorAll('.btn-loc-select').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#333';
+    });
+    var activeBtn = document.getElementById('btn-loc-' + id);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+    }
+}
 
 // ================= FUNGSI UPDATE LOCATION STATUS (DIPERBAIKI) =================
 function updateLocationStatus(isDanger, lat, lng) {
