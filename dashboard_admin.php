@@ -666,7 +666,7 @@ var dangerIcon = L.divIcon({
 // Marker awal dengan icon aman
 var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
 
-// POPUP
+// POPUP awal
 sensorMarker.bindPopup(`
     <b>🔥 Fire Detector</b><br>
     <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
@@ -681,7 +681,8 @@ var dangerZone = L.circle([fixedLat, fixedLng], {
     radius: 500
 }).addTo(map);
 
-function updateLocationStatus(isDanger) {
+// ================= FUNGSI UPDATE LOCATION STATUS (DIPERBAIKI) =================
+function updateLocationStatus(isDanger, lat, lng) {
     if (isDanger) {
         // Mode BAHAYA - Merah
         dangerZone.setStyle({ 
@@ -696,9 +697,10 @@ function updateLocationStatus(isDanger) {
         // Ganti marker ke icon bahaya
         sensorMarker.setIcon(dangerIcon);
         
+        // UBAH variabel fixedLat/Lng menjadi lat/lng
         sensorMarker.bindPopup(`
             <b>🔥 PERINGATAN KEBAKARAN!</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
+            <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
             Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
         `).openPopup();
     } else {
@@ -715,9 +717,10 @@ function updateLocationStatus(isDanger) {
         // Ganti marker ke icon aman
         sensorMarker.setIcon(safeIcon);
         
+        // UBAH variabel fixedLat/Lng menjadi lat/lng
         sensorMarker.bindPopup(`
             <b>🔥 Fire Detector</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
+            <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
             Status: <span style="color: #28a745;">Aktif - Normal</span>
         `).openPopup();
     }
@@ -861,19 +864,21 @@ function fetchDataFromDB() {
             document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
 
-            // 6. Update Peta & Koordinat dari Database
-                    if(data.lat && data.lng) {
+            // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
+            if(data.lat && data.lng) {
                 document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
                 sensorMarker.setLatLng([data.lat, data.lng]);
                 dangerZone.setLatLng([data.lat, data.lng]);
-    
-             // TAMBAHAN: Agar kamera peta otomatis bergeser ke tengah lokasi baru
-                     map.panTo(new L.LatLng(data.lat, data.lng));
+                
+                // TAMBAHAN: Geser kamera peta ke koordinat baru
+                map.panTo(new L.LatLng(data.lat, data.lng));
             }
 
-            // 7. Deteksi Bahaya
+            // ================= 7. Deteksi Bahaya (DIPERBAIKI) =================
             var isDanger = (data.asap === "Tinggi" || coValue > 50);
-            updateLocationStatus(isDanger);
+            
+            // UBAH baris ini (tambahkan data.lat dan data.lng)
+            updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 8. Update Grafik
             dataChart.labels.push(data.waktu || new Date().toLocaleTimeString());

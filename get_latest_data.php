@@ -25,8 +25,11 @@ $response = [
     'rssi'       => $data_sensor['rssi'] ?? 0,
     'ip'         => $data_sensor['ip_address'] ?? '127.0.0.1',
     'status'     => 'Online',
-    'lat'        => $data_lokasi['latitude'] ?? ($data_sensor['latitude'] ?? -1.20249),
-    'lng'        => $data_lokasi['longitude'] ?? ($data_sensor['longitude'] ?? 116.88708)
+    
+    // ======== BAGIAN YANG DIPERBAIKI ========
+    // Sekarang murni hanya mengambil dari tabel lokasi_alat
+    'lat'        => $data_lokasi['latitude'] ?? -1.20249,
+    'lng'        => $data_lokasi['longitude'] ?? 116.88708
 ];
 
 echo json_encode($response);
