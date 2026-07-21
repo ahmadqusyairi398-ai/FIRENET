@@ -10,7 +10,7 @@ if ($is_localhost) {
     $username = "ta_user";
     $password = "rahasiaTA123!";
     $dbname_outdoor = "outdoor";
-    $dbname_indoor = "indoor";
+    $dbname_indoor = "konek";
 } else if (strpos($_SERVER['HTTP_HOST'], 'inovasijre.com') !== false) {
     // ==========================================================
     // 2. KREDENSIAL DATABASE LIVE DOMAIN (inovasijre.com)
@@ -21,7 +21,7 @@ if ($is_localhost) {
     $username = "ta_user"; // UBAH: Sesuaikan dengan nama user database Anda di cPanel
     $password = "rahasiaTA123!";   // UBAH: Masukkan password user database Anda
     $dbname_outdoor = "outdoor"; // UBAH: Sesuaikan dengan nama database outdoor Anda
-    $dbname_indoor = "indoor";   // UBAH: Sesuaikan dengan nama database indoor Anda
+    $dbname_indoor = "firenet";   // UBAH: Sesuaikan dengan nama database indoor Anda
 } else {
     // ==========================================================
     // 3. KREDENSIAL DATABASE DOMAIN LAIN (PRODUCTION)
@@ -30,7 +30,7 @@ if ($is_localhost) {
     $username = "ta_user"; 
     $password = "rahasiaTA123!"; 
     $dbname_outdoor = "outdoor"; 
-    $dbname_indoor = "indoor"; 
+    $dbname_indoor = "firenet"; 
 }
 
 $pdo_outdoor = null;
