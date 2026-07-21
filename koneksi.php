@@ -10,7 +10,7 @@ if ($is_localhost) {
     $username = "ta_user";
     $password = "rahasiaTA123!";
     $dbname_outdoor = "outdoor";
-    $dbname_indoor = "konek";
+    $dbname_indoor = "firenet";
 } else if (strpos($_SERVER['HTTP_HOST'], 'inovasijre.com') !== false) {
     // ==========================================================
     // 2. KREDENSIAL DATABASE LIVE DOMAIN (inovasijre.com)
