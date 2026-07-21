@@ -84,7 +84,7 @@ $default_locations = [
         "id" => 8,
         "id_alat" => "OUT-008",
         "nama_lokasi" => "Kawasan Titik Nol IKN (Sepaku, PPU)",
-        "latitude" => --0.966113,
+        "latitude" => -0.966113,
         "longitude" => 116.702781
     ],
     
