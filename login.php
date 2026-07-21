@@ -586,6 +586,12 @@ body::before {
                 <span>Masuk</span>
             </button>
         </form>
+        
+        <div class="register-link">
+        <a href="home.php" class="back-home">
+            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
+        </a>
+        </div>
     </div>
 </div>
 
