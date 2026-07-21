@@ -27,11 +27,36 @@ require_once 'koneksi.php';
 // Gunakan koneksi indoor secara ketat
 $conn = isset($conn_indoor) ? $conn_indoor : null;
 
+// Jika koneksi gagal, coba koneksi manual sebagai fallback
 if (!$conn) {
-    die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
-        <h3>Error: Koneksi ke Database INDOOR ('indoor') Gagal.</h3>
-        <p>Silakan periksa konfigurasi database Anda pada file <code>koneksi.php</code>.</p>
-    </div>");
+    // Coba koneksi manual dengan kredensial default
+    $host = "localhost";
+    $user = "root";
+    $pass = "";
+    $db = "indoor";
+    
+    $conn = mysqli_connect($host, $user, $pass, $db);
+    
+    if (!$conn) {
+        die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
+            <h3>⚠️ Error: Koneksi ke Database INDOOR Gagal!</h3>
+            <p><strong>Detail Koneksi:</strong></p>
+            <ul>
+                <li><strong>Host:</strong> {$host}</li>
+                <li><strong>Database:</strong> {$db}</li>
+                <li><strong>Username:</strong> {$user}</li>
+                <li><strong>Password:</strong> " . ($pass ? '********' : '(kosong)') . "</li>
+            </ul>
+            <p>Pastikan:</p>
+            <ol>
+                <li>MySQL sedang berjalan (nyalakan di XAMPP Control Panel)</li>
+                <li>Database <strong>indoor</strong> sudah dibuat di phpMyAdmin</li>
+                <li>Username dan password sesuai (default XAMPP: root / kosong)</li>
+            </ol>
+            <hr>
+            <p style='font-size: 12px; color: #666;'>Error MySQL: " . mysqli_connect_error() . "</p>
+        </div>");
+    }
 }
 
 // ========== FUNGSI GET ICON SENSOR (PHP) ==========
@@ -129,6 +154,13 @@ try {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )";
         mysqli_query($conn, $createLoginTable);
+        
+        // Insert default admin if not exists
+        $checkAdmin = mysqli_query($conn, "SELECT id FROM login WHERE username = 'admin'");
+        if (!$checkAdmin || mysqli_num_rows($checkAdmin) == 0) {
+            $defaultPassword = password_hash('admin123', PASSWORD_DEFAULT);
+            mysqli_query($conn, "INSERT INTO login (username, password, role, status, created_at) VALUES ('admin', '$defaultPassword', 'admin', 'approved', NOW())");
+        }
     }
 
     // 3. Cek dan tambahkan kolom role, status, updated_at di tabel login jika belum ada
