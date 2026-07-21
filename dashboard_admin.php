@@ -544,7 +544,7 @@ canvas {
             <div class="location-info-item">
                 <i class="fas fa-globe"></i>
                 <span class="label">Koordinat:</span>
-                <span class="value" id="coordinates">-1.202490, 116.887080</span>
+                <span class="value" id="coordinates">-1.201888, 116.886997</span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-tree"></i>
