@@ -96,12 +96,29 @@ if ($conn) {
 // 5. Ambil SEMUA titik lokasi alat dari tabel lokasi_alat (database outdoor)
 $all_locations = [];
 if ($conn) {
-    $q_all_loc = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+    $q_all_loc = mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id ASC");
     if ($q_all_loc) {
         while ($r_loc = mysqli_fetch_assoc($q_all_loc)) {
+            $loc_id = (int)$r_loc['id'];
+            $raw_id_alat = isset($r_loc['id_alat']) ? trim($r_loc['id_alat']) : '';
+            $raw_nama = isset($r_loc['nama_lokasi']) ? trim($r_loc['nama_lokasi']) : '';
+            
+            // Format Nama Tempat & ID Alat (seperti di Portofolio: ID: OUT-001)
+            if (!empty($raw_nama)) {
+                $nama_tempat = $raw_nama;
+                $code_alat = !empty($raw_id_alat) ? $raw_id_alat : 'OUT-' . str_pad($loc_id, 3, '0', STR_PAD_LEFT);
+            } else if (preg_match('/^OUT-\d+/i', $raw_id_alat)) {
+                $code_alat = strtoupper($raw_id_alat);
+                $nama_tempat = 'Lokasi ' . $loc_id;
+            } else {
+                $nama_tempat = !empty($raw_id_alat) ? $raw_id_alat : 'Lokasi ' . $loc_id;
+                $code_alat = 'OUT-' . str_pad($loc_id, 3, '0', STR_PAD_LEFT);
+            }
+
             $all_locations[] = [
-                'id' => (int)$r_loc['id'],
-                'id_alat' => $r_loc['id_alat'],
+                'id' => $loc_id,
+                'id_alat' => $code_alat,
+                'nama_lokasi' => $nama_tempat,
                 'lat' => (float)$r_loc['latitude'],
                 'lng' => (float)$r_loc['longitude']
             ];
@@ -669,7 +686,9 @@ canvas {
                     onclick="flyToLocation(<?= $loc['lat'] ?>, <?= $loc['lng'] ?>, <?= $loc['id'] ?>)" 
                     style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($loc['id'] == 1) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($loc['id'] == 1) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
                     id="btn-loc-<?= $loc['id'] ?>">
-                <i class="fas fa-location-dot"></i> <?= htmlspecialchars($loc['id_alat']) ?>
+                <i class="fas fa-location-dot"></i> 
+                <span><?= htmlspecialchars($loc['nama_lokasi']) ?></span>
+                <span style="opacity: 0.85; font-size: 11px; background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 10px;">ID: <?= htmlspecialchars($loc['id_alat']) ?></span>
             </button>
             <?php endforeach; ?>
         </div>
@@ -677,6 +696,16 @@ canvas {
 
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
+            <div class="location-info-item">
+                <i class="fas fa-map-pin"></i>
+                <span class="label">Nama Tempat:</span>
+                <span class="value" id="location-name-val"><?= htmlspecialchars($all_locations[0]['nama_lokasi'] ?? 'Lokasi') ?></span>
+            </div>
+            <div class="location-info-item">
+                <i class="fas fa-microchip"></i>
+                <span class="label">ID Alat:</span>
+                <span class="value" id="location-id-val" style="color: #e85d04; font-weight: 700;">ID: <?= htmlspecialchars($all_locations[0]['id_alat'] ?? 'OUT-001') ?></span>
+            </div>
             <div class="location-info-item">
                 <i class="fas fa-globe"></i>
                 <span class="label">Koordinat:</span>
@@ -794,16 +823,21 @@ var dangerZone = null;
 // Render semua titik lokasi dari database outdoor
 if (allLocations.length > 0) {
     allLocations.forEach(function(loc) {
+        var popupContent = `
+            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
+                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
+                <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${loc.nama_lokasi}</div>
+                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${loc.id_alat}</div>
+                <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
+                    <i class="fas fa-globe"></i> ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
+                </div>
+            </div>
+        `;
+
         if (loc.id === 1) {
             // Sensor utama aktif (ID 1)
             sensorMarker = L.marker([loc.lat, loc.lng], { icon: safeIcon, draggable: false }).addTo(map);
-            sensorMarker.bindPopup(`
-                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
-                    <b>🔥 Fire Detector (${loc.id_alat})</b><br>
-                    <i class="fas fa-map-marker-alt" style="color: #28a745;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
-                    Status: <span style="color: #28a745; font-weight: bold;">Aktif - Monitoring Utama</span>
-                </div>
-            `).openPopup();
+            sensorMarker.bindPopup(popupContent).openPopup();
             
             dangerZone = L.circle([loc.lat, loc.lng], {
                 color: '#28a745',
@@ -816,15 +850,13 @@ if (allLocations.length > 0) {
         } else {
             // Titik lokasi lainnya dari database
             var marker = L.marker([loc.lat, loc.lng], { icon: otherIcon }).addTo(map);
-            marker.bindPopup(`
-                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
-                    <b>📍 ${loc.id_alat}</b><br>
-                    <i class="fas fa-globe" style="color: #0083b0;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
-                    <span style="font-size: 11px; color: #666;">Titik Lokasi Database Outdoor</span>
-                </div>
-            `);
+            marker.bindPopup(popupContent);
             locationMarkers[loc.id] = marker;
         }
+
+        locationMarkers[loc.id].on('click', function() {
+            flyToLocation(loc.lat, loc.lng, loc.id);
+        });
     });
 }
 
@@ -840,6 +872,17 @@ function flyToLocation(lat, lng, id) {
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
     }
+
+    var targetLoc = allLocations.find(l => l.id === id);
+    if (targetLoc) {
+        var nameElem = document.getElementById('location-name-val');
+        var idElem = document.getElementById('location-id-val');
+        var coordElem = document.getElementById('coordinates');
+        if (nameElem) nameElem.innerText = targetLoc.nama_lokasi;
+        if (idElem) idElem.innerText = 'ID: ' + targetLoc.id_alat;
+        if (coordElem) coordElem.innerText = targetLoc.lat.toFixed(6) + ', ' + targetLoc.lng.toFixed(6);
+    }
+
     document.querySelectorAll('.btn-loc-select').forEach(btn => {
         btn.style.background = 'white';
         btn.style.color = '#333';
