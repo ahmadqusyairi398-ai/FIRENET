@@ -4,15 +4,14 @@ session_start();
 
 // ================= TAMBAHAN KODE DATABASE =================
 // 1. Hubungkan ke database
-// Gunakan file koneksi.php yang sudah ada
 require_once 'koneksi.php';
 
 // Gunakan koneksi outdoor
 $conn = isset($conn_outdoor) ? $conn_outdoor : null;
 
-// 2. Ambil data latitude dan longitude terbaru dari tabel lokasi_alat
-$db_lat = -1.201888; // Nilai default (Balikpapan) jika tabel kosong
-$db_lng = 116.886997; // Nilai default (Balikpapan) jika tabel kosong
+// 2. Ambil data latitude dan longitude terbaru dari tabel lokasi_alat (database outdoor)
+$db_lat = -1.201888; // Nilai default jika tabel kosong
+$db_lng = 116.886997;
 
 if ($conn) {
     $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat WHERE id = 1 LIMIT 1");
@@ -23,6 +22,90 @@ if ($conn) {
         $row_lokasi = mysqli_fetch_assoc($query_lokasi);
         $db_lat = (float)$row_lokasi['latitude'];
         $db_lng = (float)$row_lokasi['longitude'];
+    }
+}
+
+// 3. Ambil data sensor terbaru murni dari tabel data_sensor (database outdoor)
+$latest_sensor = [
+    'waktu' => '-',
+    'tegangan' => '0.0',
+    'arus' => '0.00',
+    'daya' => '0.0',
+    'arah' => 'Utara',
+    'angin' => '0.0',
+    'asap' => 'Normal',
+    'suhu' => '0.0',
+    'kelembapan' => '0.0',
+    'co' => 0,
+    'rssi' => '-',
+    'ip' => '-',
+    'status' => 'Offline'
+];
+
+if ($conn) {
+    $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
+        $s = mysqli_fetch_assoc($q_sensor);
+        $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
+        $co_val = isset($s['co']) ? (float)$s['co'] : 0;
+        
+        $latest_sensor = [
+            'waktu' => date('H:i:s', strtotime($s['timestamp'])),
+            'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
+            'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
+            'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
+            'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
+            'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
+            'asap' => $asap_val,
+            'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
+            'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
+            'co' => $co_val,
+            'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+            'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+            'status' => 'Online'
+        ];
+    }
+}
+
+// 4. Ambil 20 data sensor riwayat terbaru untuk grafik awal dari database outdoor
+$chart_labels = [];
+$chart_tegangan = [];
+$chart_arus = [];
+$chart_daya = [];
+$chart_suhu = [];
+$chart_kelembapan = [];
+$chart_angin = [];
+$chart_co = [];
+
+if ($conn) {
+    $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 20) Var1 ORDER BY timestamp ASC");
+    if ($q_chart) {
+        while ($row = mysqli_fetch_assoc($q_chart)) {
+            $chart_labels[] = date('H:i:s', strtotime($row['timestamp']));
+            $chart_tegangan[] = (float)($row['tegangan'] ?? 0);
+            $chart_arus[] = (float)($row['arus'] ?? 0);
+            $chart_daya[] = (float)($row['daya'] ?? 0);
+            $chart_suhu[] = (float)($row['suhu'] ?? 0);
+            $chart_kelembapan[] = (float)($row['kelembapan'] ?? 0);
+            $chart_angin[] = (float)($row['kecepatan_angin'] ?? 0);
+            $chart_co[] = (float)($row['co'] ?? 0);
+        }
+    }
+}
+
+// 5. Ambil SEMUA titik lokasi alat dari tabel lokasi_alat (database outdoor)
+$all_locations = [];
+if ($conn) {
+    $q_all_loc = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+    if ($q_all_loc) {
+        while ($r_loc = mysqli_fetch_assoc($q_all_loc)) {
+            $all_locations[] = [
+                'id' => (int)$r_loc['id'],
+                'id_alat' => $r_loc['id_alat'],
+                'lat' => (float)$r_loc['latitude'],
+                'lng' => (float)$r_loc['longitude']
+            ];
+        }
     }
 }
 // ==========================================================
@@ -494,19 +577,18 @@ canvas {
             <!-- Status Node di dalam Header -->
             <div class="node-status-header">
                 <div class="status-item-header">
-                    <i class="fas fa-circle status-online"></i>
                     <span>Status:</span>
-                    <span class="value" id="status">-</span>
+                    <span class="value" id="status"><i class="fas fa-circle <?= ($latest_sensor['status'] === 'Online') ? 'status-online' : '' ?>"></i> <?= htmlspecialchars($latest_sensor['status']) ?></span>
                 </div>
                 <div class="status-item-header">
                     <i class="fas fa-signal"></i>
                     <span>RSSI:</span>
-                    <span class="value" id="rssi">-</span>
+                    <span class="value" id="rssi"><?= htmlspecialchars($latest_sensor['rssi']) ?> dBm</span>
                 </div>
                 <div class="status-item-header">
                     <i class="fas fa-network-wired"></i>
                     <span>IP:</span>
-                    <span class="value" id="ip">-</span>
+                    <span class="value" id="ip"><?= htmlspecialchars($latest_sensor['ip']) ?></span>
                 </div>
             </div>
         </div>
@@ -524,26 +606,36 @@ canvas {
     <!-- ========== 2. DATA SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-solar-panel"></i> Data Sensor <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
+        <h3><i class="fas fa-solar-panel"></i> Data Sensor <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
         <div class="grid">
             <!-- Solar Panel Sensors -->
-            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan">-</b><small>V DC</small></div>
-            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus">-</b><small>A DC</small></div>
-            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya">-</b><small>Watt</small></div>
+            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?> V</b><small>V DC</small></div>
+            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?> A</b><small>A DC</small></div>
+            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya"><?= htmlspecialchars($latest_sensor['daya']) ?> W</b><small>Watt</small></div>
             
             <!-- Wind Sensors -->
-            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah">-</b></div>
-            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin">-</b></div>
+            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah"><i class="fas fa-arrow-right"></i> <?= htmlspecialchars($latest_sensor['arah']) ?></b></div>
+            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin"><?= htmlspecialchars($latest_sensor['angin']) ?> m/s <i class="fas fa-wind"></i></b></div>
             
             <!-- Asap Sensor -->
-            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Asap</div><b id="asap">-</b></div>
+            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>">
+                <i class="fas fa-smog"></i>
+                <div class="sensor-label">Asap</div>
+                <b id="asap">
+                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
+                        <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
+                    <?php else: ?>
+                        <i class="fas fa-check"></i> Normal
+                    <?php endif; ?>
+                </b>
+            </div>
             
             <!-- Environment Sensors -->
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu">-</b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan">-</b></div>
+            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?> °C <i class="fas fa-thermometer-half"></i></b></div>
+            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?> % <i class="fas fa-tint"></i></b></div>
             
             <!-- Gas Sensor -->
-            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co">-</b></div>
+            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co"><?= htmlspecialchars($latest_sensor['co']) ?> ppm <i class="fas fa-industry"></i></b></div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-info-circle" style="color: #0083b0;"></i>
@@ -563,7 +655,26 @@ canvas {
     <!-- ========== 4. MAPS / LOKASI ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring <span style="font-size: 12px; color: #666; margin-left: auto;">Lokasi Tetap</span></h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring</h3>
+            <span style="font-size: 12px; background: rgba(0, 180, 219, 0.1); color: #0083b0; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                Total: <?= count($all_locations) ?> Titik Lokasi
+            </span>
+        </div>
+
+        <?php if (!empty($all_locations)): ?>
+        <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+            <?php foreach ($all_locations as $loc): ?>
+            <button type="button" class="btn-loc-select <?= ($loc['id'] == 1) ? 'active' : '' ?>" 
+                    onclick="flyToLocation(<?= $loc['lat'] ?>, <?= $loc['lng'] ?>, <?= $loc['id'] ?>)" 
+                    style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($loc['id'] == 1) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($loc['id'] == 1) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
+                    id="btn-loc-<?= $loc['id'] ?>">
+                <i class="fas fa-location-dot"></i> <?= htmlspecialchars($loc['id_alat']) ?>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
@@ -638,9 +749,10 @@ document.addEventListener('keydown', function(e) {
 // Memasukkan nilai PHP langsung ke variabel JavaScript
 var fixedLat = <?= $db_lat; ?>;
 var fixedLng = <?= $db_lng; ?>;
+var allLocations = <?= json_encode($all_locations); ?>;
 
 // Inisialisasi peta
-var map = L.map('map').setView([fixedLat, fixedLng], 15);
+var map = L.map('map').setView([fixedLat, fixedLng], 14);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
@@ -666,23 +778,78 @@ var dangerIcon = L.divIcon({
     className: 'danger-marker'
 });
 
-// Marker awal dengan icon aman
-var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
+// Icon marker untuk lokasi titik tambahan lainnya (Biru)
+var otherIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #00b4db, #0083b0); width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-location-dot" style="color: white; font-size: 14px;"></i></div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+    className: 'other-marker'
+});
 
-// POPUP awal
-sensorMarker.bindPopup(`
-    <b>🔥 Fire Detector</b><br>
-    <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
-    Status: <span style="color: #28a745;">Aktif - Normal</span>
-`).openPopup();
+var locationMarkers = {};
+var sensorMarker = null;
+var dangerZone = null;
 
-// Circle zone - AMAN (Hijau)
-var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: '#28a745',
-    fillColor: '#28a745',
-    fillOpacity: 0.1,
-    radius: 500
-}).addTo(map);
+// Render semua titik lokasi dari database outdoor
+if (allLocations.length > 0) {
+    allLocations.forEach(function(loc) {
+        if (loc.id === 1) {
+            // Sensor utama aktif (ID 1)
+            sensorMarker = L.marker([loc.lat, loc.lng], { icon: safeIcon, draggable: false }).addTo(map);
+            sensorMarker.bindPopup(`
+                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
+                    <b>🔥 Fire Detector (${loc.id_alat})</b><br>
+                    <i class="fas fa-map-marker-alt" style="color: #28a745;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
+                    Status: <span style="color: #28a745; font-weight: bold;">Aktif - Monitoring Utama</span>
+                </div>
+            `).openPopup();
+            
+            dangerZone = L.circle([loc.lat, loc.lng], {
+                color: '#28a745',
+                fillColor: '#28a745',
+                fillOpacity: 0.1,
+                radius: 500
+            }).addTo(map);
+            
+            locationMarkers[loc.id] = sensorMarker;
+        } else {
+            // Titik lokasi lainnya dari database
+            var marker = L.marker([loc.lat, loc.lng], { icon: otherIcon }).addTo(map);
+            marker.bindPopup(`
+                <div style="text-align: center; font-family: 'Segoe UI', sans-serif;">
+                    <b>📍 ${loc.id_alat}</b><br>
+                    <i class="fas fa-globe" style="color: #0083b0;"></i> Koordinat: ${loc.lat}, ${loc.lng}<br>
+                    <span style="font-size: 11px; color: #666;">Titik Lokasi Database Outdoor</span>
+                </div>
+            `);
+            locationMarkers[loc.id] = marker;
+        }
+    });
+}
+
+// Fallback jika tidak ada marker utama
+if (!sensorMarker) {
+    sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
+    dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
+}
+
+// Fungsi interaktif saat memilih tombol lokasi
+function flyToLocation(lat, lng, id) {
+    map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+    if (locationMarkers[id]) {
+        locationMarkers[id].openPopup();
+    }
+    document.querySelectorAll('.btn-loc-select').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#333';
+    });
+    var activeBtn = document.getElementById('btn-loc-' + id);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+    }
+}
 
 // ================= FUNGSI UPDATE LOCATION STATUS (DIPERBAIKI) =================
 function updateLocationStatus(isDanger, lat, lng) {
@@ -732,15 +899,15 @@ function updateLocationStatus(isDanger, lat, lng) {
 // ================= CHART =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = { 
-    labels: [], 
+    labels: <?= json_encode($chart_labels) ?>, 
     datasets: [
-        { label: 'Tegangan Panel Surya (V)', data: [], borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus Panel Surya (A)', data: [], borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Daya Panel Surya (W)', data: [], borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kecepatan Angin (m/s)', data: [], borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'CO (ppm)', data: [], borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { label: 'Tegangan Panel Surya (V)', data: <?= json_encode($chart_tegangan) ?>, borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Arus Panel Surya (A)', data: <?= json_encode($chart_arus) ?>, borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Daya Panel Surya (W)', data: <?= json_encode($chart_daya) ?>, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu) ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan) ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kecepatan Angin (m/s)', data: <?= json_encode($chart_angin) ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'CO (ppm)', data: <?= json_encode($chart_co) ?>, borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ] 
 };
 
