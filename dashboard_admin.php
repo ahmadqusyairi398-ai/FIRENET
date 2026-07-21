@@ -2,6 +2,28 @@
 // Mulai session untuk user (simulasi login)
 session_start();
 
+// ================= TAMBAHAN KODE DATABASE =================
+// 1. Hubungkan ke database
+// Gunakan file koneksi.php yang sudah ada
+require_once 'koneksi.php';
+
+// Gunakan koneksi outdoor
+$conn = isset($conn_outdoor) ? $conn_outdoor : null;
+
+// 2. Ambil data latitude dan longitude terbaru dari tabel lokasi_alat
+$db_lat = -1.201888; // Nilai default (Balikpapan) jika tabel kosong
+$db_lng = 116.886997; // Nilai default (Balikpapan) jika tabel kosong
+
+if ($conn) {
+    $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat ORDER BY id DESC LIMIT 1");
+    if ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) {
+        $row_lokasi = mysqli_fetch_assoc($query_lokasi);
+        $db_lat = (float)$row_lokasi['latitude'];
+        $db_lng = (float)$row_lokasi['longitude'];
+    }
+}
+// ==========================================================
+
 // Jika tipe dashboard adalah indoor, alihkan ke dashboard_admin_indoor.php
 if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
     header("Location: dashboard_admin_indoor.php");
@@ -544,7 +566,7 @@ canvas {
             <div class="location-info-item">
                 <i class="fas fa-globe"></i>
                 <span class="label">Koordinat:</span>
-                <span class="value" id="coordinates">-1.201888, 116.886997</span>
+                <span class="value" id="coordinates"><?= $db_lat ?>, <?= $db_lng ?></span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-tree"></i>
@@ -609,9 +631,10 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ================= KOORDINAT STATIS (1 LOKASI) =================
-var fixedLat = -1.20249;
-var fixedLng = 116.88708;
+// ================= KOORDINAT DINAMIS DARI DATABASE =================
+// Memasukkan nilai PHP langsung ke variabel JavaScript
+var fixedLat = <?= $db_lat; ?>;
+var fixedLng = <?= $db_lng; ?>;
 
 // Inisialisasi peta
 var map = L.map('map').setView([fixedLat, fixedLng], 15);
@@ -839,10 +862,13 @@ function fetchDataFromDB() {
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
 
             // 6. Update Peta & Koordinat dari Database
-            if(data.lat && data.lng) {
+                    if(data.lat && data.lng) {
                 document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
                 sensorMarker.setLatLng([data.lat, data.lng]);
                 dangerZone.setLatLng([data.lat, data.lng]);
+    
+             // TAMBAHAN: Agar kamera peta otomatis bergeser ke tengah lokasi baru
+                     map.panTo(new L.LatLng(data.lat, data.lng));
             }
 
             // 7. Deteksi Bahaya
@@ -877,6 +903,7 @@ function fetchDataFromDB() {
 setInterval(fetchDataFromDB, 3000);
 fetchDataFromDB(); // Jalankan pertama kali saat load
 
+// Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>
 </body>
