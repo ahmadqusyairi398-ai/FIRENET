@@ -49,7 +49,7 @@ try {
     if ($dateColumn) $selectFields[] = "$dateColumn as waktu";
     else $selectFields[] = "'' as waktu";
 
-    // Daftar sensor yang ditampilkan - SESUAI DENGAN indoor.sql
+    // Daftar sensor yang ditampilkan - SESUAI DENGAN indoor.sql (TANPA DAYA)
     $sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'api'];
     foreach ($sensorFields as $sf) {
         if (in_array($sf, $columns)) $selectFields[] = $sf;
@@ -91,7 +91,7 @@ try {
 }
 
 // ============================================================
-// KONVERSI DATA KE FORMAT NUMERIK UNTUK GRAFIK
+// KONVERSI DATA KE FORMAT NUMERIK UNTUK GRAFIK (TANPA DAYA)
 // ============================================================
 $chartData = [];
 foreach ($rows as $row) {
@@ -104,9 +104,6 @@ foreach ($rows as $row) {
     // Ambil nilai tegangan dan arus
     $teganganVal = isset($row['tegangan']) ? floatval($row['tegangan']) : 0;
     $arusVal = isset($row['arus']) ? floatval($row['arus']) : 0;
-    
-    // Daya dihitung manual dari tegangan * arus (karena tidak ada di database indoor.sql)
-    $dayaVal = $teganganVal * $arusVal;
 
     $chartData[] = [
         'waktu' => $timestamp,
@@ -115,7 +112,6 @@ foreach ($rows as $row) {
         'kelembapan' => isset($row['kelembapan']) ? floatval($row['kelembapan']) : 0,
         'tegangan' => $teganganVal,
         'arus' => $arusVal,
-        'daya' => $dayaVal,
         'api' => $apiVal
     ];
 }
@@ -646,7 +642,7 @@ canvas {
         <button class="tab-btn active" data-mode="all" onclick="setMode('all', this)">Semua Sensor</button>
         <button class="tab-btn" data-mode="bahaya" onclick="setMode('bahaya', this)">Api & Asap</button>
         <button class="tab-btn" data-mode="env" onclick="setMode('env', this)">Suhu & Kelembapan</button>
-        <button class="tab-btn" data-mode="listrik" onclick="setMode('listrik', this)">Tegangan & Arus & Daya</button>
+        <button class="tab-btn" data-mode="listrik" onclick="setMode('listrik', this)">Tegangan & Arus</button>
     </div>
 
     <div class="chart-card">
@@ -710,15 +706,14 @@ document.addEventListener('keydown', function(e) {
 const rawData = <?php echo $jsonData; ?>;
 console.log('Data dari database:', rawData);
 
-// Konfigurasi sensor - SESUAI DENGAN indoor.sql
+// Konfigurasi sensor - SESUAI DENGAN indoor.sql (TANPA DAYA)
 const sensorConfig = [
     { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
     { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
     { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
     { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
     { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
-    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 },
-    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1200, yMax: 1300 }
+    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 }
 ];
 
 let currentMode = "all";
@@ -772,7 +767,7 @@ function initDatasets() {
             pointRadius: 3,
             pointHoverRadius: 6,
             hidden: sensor.group !== 'all',
-            yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' || sensor.id === 'daya' ? 'y-listrik' : 
+            yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
         });
     });
@@ -860,9 +855,9 @@ function createChart(labels, dataPoints) {
                     position: 'right', 
                     beginAtZero: false, 
                     min: 0, 
-                    max: 1300,
+                    max: 250,
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
-                    title: { display: true, text: 'Tegangan (V) / Arus (A) / Daya (W)', color: '#ff9800' },
+                    title: { display: true, text: 'Tegangan (V) / Arus (A)', color: '#ff9800' },
                     ticks: { callback: function(v) { return v; } },
                     display: false
                 }
@@ -998,7 +993,6 @@ document.addEventListener('DOMContentLoaded', () => {
         kelembapan: typeof row.kelembapan === 'number' ? row.kelembapan : 0,
         tegangan: typeof row.tegangan === 'number' ? row.tegangan : 0,
         arus: typeof row.arus === 'number' ? row.arus : 0,
-        daya: typeof row.daya === 'number' ? row.daya : 0,
         api: typeof row.api === 'number' ? row.api : 0
     }));
     
