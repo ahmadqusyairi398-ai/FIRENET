@@ -1,6 +1,7 @@
 <?php
 // Deteksi secara otomatis apakah sedang berjalan di Localhost atau di Domain/Hosting Live
-$is_localhost = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1');
+$http_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$is_localhost = ($http_host === 'localhost' || $http_host === '127.0.0.1');
 
 if ($is_localhost) {
     // ==========================================
@@ -11,7 +12,7 @@ if ($is_localhost) {
     $password = "rahasiaTA123!";
     $dbname_outdoor = "outdoor";
     $dbname_indoor = "firenet";
-} else if (strpos($_SERVER['HTTP_HOST'], 'inovasijre.com') !== false) {
+} else if (strpos($http_host, 'inovasijre.com') !== false) {
     // ==========================================================
     // 2. KREDENSIAL DATABASE LIVE DOMAIN (inovasijre.com)
     // ==========================================================

@@ -15,7 +15,10 @@ $db_lat = -1.201888; // Nilai default (Balikpapan) jika tabel kosong
 $db_lng = 116.886997; // Nilai default (Balikpapan) jika tabel kosong
 
 if ($conn) {
-    $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat ORDER BY id DESC LIMIT 1");
+    $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat WHERE id = 1 LIMIT 1");
+    if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
+        $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat ORDER BY id ASC LIMIT 1");
+    }
     if ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) {
         $row_lokasi = mysqli_fetch_assoc($query_lokasi);
         $db_lat = (float)$row_lokasi['latitude'];

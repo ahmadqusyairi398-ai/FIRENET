@@ -6,8 +6,11 @@ include 'koneksi.php'; // Sesuaikan dengan file koneksi Anda
 $query_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
 $data_sensor = mysqli_fetch_assoc($query_sensor);
 
-// 2. Ambil lokasi alat terbaru
-$query_lokasi = mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id DESC LIMIT 1");
+// 2. Ambil lokasi alat utama (id=1)
+$query_lokasi = mysqli_query($conn, "SELECT * FROM lokasi_alat WHERE id = 1 LIMIT 1");
+if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
+    $query_lokasi = mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id ASC LIMIT 1");
+}
 $data_lokasi = mysqli_fetch_assoc($query_lokasi);
 
 // Gabungkan response
