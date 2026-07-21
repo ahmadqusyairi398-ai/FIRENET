@@ -48,6 +48,92 @@ function getSensorIconPHP($nama)
     return isset($icons[$nama]) ? $icons[$nama] : "microchip";
 }
 
+// ========== CEK DAN BUAT TABEL LOKASI ==========
+function ensureLocationTable($conn) {
+    if (!$conn) return false;
+    
+    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi'");
+    if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
+        $createTable = "CREATE TABLE lokasi (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            latitude DECIMAL(10,8) NOT NULL,
+            longitude DECIMAL(11,8) NOT NULL,
+            last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )";
+        mysqli_query($conn, $createTable);
+        
+        // Insert default location
+        $defaultLocations = [
+            ['latitude' => -1.20249, 'longitude' => 116.88708],
+            ['latitude' => -1.20250, 'longitude' => 116.88710],
+        ];
+        
+        foreach ($defaultLocations as $loc) {
+            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi (latitude, longitude) VALUES (?, ?)");
+            if ($stmt) {
+                mysqli_stmt_bind_param($stmt, "dd", $loc['latitude'], $loc['longitude']);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+            }
+        }
+        return true;
+    }
+    return true;
+}
+
+// Jalankan fungsi untuk membuat tabel lokasi
+ensureLocationTable($conn);
+
+// ========== FUNGSI UNTUK DATA LOKASI (MENGGUNAKAN DATABASE) ==========
+function getLocations($conn) {
+    $locations = [];
+    if ($conn) {
+        $query = mysqli_query($conn, "SELECT id, latitude, longitude, last_update FROM lokasi ORDER BY id ASC");
+        if ($query) {
+            while ($row = mysqli_fetch_assoc($query)) {
+                $locations[] = $row;
+            }
+        }
+    }
+    return $locations;
+}
+
+function addLocation($conn, $latitude, $longitude) {
+    if (!$conn) return false;
+    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi (latitude, longitude) VALUES (?, ?)");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "dd", $latitude, $longitude);
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+    return false;
+}
+
+function updateLocation($conn, $id, $latitude, $longitude) {
+    if (!$conn) return false;
+    $stmt = mysqli_prepare($conn, "UPDATE lokasi SET latitude = ?, longitude = ?, last_update = NOW() WHERE id = ?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "ddi", $latitude, $longitude, $id);
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+    return false;
+}
+
+function deleteLocation($conn, $id) {
+    if (!$conn) return false;
+    $stmt = mysqli_prepare($conn, "DELETE FROM lokasi WHERE id = ?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "i", $id);
+        $result = mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+        return $result;
+    }
+    return false;
+}
+
 // ========== CEK DAN DIAGNOSA STRUKTUR DATABASE ==========
 try {
     // 1. Cek & Buat tabel batas_sensor jika belum ada
@@ -129,6 +215,13 @@ try {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )";
         mysqli_query($conn, $createLoginTable);
+        
+        // Insert default admin if not exists
+        $checkAdmin = mysqli_query($conn, "SELECT id FROM login WHERE username = 'admin'");
+        if (!$checkAdmin || mysqli_num_rows($checkAdmin) == 0) {
+            $defaultPassword = password_hash('admin123', PASSWORD_DEFAULT);
+            mysqli_query($conn, "INSERT INTO login (username, password, role, status, created_at) VALUES ('admin', '$defaultPassword', 'admin', 'approved', NOW())");
+        }
     }
 
     // 3. Cek dan tambahkan kolom role, status, updated_at di tabel login jika belum ada
@@ -148,98 +241,6 @@ try {
 } catch (Throwable $e) {
     // Log error secara internal agar tidak menghasilkan HTTP 500 ke user
     error_log("Database initialization error: " . $e->getMessage());
-}
-
-// ========== FILE UNTUK DATA LOKASI (JSON) ==========
-$locationDataFile = __DIR__ . '/data/locations.json';
-
-// Buat folder data jika belum ada
-if (!is_dir(__DIR__ . '/data')) {
-    mkdir(__DIR__ . '/data', 0777, true);
-}
-
-// Fungsi untuk mendapatkan lokasi
-function getLocations($file) {
-    if (!file_exists($file)) {
-        return [];
-    }
-    $data = file_get_contents($file);
-    $locations = json_decode($data, true);
-    
-    if (!is_array($locations)) {
-        return [];
-    }
-    
-    foreach ($locations as &$loc) {
-        if (!isset($loc['id'])) {
-            $loc['id'] = rand(100, 999);
-        }
-        if (!isset($loc['last_update'])) {
-            $loc['last_update'] = date('Y-m-d H:i:s');
-        }
-        if (!isset($loc['latitude'])) {
-            $loc['latitude'] = 0;
-        }
-        if (!isset($loc['longitude'])) {
-            $loc['longitude'] = 0;
-        }
-        // Hapus field yang tidak diperlukan
-        if (isset($loc['nama_lokasi'])) {
-            unset($loc['nama_lokasi']);
-        }
-        if (isset($loc['device'])) {
-            unset($loc['device']);
-        }
-    }
-    
-    return $locations;
-}
-
-function saveLocations($locations, $file) {
-    file_put_contents($file, json_encode($locations, JSON_PRETTY_PRINT));
-}
-
-// Cek dan buat file locations.json
-if (!file_exists($locationDataFile)) {
-    $defaultLocations = [
-        ['id' => 1, 'latitude' => -1.20249, 'longitude' => 116.88708, 'last_update' => date('Y-m-d H:i:s')],
-        ['id' => 2, 'latitude' => -1.20250, 'longitude' => 116.88710, 'last_update' => date('Y-m-d H:i:s')],
-    ];
-    file_put_contents($locationDataFile, json_encode($defaultLocations, JSON_PRETTY_PRINT));
-} else {
-    $locations = getLocations($locationDataFile);
-    $needsUpdate = false;
-    
-    foreach ($locations as &$loc) {
-        if (!isset($loc['id'])) {
-            $loc['id'] = rand(100, 999);
-            $needsUpdate = true;
-        }
-        if (!isset($loc['last_update'])) {
-            $loc['last_update'] = date('Y-m-d H:i:s');
-            $needsUpdate = true;
-        }
-        if (!isset($loc['latitude'])) {
-            $loc['latitude'] = 0;
-            $needsUpdate = true;
-        }
-        if (!isset($loc['longitude'])) {
-            $loc['longitude'] = 0;
-            $needsUpdate = true;
-        }
-        if (isset($loc['nama_lokasi'])) {
-            unset($loc['nama_lokasi']);
-            $needsUpdate = true;
-        }
-        if (isset($loc['device'])) {
-            unset($loc['device']);
-            $needsUpdate = true;
-        }
-    }
-    
-    if ($needsUpdate) {
-        saveLocations($locations, $locationDataFile);
-    }
 }
 
 // ========== FUNGSI USER ==========
@@ -375,22 +376,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // CRUD Lokasi
+    // CRUD Lokasi (menggunakan database)
     if (isset($_POST['add_location'])) {
         $latitude = floatval($_POST['latitude']);
         $longitude = floatval($_POST['longitude']);
         
         if ($latitude != 0 && $longitude != 0) {
-            $locations = getLocations($locationDataFile);
-            $new_id = count($locations) > 0 ? max(array_column($locations, 'id')) + 1 : 1;
-            $locations[] = [
-                'id' => $new_id,
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-                'last_update' => date('Y-m-d H:i:s')
-            ];
-            saveLocations($locations, $locationDataFile);
-            $success_message = "Lokasi baru berhasil ditambahkan!";
+            if (addLocation($conn, $latitude, $longitude)) {
+                $success_message = "Lokasi baru berhasil ditambahkan!";
+            } else {
+                $error_message = "Gagal menambahkan lokasi!";
+            }
         } else {
             $error_message = "Latitude dan Longitude harus diisi!";
         }
@@ -402,17 +398,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $longitude = floatval($_POST['edit_longitude']);
         
         if ($latitude != 0 && $longitude != 0) {
-            $locations = getLocations($locationDataFile);
-            foreach ($locations as &$loc) {
-                if ($loc['id'] == $location_id) {
-                    $loc['latitude'] = $latitude;
-                    $loc['longitude'] = $longitude;
-                    $loc['last_update'] = date('Y-m-d H:i:s');
-                    break;
-                }
+            if (updateLocation($conn, $location_id, $latitude, $longitude)) {
+                $success_message = "Lokasi berhasil diperbarui!";
+            } else {
+                $error_message = "Gagal memperbarui lokasi!";
             }
-            saveLocations($locations, $locationDataFile);
-            $success_message = "Lokasi berhasil diperbarui!";
         } else {
             $error_message = "Latitude dan Longitude harus diisi!";
         }
@@ -420,13 +410,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (isset($_POST['delete_location'])) {
         $location_id = intval($_POST['location_id']);
-        $locations = getLocations($locationDataFile);
-        $locations = array_filter($locations, function($loc) use ($location_id) {
-            return $loc['id'] != $location_id;
-        });
-        $locations = array_values($locations);
-        saveLocations($locations, $locationDataFile);
-        $success_message = "Lokasi berhasil dihapus!";
+        if (deleteLocation($conn, $location_id)) {
+            $success_message = "Lokasi berhasil dihapus!";
+        } else {
+            $error_message = "Gagal menghapus lokasi!";
+        }
     }
 
     // Manajemen User
@@ -480,7 +468,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 // Ambil data terbaru
 $users = getUsers($conn);
-$locations = getLocations($locationDataFile);
+$locations = getLocations($conn);
 $sensorAlarmData = getSensorAlarmData($conn);
 $adminCount = countActiveAdmins($conn);
 $canAddAdmin = $adminCount < $maxAdmin;
