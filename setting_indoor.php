@@ -52,8 +52,10 @@ function getSensorIconPHP($nama)
 function ensureLocationTable($conn) {
     if (!$conn) return false;
     
+    // Cek apakah tabel 'lokasi' sudah ada
     $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi'");
     if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
+        // Buat tabel lokasi
         $createTable = "CREATE TABLE lokasi (
             id INT AUTO_INCREMENT PRIMARY KEY,
             latitude DECIMAL(10,8) NOT NULL,
@@ -81,10 +83,16 @@ function ensureLocationTable($conn) {
     return true;
 }
 
-// Jalankan fungsi untuk membuat tabel lokasi
+// Jalankan fungsi untuk memastikan tabel lokasi ada
 ensureLocationTable($conn);
 
-// ========== FUNGSI UNTUK DATA LOKASI (MENGGUNAKAN DATABASE) ==========
+// ========== FUNGSI CRUD UNTUK DATA LOKASI ==========
+
+/**
+ * Mendapatkan semua data lokasi dari database
+ * @param mysqli $conn Koneksi database
+ * @return array Array berisi data lokasi
+ */
 function getLocations($conn) {
     $locations = [];
     if ($conn) {
@@ -98,6 +106,13 @@ function getLocations($conn) {
     return $locations;
 }
 
+/**
+ * Menambahkan lokasi baru ke database
+ * @param mysqli $conn Koneksi database
+ * @param float $latitude Latitude lokasi
+ * @param float $longitude Longitude lokasi
+ * @return bool True jika berhasil, False jika gagal
+ */
 function addLocation($conn, $latitude, $longitude) {
     if (!$conn) return false;
     $stmt = mysqli_prepare($conn, "INSERT INTO lokasi (latitude, longitude) VALUES (?, ?)");
@@ -110,6 +125,14 @@ function addLocation($conn, $latitude, $longitude) {
     return false;
 }
 
+/**
+ * Mengupdate data lokasi berdasarkan ID
+ * @param mysqli $conn Koneksi database
+ * @param int $id ID lokasi yang akan diupdate
+ * @param float $latitude Latitude baru
+ * @param float $longitude Longitude baru
+ * @return bool True jika berhasil, False jika gagal
+ */
 function updateLocation($conn, $id, $latitude, $longitude) {
     if (!$conn) return false;
     $stmt = mysqli_prepare($conn, "UPDATE lokasi SET latitude = ?, longitude = ?, last_update = NOW() WHERE id = ?");
@@ -122,6 +145,12 @@ function updateLocation($conn, $id, $latitude, $longitude) {
     return false;
 }
 
+/**
+ * Menghapus data lokasi berdasarkan ID
+ * @param mysqli $conn Koneksi database
+ * @param int $id ID lokasi yang akan dihapus
+ * @return bool True jika berhasil, False jika gagal
+ */
 function deleteLocation($conn, $id) {
     if (!$conn) return false;
     $stmt = mysqli_prepare($conn, "DELETE FROM lokasi WHERE id = ?");
@@ -132,6 +161,26 @@ function deleteLocation($conn, $id) {
         return $result;
     }
     return false;
+}
+
+/**
+ * Mendapatkan satu lokasi berdasarkan ID
+ * @param mysqli $conn Koneksi database
+ * @param int $id ID lokasi
+ * @return array|null Data lokasi atau null jika tidak ditemukan
+ */
+function getLocationById($conn, $id) {
+    if (!$conn) return null;
+    $stmt = mysqli_prepare($conn, "SELECT id, latitude, longitude, last_update FROM lokasi WHERE id = ?");
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "i", $id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $location = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $location;
+    }
+    return null;
 }
 
 // ========== CEK DAN DIAGNOSA STRUKTUR DATABASE ==========
