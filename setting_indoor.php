@@ -103,13 +103,11 @@ function getLocations($conn) {
     return $locations;
 }
 
-function addLocation($conn, $latitude, $longitude) {
+function addLocation($conn, $id_alat, $latitude, $longitude) {
     if (!$conn) return false;
-    // Beri id_alat default misal 'NEW_ALAT' (atau bisa dinamis nantinya)
-    $id_alat_default = "00" . rand(4,999); 
     $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude) VALUES (?, ?, ?)");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "sdd", $id_alat_default, $latitude, $longitude);
+        mysqli_stmt_bind_param($stmt, "sdd", $id_alat, $latitude, $longitude);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -117,12 +115,11 @@ function addLocation($conn, $latitude, $longitude) {
     return false;
 }
 
-function updateLocation($conn, $id, $latitude, $longitude) {
+function updateLocation($conn, $id, $id_alat, $latitude, $longitude) {
     if (!$conn) return false;
-    // Otomatis memperbarui kolom updated_at jika database support on update CURRENT_TIMESTAMP atau update manual
-    $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET id_alat = ?, latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "ddi", $latitude, $longitude, $id);
+        mysqli_stmt_bind_param($stmt, "sddi", $id_alat, $latitude, $longitude, $id);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -400,33 +397,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // CRUD Lokasi (menggunakan database)
     if (isset($_POST['add_location'])) {
+        $id_alat = trim($_POST['id_alat']);
         $latitude = floatval($_POST['latitude']);
         $longitude = floatval($_POST['longitude']);
         
-        if ($latitude != 0 && $longitude != 0) {
-            if (addLocation($conn, $latitude, $longitude)) {
+        if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
+            if (addLocation($conn, $id_alat, $latitude, $longitude)) {
                 $success_message = "Lokasi baru berhasil ditambahkan!";
             } else {
                 $error_message = "Gagal menambahkan lokasi!";
             }
         } else {
-            $error_message = "Latitude dan Longitude harus diisi!";
+            $error_message = "ID Alat, Latitude dan Longitude harus diisi!";
         }
     }
 
     if (isset($_POST['edit_location'])) {
         $location_id = intval($_POST['location_id']);
+        $id_alat = trim($_POST['edit_id_alat']);
         $latitude = floatval($_POST['edit_latitude']);
         $longitude = floatval($_POST['edit_longitude']);
         
-        if ($latitude != 0 && $longitude != 0) {
-            if (updateLocation($conn, $location_id, $latitude, $longitude)) {
+        if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
+            if (updateLocation($conn, $location_id, $id_alat, $latitude, $longitude)) {
                 $success_message = "Lokasi berhasil diperbarui!";
             } else {
                 $error_message = "Gagal memperbarui lokasi!";
             }
         } else {
-            $error_message = "Latitude dan Longitude harus diisi!";
+            $error_message = "ID Alat, Latitude dan Longitude harus diisi!";
         }
     }
 
@@ -1230,17 +1229,18 @@ $totalUsers = count($users);
                                 <?php foreach ($locations as $index => $loc): ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
-                                        <td><?= isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '-' ?></td>
+                                        <td><strong><?= isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '-' ?></strong></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
                                         <td class="action-buttons">
                                             <?php 
                                             $id = isset($loc['id']) ? (int)$loc['id'] : 0;
+                                            $id_alat = isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '';
                                             $lat = isset($loc['latitude']) ? (float)$loc['latitude'] : 0;
                                             $lng = isset($loc['longitude']) ? (float)$loc['longitude'] : 0;
                                             ?>
-                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, <?= $lat ?>, <?= $lng ?>)">
+                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= $id_alat ?>', <?= $lat ?>, <?= $lng ?>)">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button class="btn-danger btn-delete-location" data-id="<?= $id ?>">
@@ -1447,16 +1447,25 @@ $totalUsers = count($users);
             </div>
             <form method="POST">
                 <div class="form-group">
+                    <label>ID Alat <span style="color:red;">*</span></label>
+                    <input type="text" name="id_alat" id="add_id_alat" placeholder="Contoh: 001, 002, A001" required>
+                    <small style="color:#666; display:block; margin-top:5px;">
+                        <i class="fas fa-info-circle"></i> Masukkan ID unik untuk alat monitoring
+                    </small>
+                </div>
+                <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
-                    <input type="number" name="latitude" step="any" required>
+                    <input type="number" name="latitude" id="add_latitude" step="any" required>
                     <small>Contoh: -1.20249 (negatif untuk selatan)</small>
                 </div>
                 <div class="form-group">
                     <label>Longitude <span style="color:red;">*</span></label>
-                    <input type="number" name="longitude" step="any" required>
+                    <input type="number" name="longitude" id="add_longitude" step="any" required>
                     <small>Contoh: 116.88708</small>
                 </div>
-                <button type="submit" name="add_location" class="btn-primary">Simpan Lokasi</button>
+                <button type="submit" name="add_location" class="btn-primary" style="width:100%; margin-top:10px;">
+                    <i class="fas fa-save"></i> Simpan Lokasi
+                </button>
             </form>
         </div>
     </div>
@@ -1471,6 +1480,10 @@ $totalUsers = count($users);
             <form method="POST">
                 <input type="hidden" name="location_id" id="edit_location_id">
                 <div class="form-group">
+                    <label>ID Alat <span style="color:red;">*</span></label>
+                    <input type="text" name="edit_id_alat" id="edit_id_alat" required>
+                </div>
+                <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
                     <input type="number" name="edit_latitude" id="edit_latitude" step="any" required>
                 </div>
@@ -1478,7 +1491,9 @@ $totalUsers = count($users);
                     <label>Longitude <span style="color:red;">*</span></label>
                     <input type="number" name="edit_longitude" id="edit_longitude" step="any" required>
                 </div>
-                <button type="submit" name="edit_location" class="btn-primary">Simpan Perubahan</button>
+                <button type="submit" name="edit_location" class="btn-primary" style="width:100%; margin-top:10px;">
+                    <i class="fas fa-save"></i> Simpan Perubahan
+                </button>
             </form>
         </div>
     </div>
@@ -1650,6 +1665,33 @@ $totalUsers = count($users);
             }
         }
 
+        // ========== FUNGSI OPEN EDIT LOCATION MODAL ==========
+        function openEditLocationModal(id, id_alat, lat, lng) {
+            console.log('Edit Location:', id, id_alat, lat, lng);
+            
+            try {
+                document.getElementById('edit_location_id').value = id;
+                document.getElementById('edit_id_alat').value = id_alat || '';
+                document.getElementById('edit_latitude').value = lat;
+                document.getElementById('edit_longitude').value = lng;
+                
+                var modal = document.getElementById('editLocationModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.style.visibility = 'visible';
+                    modal.style.opacity = '1';
+                }
+            } catch (e) {
+                console.error('Error in openEditLocationModal:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan saat membuka modal edit: ' + e.message,
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        }
+
         // ========== EVENT LISTENER UNTUK TOMBOL ==========
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded - Setting up event listeners');
@@ -1722,31 +1764,6 @@ $totalUsers = count($users);
                 modal.style.display = 'flex';
                 modal.style.visibility = 'visible';
                 modal.style.opacity = '1';
-            }
-        }
-
-        function openEditLocationModal(id, lat, lng) {
-            console.log('Edit Location:', id, lat, lng);
-            
-            try {
-                document.getElementById('edit_location_id').value = id;
-                document.getElementById('edit_latitude').value = lat;
-                document.getElementById('edit_longitude').value = lng;
-                
-                var modal = document.getElementById('editLocationModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    modal.style.visibility = 'visible';
-                    modal.style.opacity = '1';
-                }
-            } catch (e) {
-                console.error('Error in openEditLocationModal:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan saat membuka modal edit: ' + e.message,
-                    confirmButtonColor: '#dc3545'
-                });
             }
         }
 
