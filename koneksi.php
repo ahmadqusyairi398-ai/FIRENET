@@ -14,8 +14,8 @@ if ($is_localhost) {
     // KREDENSIAL DATABASE LOCALHOST (XAMPP)
     // ==========================================
     $host = "localhost";
-    $user = "root";          // Default XAMPP
-    $pass = "";              // Default XAMPP kosong
+    $user = "ta_user";          // Default XAMPP
+    $pass = "rahasiaTA123!";    // Default XAMPP kosong
     $dbname_outdoor = "outdoor";
     $dbname_indoor = "indoor";
     

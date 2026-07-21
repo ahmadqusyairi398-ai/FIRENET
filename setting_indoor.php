@@ -31,8 +31,8 @@ $conn = isset($conn_indoor) ? $conn_indoor : null;
 if (!$conn) {
     // Coba koneksi manual dengan kredensial default
     $host = "localhost";
-    $user = "root";
-    $pass = "";
+    $user = "ta_user";
+    $pass = "rahasiaTA123!";
     $db = "indoor";
     
     $conn = mysqli_connect($host, $user, $pass, $db);
