@@ -9,9 +9,7 @@ require_once 'koneksi.php';
 // Gunakan koneksi outdoor
 $conn = isset($conn_outdoor) ? $conn_outdoor : null;
 
-// 2. Ambil data latitude dan longitude terbaru dari tabel lokasi_alat (database outdoor)
-$db_lat = -1.201888; // Nilai default jika tabel kosong
-$db_lng = 116.886997;
+
 
 if ($conn) {
     $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat WHERE id = 1 LIMIT 1");
