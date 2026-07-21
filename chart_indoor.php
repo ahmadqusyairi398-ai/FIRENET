@@ -21,6 +21,7 @@ if (!$pdo_indoor) {
         <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel, membuat database <strong>firenet</strong> di phpMyAdmin, dan mengimpor tabel-tabel yang diperlukan.</p>
     </div>");
 }
+
 $columns = [];
 $rows = [];
 
@@ -43,16 +44,16 @@ try {
         $dateColumn = $columns[0];
     }
 
-    // Bangun query dengan sensor baru
+    // Bangun query dengan sensor
     $selectFields = ['id'];
     if ($dateColumn) $selectFields[] = "$dateColumn as waktu";
     else $selectFields[] = "'' as waktu";
 
-    // Daftar sensor yang ditampilkan
-    $sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'api'];
+    // Daftar sensor yang ditampilkan - SESUAI DENGAN indoor.sql
+    $sensorFields = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'api'];
     foreach ($sensorFields as $sf) {
         if (in_array($sf, $columns)) $selectFields[] = $sf;
-        else $selectFields[] = "'' as $sf";
+        else $selectFields[] = "0 as $sf";
     }
 
     $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
@@ -61,17 +62,20 @@ try {
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch(Exception $e) {
-    // Jika tabel tidak ada atau bermasalah, buat tabel baru
+    // Jika tabel tidak ada, buat tabel baru sesuai struktur indoor.sql
     $create = "CREATE TABLE IF NOT EXISTS data_sensor (
         id INT AUTO_INCREMENT PRIMARY KEY,
         tanggal_dan_waktu DATETIME NOT NULL,
-        asap VARCHAR(20) DEFAULT 'Normal',
-        suhu DECIMAL(5,2) DEFAULT 0,
-        kelembapan DECIMAL(5,2) DEFAULT 0,
-        tegangan DECIMAL(6,2) DEFAULT 0,
-        arus DECIMAL(6,2) DEFAULT 0,
-        daya DECIMAL(6,2) DEFAULT 0,
-        api VARCHAR(20) DEFAULT 'Aman'
+        asap FLOAT DEFAULT 0,
+        suhu FLOAT DEFAULT 0,
+        kelembapan FLOAT DEFAULT 0,
+        tegangan FLOAT DEFAULT 0,
+        arus FLOAT DEFAULT 0,
+        api FLOAT DEFAULT 0,
+        ip_address VARCHAR(45) DEFAULT NULL,
+        rssi INT DEFAULT NULL,
+        latitude DECIMAL(10,8) DEFAULT NULL,
+        longitude DECIMAL(11,8) DEFAULT NULL
     )";
     $pdo_indoor->exec($create);
     
@@ -86,45 +90,32 @@ try {
     }
 }
 
-// Cek dan tambahkan kolom baru jika belum ada
-if (!empty($columns)) {
-    $checkColumns = ['daya', 'api'];
-    foreach ($checkColumns as $col) {
-        if (!in_array($col, $columns)) {
-            try {
-                if ($col === 'api') {
-                    $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN api VARCHAR(20) DEFAULT 'Aman'");
-                } else {
-                    $pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN $col DECIMAL(6,2) DEFAULT 0");
-                }
-            } catch(Exception $ex) {
-                // Abaikan jika gagal
-            }
-        }
-    }
-}
-
-// Konversi data ke format numerik untuk grafik
+// ============================================================
+// KONVERSI DATA KE FORMAT NUMERIK UNTUK GRAFIK
+// ============================================================
 $chartData = [];
 foreach ($rows as $row) {
     $timestamp = isset($row['waktu']) ? $row['waktu'] : '';
 
-    $asapVal = $row['asap'];
-    if (is_numeric($asapVal)) $asapVal = floatval($asapVal);
-    else $asapVal = (strtolower($asapVal) == 'tinggi' || strtolower($asapVal) == 'bahaya') ? 100 : 0;
+    // Karena di indoor.sql tipe data asap dan api adalah FLOAT
+    $asapVal = isset($row['asap']) ? floatval($row['asap']) : 0;
+    $apiVal = isset($row['api']) ? floatval($row['api']) : 0;
 
-    $apiVal = isset($row['api']) ? $row['api'] : 'Aman';
-    if (is_numeric($apiVal)) $apiVal = floatval($apiVal);
-    else $apiVal = (strtolower($apiVal) == 'terdeteksi api' || strtolower($apiVal) == 'bahaya' || strtolower($apiVal) == 'api') ? 100 : 0;
+    // Ambil nilai tegangan dan arus
+    $teganganVal = isset($row['tegangan']) ? floatval($row['tegangan']) : 0;
+    $arusVal = isset($row['arus']) ? floatval($row['arus']) : 0;
+    
+    // Daya dihitung manual dari tegangan * arus (karena tidak ada di database indoor.sql)
+    $dayaVal = $teganganVal * $arusVal;
 
     $chartData[] = [
         'waktu' => $timestamp,
         'asap' => $asapVal,
-        'suhu' => floatval($row['suhu']),
-        'kelembapan' => floatval($row['kelembapan']),
-        'tegangan' => floatval($row['tegangan']),
-        'arus' => floatval($row['arus']),
-        'daya' => isset($row['daya']) ? floatval($row['daya']) : 0,
+        'suhu' => isset($row['suhu']) ? floatval($row['suhu']) : 0,
+        'kelembapan' => isset($row['kelembapan']) ? floatval($row['kelembapan']) : 0,
+        'tegangan' => $teganganVal,
+        'arus' => $arusVal,
+        'daya' => $dayaVal,
         'api' => $apiVal
     ];
 }
@@ -258,6 +249,10 @@ body::before {
     font-size: 24px;
 }
 
+.header h2 i {
+    color: #e85d04;
+}
+
 .header-right {
     display: flex;
     align-items: center;
@@ -375,7 +370,6 @@ body::before {
 .tab-btn[data-mode="bahaya"].active { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); }
 .tab-btn[data-mode="env"].active { background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(46, 204, 113, 0.9)); }
 .tab-btn[data-mode="listrik"].active { background: linear-gradient(135deg, rgba(255, 230, 109, 0.9), rgba(243, 156, 18, 0.9)); }
-.tab-btn[data-mode="angin"].active { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
 
 .chart-card {
     background: rgba(255, 255, 255, 0.9);
@@ -591,7 +585,7 @@ canvas {
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-    <h3><i class="fas fa-chart-line"></i> FireNetWork</h3>
+    <h3><i class="fas fa-fire"></i> FireDetector</h3>
     <a href="<?php echo ($role == 'admin') ? 'dashboard_admin_indoor.php' : 'dashboard_user_indoor.php'; ?>" class="menu-btn">
         <i class="fas fa-tachometer-alt"></i>
         <span>Dashboard</span>
@@ -620,7 +614,7 @@ canvas {
 <!-- MAIN CONTENT -->
 <div class="main">
     <div class="header">
-        <h2><i class="fas fa-chart-line"></i> Chart Monitoring Sensor</h2>
+        <h2><i class="fas fa-chart-line"></i> Chart Monitoring Sensor Indoor</h2>
         <div class="header-right">
             <a href="home.php" class="btn-home-header">
                 <i class="fas fa-home"></i> HOME
@@ -634,12 +628,15 @@ canvas {
 
     <div class="filter-section">
         <div class="filter-form">
-            <label>Dari:</label>
+            <label><i class="fas fa-calendar-alt"></i> Dari:</label>
             <input type="date" id="dateFrom">
             <label>Sampai:</label>
             <input type="date" id="dateTo">
             <button id="btnFilter" onclick="filterData()">
                 <i class="fas fa-search"></i> Tampilkan
+            </button>
+            <button onclick="resetFilter()" style="background: #6c757d;">
+                <i class="fas fa-undo"></i> Reset
             </button>
         </div>
     </div>
@@ -713,15 +710,15 @@ document.addEventListener('keydown', function(e) {
 const rawData = <?php echo $jsonData; ?>;
 console.log('Data dari database:', rawData);
 
-// Konfigurasi sensor
+// Konfigurasi sensor - SESUAI DENGAN indoor.sql
 const sensorConfig = [
-    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
+    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
     { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
     { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
     { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
     { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 },
-    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200 }
+    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1200, yMax: 1300 }
 ];
 
 let currentMode = "all";
@@ -772,12 +769,11 @@ function initDatasets() {
             borderWidth: 2,
             tension: 0.4,
             fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 8,
+            pointRadius: 3,
+            pointHoverRadius: 6,
             hidden: sensor.group !== 'all',
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' || sensor.id === 'daya' ? 'y-listrik' : 
-                     (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 
-                     (sensor.id === 'api' || sensor.id === 'asap' ? 'y-bahaya' : 'y-bahaya'))
+                     (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
         });
     });
 }
@@ -847,7 +843,7 @@ function createChart(labels, dataPoints) {
                     beginAtZero: true, 
                     max: 120,
                     grid: { color: 'rgba(255,107,107,0.2)', drawOnChartArea: true },
-                    title: { display: true, text: 'Api (%) / Asap (%)', color: '#ff6b6b' },
+                    title: { display: true, text: 'Api / Asap', color: '#ff6b6b' },
                     ticks: { callback: function(v) { return v; } },
                     display: true
                 },
@@ -857,17 +853,18 @@ function createChart(labels, dataPoints) {
                     max: 100,
                     grid: { color: 'rgba(78,205,196,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
-                    ticks: { callback: v => v + (v > 50 ? '%' : '°C') },
+                    ticks: { callback: function(v) { return v; } },
                     display: false
                 },
                 'y-listrik': {
                     position: 'right', 
                     beginAtZero: false, 
                     min: 0, 
-                    max: 1200,
+                    max: 1300,
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A) / Daya (W)', color: '#ff9800' },
-                    ticks: { callback: v => v + (v > 100 ? 'W' : (v > 10 ? 'V' : 'A')) },
+                    ticks: { callback: function(v) { return v; } },
+                    display: false
                 }
             }
         }
@@ -943,7 +940,7 @@ function toggleDataset(index) {
 function setMode(mode, element) {
     currentMode = mode;
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    element.classList.add('active');
+    if (element) element.classList.add('active');
     
     let visibleGroups = [];
     if (mode === 'all') visibleGroups = ['bahaya', 'env', 'listrik'];
@@ -981,6 +978,14 @@ function filterData() {
         alert('Tidak ada data dalam rentang tanggal tersebut.');
         return;
     }
+    const labels = filteredData.map(d => d.waktu);
+    createChart(labels, filteredData);
+}
+
+function resetFilter() {
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    filteredData = [...fullData];
     const labels = filteredData.map(d => d.waktu);
     createChart(labels, filteredData);
 }

@@ -43,7 +43,6 @@ function getSensorIconPHP($nama)
         "KELEMBAPAN" => "tint",
         "TEGANGAN" => "bolt",
         "ARUS" => "charging-station",
-        "DAYA" => "solar-panel",
         "API" => "fire"
     ];
     return isset($icons[$nama]) ? $icons[$nama] : "microchip";
@@ -66,15 +65,14 @@ try {
         )";
         mysqli_query($conn, $createTable);
 
-        // Insert data default sensor
+        // Insert data default sensor - HANYA SENSOR YANG ADA DI indoor.sql
         $defaultSensors = [
             ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)'],
             ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
             ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
             ['KELEMBAPAN', 85, '%', 30, 95, 'Kelembapan udara'],
             ['TEGANGAN', 190, 'V', 150, 250, 'Tegangan listrik'],
-            ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
-            ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
+            ['ARUS', 15, 'A', 0, 20, 'Arus listrik']
         ];
 
         foreach ($defaultSensors as $sensor) {
@@ -95,6 +93,7 @@ try {
             }
         }
         
+        // Hanya tambahkan sensor yang ada di indoor.sql
         $newSensors = [
             ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)']
         ];
@@ -110,8 +109,11 @@ try {
             }
         }
         
-        // Hapus sensor CO jika ada
-        mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = 'CO'");
+        // Hapus sensor yang tidak relevan (DAYA, CO, dll)
+        $sensorsToRemove = ['DAYA', 'CO', 'KECEPATAN_ANGIN', 'ARAH_ANGIN'];
+        foreach ($sensorsToRemove as $sensor) {
+            mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = '$sensor'");
+        }
     }
 
     // 2. Cek & Buat tabel login jika belum ada
@@ -141,12 +143,6 @@ try {
     $checkUpdatedAt = mysqli_query($conn, "SHOW COLUMNS FROM login LIKE 'updated_at'");
     if (!$checkUpdatedAt || mysqli_num_rows($checkUpdatedAt) == 0) {
         mysqli_query($conn, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-    }
-
-    // 4. Cek dan hapus kolom device di batas_sensor jika ada
-    $checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
-    if ($checkDevice && mysqli_num_rows($checkDevice) > 0) {
-        mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
     }
 
 } catch (Throwable $e) {
@@ -187,6 +183,7 @@ function getLocations($file) {
         if (!isset($loc['longitude'])) {
             $loc['longitude'] = 0;
         }
+        // Hapus field yang tidak diperlukan
         if (isset($loc['nama_lokasi'])) {
             unset($loc['nama_lokasi']);
         }
@@ -503,6 +500,7 @@ $totalUsers = count($users);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <style>
+        /* ========== STYLE ========== */
         * {
             margin: 0;
             padding: 0;
@@ -1080,7 +1078,7 @@ $totalUsers = count($users);
 
     <!-- SIDEBAR -->
     <div class="sidebar">
-        <h3><i class="fas fa-cog"></i> FireNetWork</h3>
+        <h3><i class="fas fa-cog"></i> FireDetector</h3>
         <a href="dashboard_admin_indoor.php" class="menu-btn"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
         <a href="chart_indoor.php" class="menu-btn"><i class="fas fa-chart-line"></i><span>CHART</span></a>
         <a href="tabel_indoor.php" class="menu-btn"><i class="fas fa-table"></i><span>TABEL</span></a>

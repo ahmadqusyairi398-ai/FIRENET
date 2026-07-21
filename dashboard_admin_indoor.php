@@ -748,41 +748,39 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= GENERATE DATA =================
-function generateData() {
-    var apiStatus = Math.random() > 0.85 ? "Terdeteksi Api" : "Aman";
-    var asapStatus = Math.random() > 0.85 ? "Tinggi" : "Normal";
-    var isDanger = (apiStatus === "Terdeteksi Api" || asapStatus === "Tinggi");
-    let suhu = (Math.random() * 30 + 20).toFixed(1);
-    let kelembapan = (Math.random() * 60 + 40).toFixed(1);
-    let tegangan = (Math.random() * 10 + 210).toFixed(1);
-    let arus = (Math.random() * 5 + 1).toFixed(2);
-    if (apiStatus === "Terdeteksi Api") {
-        suhu = (Math.random() * 25 + 40).toFixed(1);
-        kelembapan = (Math.random() * 30 + 30).toFixed(1);
+// ================= AMBIL DATA DARI DATABASE MENGGUNAKAN AJAX =================
+async function fetchSensorData() {
+    try {
+        const response = await fetch('get_sensor_data_indoor.php');
+        const data = await response.json();
+        
+        if (data.error) {
+            console.error('Error:', data.message);
+            return null;
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('Fetch error:', error);
+        return null;
     }
-    return {
-        waktu: new Date().toLocaleTimeString(),
-        api: apiStatus, 
-        asap: asapStatus, 
-        suhu: suhu, 
-        kelembapan: kelembapan,
-        tegangan: tegangan, 
-        arus: arus, 
-        status: 'Online',
-        rssi: Math.floor(Math.random() * 40 + -80),
-        ip: '192.168.' + Math.floor(Math.random() * 255) + '.' + Math.floor(Math.random() * 255),
-        isDanger: isDanger,
-        apiValue: apiStatus === "Terdeteksi Api" ? 1 : 0
-    };
 }
 
-// ================= UPDATE DATA =================
-function updateDashboard() {
-    let data = generateData();
+// ================= UPDATE DASHBOARD DENGAN DATA DARI DATABASE =================
+async function updateDashboard() {
+    const data = await fetchSensorData();
+    
+    if (!data) {
+        // Jika gagal ambil data, tampilkan pesan error
+        document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
+        document.getElementById("rssi").innerHTML = '-';
+        document.getElementById("ip").innerHTML = '-';
+        document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> Gagal ambil data`;
+        return;
+    }
     
     // Update status node di header
-    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
+    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Online`;
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
@@ -821,6 +819,11 @@ function updateDashboard() {
     
     // Update location status
     updateLocationStatus(data.isDanger);
+    
+    // Update koordinat jika ada dari database
+    if (data.latitude && data.longitude) {
+        document.getElementById('coordinates').innerHTML = `${data.latitude}, ${data.longitude}`;
+    }
     
     // Update chart
     dataChart.labels.push(data.waktu);

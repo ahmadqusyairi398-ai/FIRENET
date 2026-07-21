@@ -22,64 +22,27 @@ if (!$pdo_indoor) {
     </div>");
 }
 
-echo "<script>console.log('Koneksi database berhasil');</script>";
-
-// Ambil data dari tabel data_sensor sesuai dengan struktur yang ada
+// ============================================================
+// AMBIL DATA DARI TABEL data_sensor SESUAI DENGAN indoor.sql
+// ============================================================
 try {
-    // Cek kolom apa saja yang tersedia di tabel data_sensor
-    $checkColumns = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor");
-    $existingColumns = [];
-    while($col = $checkColumns->fetch(PDO::FETCH_ASSOC)) {
-        $existingColumns[] = $col['Field'];
-    }
-    
-    echo "<script>console.log('Kolom yang tersedia: " . json_encode($existingColumns) . "');</script>";
-    
-    // Tentukan kolom tanggal/waktu berdasarkan yang tersedia
-    $dateColumn = null;
-    $possibleDateColumns = ['tanggal_dan_waktu', 'timestamp', 'created_at', 'tanggal', 'waktu', 'date', 'datetime'];
-    
-    foreach ($possibleDateColumns as $col) {
-        if (in_array($col, $existingColumns)) {
-            $dateColumn = $col;
-            break;
-        }
-    }
-    
-    // Jika tidak ada kolom tanggal/waktu, gunakan kolom pertama yang tersedia untuk sorting
-    if ($dateColumn === null && !empty($existingColumns)) {
-        $dateColumn = $existingColumns[0]; // Gunakan kolom pertama sebagai default
-    }
-    
-    // Bangun query berdasarkan kolom yang tersedia - TANPA SENSOR API
-    $selectColumns = [];
-    $selectColumns[] = 'id';
-    
-    // Tambahkan kolom tanggal/waktu jika ada
-    if ($dateColumn) {
-        $selectColumns[] = "$dateColumn as tanggal_waktu";
-    } else {
-        $selectColumns[] = "'' as tanggal_waktu";
-    }
-    
-    // Tambahkan kolom lainnya - TANPA API
-    $otherColumns = ['asap', 'suhu', 'kelembapan', 'tegangan', 'arus', 'daya', 'kecepatan_angin', 'arah_angin', 'co'];
-    foreach ($otherColumns as $col) {
-        if (in_array($col, $existingColumns)) {
-            $selectColumns[] = $col;
-        } else {
-            $selectColumns[] = "'' as $col"; // Default kosong jika kolom tidak ada
-        }
-    }
-    
-    $query = "SELECT " . implode(", ", $selectColumns) . " FROM data_sensor";
-    
-    if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC";
-    }
-    
-    echo "<script>console.log('Query: " . addslashes($query) . "');</script>";
-    
+    // Query disesuaikan persis dengan kolom yang ada di database indoor.sql
+    $query = "SELECT 
+                id, 
+                timestamp as tanggal_waktu, 
+                api, 
+                asap, 
+                suhu, 
+                kelembapan, 
+                tegangan, 
+                arus, 
+                rssi,
+                ip_address,
+                latitude,
+                longitude
+              FROM data_sensor 
+              ORDER BY timestamp DESC";
+              
     $stmt = $pdo_indoor->prepare($query);
     $stmt->execute();
     $sensorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -89,31 +52,25 @@ try {
 } catch(PDOException $e) {
     echo "<script>console.log('Error: " . addslashes($e->getMessage()) . "');</script>";
     
-    // Jika tabel tidak ada, buat tabel baru dengan semua kolom yang diperlukan - TANPA API
+    // Jika tabel tidak ada, buat tabel sesuai dengan indoor.sql
     if (strpos($e->getMessage(), "Table") !== false) {
         $createTable = "
         CREATE TABLE IF NOT EXISTS data_sensor (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            tanggal_dan_waktu DATETIME NOT NULL,
-            asap VARCHAR(20) DEFAULT 'Normal',
-            suhu DECIMAL(5,2) DEFAULT 0,
-            kelembapan DECIMAL(5,2) DEFAULT 0,
-            tegangan DECIMAL(6,2) DEFAULT 0,
-            arus DECIMAL(6,2) DEFAULT 0,
-            daya DECIMAL(6,2) DEFAULT 0,
-            kecepatan_angin DECIMAL(5,2) DEFAULT 0,
-            arah_angin VARCHAR(20) DEFAULT '-',
-            co DECIMAL(6,2) DEFAULT 0
+            api FLOAT DEFAULT NULL,
+            asap FLOAT DEFAULT NULL,
+            suhu FLOAT DEFAULT NULL,
+            kelembapan FLOAT DEFAULT NULL,
+            tegangan FLOAT DEFAULT NULL,
+            arus FLOAT DEFAULT NULL,
+            rssi INT(11) DEFAULT NULL,
+            ip_address VARCHAR(50) DEFAULT NULL,
+            latitude DECIMAL(10,8) DEFAULT NULL,
+            longitude DECIMAL(11,8) DEFAULT NULL,
+            timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )";
         $pdo_indoor->exec($createTable);
-        
-        // Ambil data setelah tabel dibuat
-        $query = "SELECT id, tanggal_dan_waktu, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co 
-                  FROM data_sensor 
-                  ORDER BY tanggal_dan_waktu DESC";
-        $stmt = $pdo_indoor->prepare($query);
-        $stmt->execute();
-        $sensorData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sensorData = [];
     } else {
         $sensorData = [];
     }
@@ -256,6 +213,10 @@ body::before {
 .header h2 {
     color: #1e3c72;
     font-size: 24px;
+}
+
+.header h2 i {
+    color: #e85d04;
 }
 
 .header-right {
@@ -449,11 +410,17 @@ body::before {
 .status-bahaya {
     color: #dc3545;
     font-weight: bold;
+    animation: blink 1s infinite;
 }
 
 .status-waspada {
     color: #ff9800;
     font-weight: bold;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* ========== MODAL LOGOUT ========== */
@@ -647,7 +614,7 @@ body::before {
 
 <!-- SIDEBAR - Disesuaikan dengan role pengguna -->
 <div class="sidebar">
-    <h3><i class="fas fa-fire"></i> FireNetWork</h3>
+    <h3><i class="fas fa-fire"></i> FireDetector</h3>
     <!-- Dashboard link mengarah ke halaman yang sesuai dengan role -->
     <a href="<?php echo ($role == 'admin') ? 'dashboard_admin_indoor.php' : 'dashboard_user_indoor.php'; ?>" class="menu-btn">
         <i class="fas fa-tachometer-alt"></i>
@@ -677,7 +644,7 @@ body::before {
 <!-- MAIN CONTENT -->
 <div class="main">
     <div class="header">
-        <h2><i class="fas fa-table"></i> Tabel Data Sensor</h2>
+        <h2><i class="fas fa-table"></i> Tabel Data Sensor Indoor</h2>
         <div class="header-right">
             <a href="home.php" class="btn-home-header">
                 <i class="fas fa-home"></i> HOME
@@ -720,15 +687,13 @@ body::before {
                     <tr>
                         <th>No</th>
                         <th><i class="fas fa-calendar"></i> Tanggal & Waktu</th>
+                        <th><i class="fas fa-fire"></i> Api</th>
                         <th><i class="fas fa-smog"></i> Asap</th>
                         <th><i class="fas fa-thermometer-half"></i> Suhu (°C)</th>
                         <th><i class="fas fa-tint"></i> Kelembapan (%)</th>
                         <th><i class="fas fa-bolt"></i> Tegangan (V)</th>
                         <th><i class="fas fa-charging-station"></i> Arus (A)</th>
-                        <th><i class="fas fa-solar-panel"></i> Daya (W)</th>
-                        <th><i class="fas fa-wind"></i> Kecepatan Angin (m/s)</th>
-                        <th><i class="fas fa-compass"></i> Arah Angin</th>
-                        <th><i class="fas fa-skull-crossbones"></i> CO (ppm)</th>
+                        <th><i class="fas fa-signal"></i> RSSI (dBm)</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -790,6 +755,7 @@ document.addEventListener('keydown', function(e) {
 const sensorDataPHP = <?php echo json_encode($sensorData); ?>;
 console.log('Data dari database:', sensorDataPHP);
 
+// Proses data dari database
 let sensorData = sensorDataPHP.map((item, index) => {
     let formattedDate = item.tanggal_waktu || '-';
     let dateOnly = formattedDate !== '-' ? formattedDate.split(' ')[0] : '';
@@ -798,66 +764,81 @@ let sensorData = sensorDataPHP.map((item, index) => {
         no: index + 1,
         tanggal_waktu: formattedDate,
         tanggal: dateOnly,
-        asap: item.asap || '-',
-        suhu: item.suhu ? parseFloat(item.suhu).toFixed(1) : '0',
-        kelembapan: item.kelembapan ? parseFloat(item.kelembapan).toFixed(1) : '0',
-        tegangan: item.tegangan ? parseFloat(item.tegangan).toFixed(1) : '0',
-        arus: item.arus ? parseFloat(item.arus).toFixed(2) : '0',
-        daya: item.daya ? parseFloat(item.daya).toFixed(1) : '0',
-        kecepatan_angin: item.kecepatan_angin ? parseFloat(item.kecepatan_angin).toFixed(1) : '0',
-        arah_angin: item.arah_angin || '-',
-        co: item.co ? parseFloat(item.co).toFixed(1) : '0'
+        api: item.api !== null && item.api !== undefined ? parseFloat(item.api).toFixed(2) : '0',
+        asap: item.asap !== null && item.asap !== undefined ? parseFloat(item.asap).toFixed(2) : '0',
+        suhu: item.suhu !== null && item.suhu !== undefined ? parseFloat(item.suhu).toFixed(1) : '0',
+        kelembapan: item.kelembapan !== null && item.kelembapan !== undefined ? parseFloat(item.kelembapan).toFixed(1) : '0',
+        tegangan: item.tegangan !== null && item.tegangan !== undefined ? parseFloat(item.tegangan).toFixed(1) : '0',
+        arus: item.arus !== null && item.arus !== undefined ? parseFloat(item.arus).toFixed(2) : '0',
+        rssi: item.rssi !== null && item.rssi !== undefined ? item.rssi : '0'
     };
 });
 
 let currentData = [...sensorData];
 let dataTable;
 
-// Fungsi untuk menentukan status dan kelas CSS - TANPA API
+// Fungsi untuk menentukan status berdasarkan nilai angka (float)
 function getStatusClass(value, type) {
-    if (type === 'asap') {
-        if (value === 'Tinggi' || value === 'Bahaya') return 'status-bahaya';
-        if (value === 'Sedang') return 'status-waspada';
+    let num = parseFloat(value);
+    if (type === 'api') {
+        if (num > 70) return 'status-bahaya';
+        if (num > 40) return 'status-waspada';
         return 'status-aman';
     }
-    if (type === 'co') {
-        let coValue = parseFloat(value);
-        if (coValue > 50) return 'status-bahaya';
-        if (coValue > 35) return 'status-waspada';
+    if (type === 'asap') {
+        if (num > 70) return 'status-bahaya';
+        if (num > 40) return 'status-waspada';
         return 'status-aman';
     }
     return '';
 }
 
 function getStatusIcon(value, type) {
-    if (type === 'asap') {
-        if (value === 'Tinggi' || value === 'Bahaya') return '<i class="fas fa-chart-line"></i>';
-        if (value === 'Sedang') return '<i class="fas fa-minus-circle"></i>';
-        return '<i class="fas fa-check"></i>';
+    let num = parseFloat(value);
+    if (type === 'api') {
+        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
+        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
+        return '<i class="fas fa-check-circle"></i>';
     }
-    if (type === 'co') {
-        let coValue = parseFloat(value);
-        if (coValue > 50) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (coValue > 35) return '<i class="fas fa-exclamation-circle"></i>';
+    if (type === 'asap') {
+        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
+        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     return '';
 }
 
-function updateDataTable(data) {
-    const rows = data.map((item) => [
+function getStatusText(value, type) {
+    let num = parseFloat(value);
+    if (type === 'api') {
+        if (num > 70) return 'Terdeteksi Api';
+        if (num > 40) return 'Potensi Api';
+        return 'Aman';
+    }
+    if (type === 'asap') {
+        if (num > 70) return 'Tinggi';
+        if (num > 40) return 'Sedang';
+        return 'Normal';
+    }
+    return '';
+}
+
+function createRow(item) {
+    return [
         item.no,
         item.tanggal_waktu,
-        `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${item.asap}</span>`,
+        `<span class="${getStatusClass(item.api, 'api')}">${getStatusIcon(item.api, 'api')} ${getStatusText(item.api, 'api')} (${item.api})</span>`,
+        `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${getStatusText(item.asap, 'asap')} (${item.asap})</span>`,
         `${item.suhu} °C`,
         `${item.kelembapan} %`,
         `${item.tegangan} V`,
         `${item.arus} A`,
-        `${item.daya} W`,
-        `${item.kecepatan_angin} m/s`,
-        `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
-    ]);
+        `${item.rssi} dBm`
+    ];
+}
+
+function updateDataTable(data) {
+    const rows = data.map(createRow);
     if (dataTable) {
         dataTable.clear();
         if (rows.length > 0) dataTable.rows.add(rows);
@@ -867,46 +848,42 @@ function updateDataTable(data) {
 
 function initDataTable(data) {
     if (dataTable) dataTable.destroy();
-    const rows = data.map((item) => [
-        item.no,
-        item.tanggal_waktu,
-        `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${item.asap}</span>`,
-        `${item.suhu} °C`,
-        `${item.kelembapan} %`,
-        `${item.tegangan} V`,
-        `${item.arus} A`,
-        `${item.daya} W`,
-        `${item.kecepatan_angin} m/s`,
-        `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
-    ]);
+    const rows = data.map(createRow);
+    
+    const tableColumns = [
+        { title: "No" }, 
+        { title: "Tanggal & Waktu" }, 
+        { title: "Api" }, 
+        { title: "Asap" }, 
+        { title: "Suhu (°C)" }, 
+        { title: "Kelembapan (%)" },
+        { title: "Tegangan (V)" }, 
+        { title: "Arus (A)" },
+        { title: "RSSI (dBm)" }
+    ];
+
     dataTable = $('#sensorTable').DataTable({
         data: rows,
-        columns: [
-            { title: "No" }, 
-            { title: "Tanggal & Waktu" }, 
-            { title: "Asap" }, 
-            { title: "Suhu (°C)" }, 
-            { title: "Kelembapan (%)" },
-            { title: "Tegangan (V)" }, 
-            { title: "Arus (A)" },
-            { title: "Daya (W)" },
-            { title: "Kecepatan Angin (m/s)" },
-            { title: "Arah Angin" },
-            { title: "CO (ppm)" }
-        ],
+        columns: tableColumns,
         language: {
             url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
-            lengthMenu: "Tampilkan _MENU_ data",
-            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-            infoEmpty: "Tidak ada data",
-            search: "Cari:",
-            paginate: { first: "Pertama", last: "Terakhir", next: "Selanjutnya", previous: "Sebelumnya" }
+            emptyTable: "Tidak ada data sensor yang tersedia. Silakan tambahkan data terlebih dahulu."
         },
         pageLength: 10, 
-        lengthMenu: [5, 10, 25, 50], 
+        lengthMenu: [5, 10, 25, 50, 100], 
         order: [[1, 'desc']], 
-        scrollX: true
+        scrollX: true,
+        columnDefs: [
+            { width: "5%", targets: 0 },
+            { width: "15%", targets: 1 },
+            { width: "12%", targets: 2 },
+            { width: "12%", targets: 3 },
+            { width: "10%", targets: 4 },
+            { width: "10%", targets: 5 },
+            { width: "10%", targets: 6 },
+            { width: "10%", targets: 7 },
+            { width: "8%", targets: 8 }
+        ]
     });
 }
 
@@ -914,8 +891,8 @@ function applyFilter() {
     let filteredData = [...sensorData];
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
-    if (startDate && filteredData[0]?.tanggal) filteredData = filteredData.filter(item => item.tanggal >= startDate);
-    if (endDate && filteredData[0]?.tanggal) filteredData = filteredData.filter(item => item.tanggal <= endDate);
+    if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
+    if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
     filteredData.forEach((item, idx) => item.no = idx + 1);
     currentData = filteredData;
     updateDataTable(currentData);
@@ -931,49 +908,48 @@ function resetFilter() {
 }
 
 function exportToExcel() {
-    let exportData = [...sensorData];
-    const startDate = document.getElementById('start_date').value;
-    const endDate = document.getElementById('end_date').value;
-    if (startDate && exportData[0]?.tanggal) exportData = exportData.filter(item => item.tanggal >= startDate);
-    if (endDate && exportData[0]?.tanggal) exportData = exportData.filter(item => item.tanggal <= endDate);
-    if (exportData.length === 0) { alert('Tidak ada data untuk diexport!'); return; }
+    if (currentData.length === 0) { 
+        alert('Tidak ada data untuk diexport!'); 
+        return; 
+    }
     
-    let csv = "No,Tanggal & Waktu,Asap,Suhu (°C),Kelembapan (%),Tegangan (V),Arus (A),Daya (W),Kecepatan Angin (m/s),Arah Angin,CO (ppm)\n";
-    exportData.forEach((item, idx) => {
-        csv += `"${idx+1}","${item.tanggal_waktu}","${item.asap}","${item.suhu}","${item.kelembapan}","${item.tegangan}","${item.arus}","${item.daya}","${item.kecepatan_angin}","${item.arah_angin}","${item.co}"\n`;
+    let csv = "No,Tanggal & Waktu,Api,Asap,Suhu (°C),Kelembapan (%),Tegangan (V),Arus (A),RSSI (dBm)\n";
+    currentData.forEach((item, idx) => {
+        let statusApi = getStatusText(item.api, 'api');
+        let statusAsap = getStatusText(item.asap, 'asap');
+        csv += `"${idx+1}","${item.tanggal_waktu}","${statusApi} (${item.api})","${statusAsap} (${item.asap})","${item.suhu}","${item.kelembapan}","${item.tegangan}","${item.arus}","${item.rssi}"\n`;
     });
     
     const blob = new Blob(["\uFEFF" + csv], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `data_sensor_${new Date().toISOString().slice(0,19)}.xls`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.download = `data_sensor_indoor_${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert(`Berhasil mengexport ${exportData.length} data ke Excel!`);
+    alert(`Berhasil mengexport ${currentData.length} data ke Excel!`);
 }
 
 $(document).ready(function() {
-    // Perbaikan kondisi: Cek apakah array memiliki isi terlebih dahulu secara aman
     if (sensorData && sensorData.length > 0) {
         initDataTable(sensorData);
         console.log(`Data berhasil dimuat: ${sensorData.length} record`);
     } else {
-        // Jika data kosong, inisialisasi tabel kosong agar DataTables tidak rusak
+        // Inisialisasi tabel kosong
         $('#sensorTable').DataTable({
             data: [],
             columns: [
                 { title: "No" }, 
                 { title: "Tanggal & Waktu" }, 
+                { title: "Api" }, 
                 { title: "Asap" }, 
                 { title: "Suhu (°C)" }, 
                 { title: "Kelembapan (%)" },
                 { title: "Tegangan (V)" }, 
                 { title: "Arus (A)" },
-                { title: "Daya (W)" },
-                { title: "Kecepatan Angin (m/s)" },
-                { title: "Arah Angin" },
-                { title: "CO (ppm)" }
+                { title: "RSSI (dBm)" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
