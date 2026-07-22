@@ -776,7 +776,7 @@ var fixedLat = <?= $db_lat; ?>;
 var fixedLng = <?= $db_lng; ?>;
 var allLocations = <?= json_encode($all_locations); ?>;
 
-// Variabel untuk melacak ID lokasi yang sedang aktif dilihat di popup
+// Variabel untuk melacak ID lokasi yang sedang aktif dilihat
 var activeSelectedLocationId = 1;
 
 // Inisialisasi peta
@@ -867,7 +867,7 @@ if (!sensorMarker) {
 
 // ================= FUNGSI FLY TO LOCATION (DIPERBAIKI) =================
 function flyToLocation(lat, lng, id) {
-    activeSelectedLocationId = id; // Simpan ID yang sedang aktif
+    activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
@@ -911,7 +911,7 @@ function updateLocationStatus(isDanger, lat, lng) {
             Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
         `);
         
-        // Hanya buka popup otomatis jika user sedang memantau marker utama (ID 1)
+        // KUNCI UTAMA: Hanya buka popup peringatan otomatis jika user sedang memantau marker utama (ID 1)
         if (activeSelectedLocationId === 1) {
             sensorMarker.openPopup();
         }
