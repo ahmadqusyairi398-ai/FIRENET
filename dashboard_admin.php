@@ -9,8 +9,6 @@ require_once 'koneksi.php';
 // Gunakan koneksi outdoor
 $conn = isset($conn_outdoor) ? $conn_outdoor : null;
 
-
-
 if ($conn) {
     $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat WHERE id = 1 LIMIT 1");
     if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
@@ -778,6 +776,9 @@ var fixedLat = <?= $db_lat; ?>;
 var fixedLng = <?= $db_lng; ?>;
 var allLocations = <?= json_encode($all_locations); ?>;
 
+// Variabel untuk melacak ID lokasi yang sedang aktif dilihat di popup
+var activeSelectedLocationId = 1;
+
 // Inisialisasi peta
 var map = L.map('map').setView([fixedLat, fixedLng], 14);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -864,8 +865,9 @@ if (!sensorMarker) {
     dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
 }
 
-// Fungsi interaktif saat memilih tombol lokasi
+// ================= FUNGSI FLY TO LOCATION (DIPERBAIKI) =================
 function flyToLocation(lat, lng, id) {
+    activeSelectedLocationId = id; // Simpan ID yang sedang aktif
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
@@ -873,12 +875,9 @@ function flyToLocation(lat, lng, id) {
 
     var targetLoc = allLocations.find(l => l.id === id);
     if (targetLoc) {
-        var nameElem = document.getElementById('location-name-val');
-        var idElem = document.getElementById('location-id-val');
-        var coordElem = document.getElementById('coordinates');
-        if (nameElem) nameElem.innerText = targetLoc.nama_lokasi;
-        if (idElem) idElem.innerText = 'ID: ' + targetLoc.id_alat;
-        if (coordElem) coordElem.innerText = targetLoc.lat.toFixed(6) + ', ' + targetLoc.lng.toFixed(6);
+        document.getElementById('location-name-val').innerText = targetLoc.nama_lokasi;
+        document.getElementById('location-id-val').innerText = 'ID: ' + targetLoc.id_alat;
+        document.getElementById('coordinates').innerText = targetLoc.lat.toFixed(6) + ', ' + targetLoc.lng.toFixed(6);
     }
 
     document.querySelectorAll('.btn-loc-select').forEach(btn => {
@@ -895,7 +894,6 @@ function flyToLocation(lat, lng, id) {
 // ================= FUNGSI UPDATE LOCATION STATUS (DIPERBAIKI) =================
 function updateLocationStatus(isDanger, lat, lng) {
     if (isDanger) {
-        // Mode BAHAYA - Merah
         dangerZone.setStyle({ 
             color: '#dc2626', 
             fillColor: '#dc2626', 
@@ -905,17 +903,19 @@ function updateLocationStatus(isDanger, lat, lng) {
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
         
-        // Ganti marker ke icon bahaya
         sensorMarker.setIcon(dangerIcon);
         
-        // UBAH variabel fixedLat/Lng menjadi lat/lng
         sensorMarker.bindPopup(`
             <b>🔥 PERINGATAN KEBAKARAN!</b><br>
             <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
             Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
-        `).openPopup();
+        `);
+        
+        // Hanya buka popup otomatis jika user sedang memantau marker utama (ID 1)
+        if (activeSelectedLocationId === 1) {
+            sensorMarker.openPopup();
+        }
     } else {
-        // Mode AMAN - Hijau
         dangerZone.setStyle({ 
             color: '#28a745', 
             fillColor: '#28a745', 
@@ -925,15 +925,17 @@ function updateLocationStatus(isDanger, lat, lng) {
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Hijau (Aman)';
         
-        // Ganti marker ke icon aman
         sensorMarker.setIcon(safeIcon);
         
-        // UBAH variabel fixedLat/Lng menjadi lat/lng
         sensorMarker.bindPopup(`
             <b>🔥 Fire Detector</b><br>
             <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
             Status: <span style="color: #28a745;">Aktif - Normal</span>
-        `).openPopup();
+        `);
+        
+        if (activeSelectedLocationId === 1) {
+            sensorMarker.openPopup();
+        }
     }
 }
 
@@ -1075,7 +1077,7 @@ function fetchDataFromDB() {
             document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
 
-            // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
+            // ================= 6. Update Peta & Koordinat dari Database =================
             if(data.lat && data.lng) {
                 document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
                 sensorMarker.setLatLng([data.lat, data.lng]);
@@ -1085,10 +1087,10 @@ function fetchDataFromDB() {
                 map.panTo(new L.LatLng(data.lat, data.lng));
             }
 
-            // ================= 7. Deteksi Bahaya (DIPERBAIKI) =================
+            // ================= 7. Deteksi Bahaya =================
             var isDanger = (data.asap === "Tinggi" || coValue > 50);
             
-            // UBAH baris ini (tambahkan data.lat dan data.lng)
+            // Panggil updateLocationStatus dengan koordinat
             updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 8. Update Grafik
@@ -1109,7 +1111,7 @@ function fetchDataFromDB() {
         })
         .catch(error => {
             console.error('Error fetching data:', error);
-            // Data gagal ditarik, beri notifikasi error dan jangan pakai dummy
+            // Data gagal ditarik, beri notifikasi error
             document.getElementById("status").innerHTML = `<i class="fas fa-times-circle" style="color:#dc3545;"></i> Offline`;
         });
 }
