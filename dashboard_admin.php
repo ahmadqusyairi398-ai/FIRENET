@@ -891,8 +891,11 @@ function flyToLocation(lat, lng, id) {
     }
 }
 
-// ================= FUNGSI UPDATE LOCATION STATUS (DIPERBAIKI) =================
+// ================= FUNGSI UPDATE LOCATION STATUS (DISAMAKAN SEPERTI GAMBAR 1) =================
 function updateLocationStatus(isDanger, lat, lng) {
+    // Ambil data lokasi utama (ID 1) dari array allLocations untuk mendapatkan nama & ID alatnya
+    var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
+
     if (isDanger) {
         dangerZone.setStyle({ 
             color: '#dc2626', 
@@ -905,13 +908,18 @@ function updateLocationStatus(isDanger, lat, lng) {
         
         sensorMarker.setIcon(dangerIcon);
         
+        // Format popup diubah agar mirip seperti Gambar 1 (Nama Tempat, ID, dan Koordinat)
         sensorMarker.bindPopup(`
-            <b>🔥 PERINGATAN KEBAKARAN!</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
-            Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
+            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
+                <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 20px; margin-bottom: 5px;"></i>
+                <div style="font-weight: 700; font-size: 14px; color: #dc2626;">${mainLoc.nama_lokasi}</div>
+                <div style="font-size: 12px; color: #dc2626; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} (BAHAYA!)</div>
+                <div style="font-size: 12px; background: rgba(220,38,38,0.1); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
+                    <i class="fas fa-globe"></i> ${lat}, ${lng}
+                </div>
+            </div>
         `);
         
-        // KUNCI UTAMA: Hanya buka popup peringatan otomatis jika user sedang memantau marker utama (ID 1)
         if (activeSelectedLocationId === 1) {
             sensorMarker.openPopup();
         }
@@ -927,10 +935,16 @@ function updateLocationStatus(isDanger, lat, lng) {
         
         sensorMarker.setIcon(safeIcon);
         
+        // Format popup normal (aman) juga disamakan strukturnya
         sensorMarker.bindPopup(`
-            <b>🔥 Fire Detector</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${lat}, ${lng}<br>
-            Status: <span style="color: #28a745;">Aktif - Normal</span>
+            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
+                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
+                <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${mainLoc.nama_lokasi}</div>
+                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat}</div>
+                <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
+                    <i class="fas fa-globe"></i> ${lat}, ${lng}
+                </div>
+            </div>
         `);
         
         if (activeSelectedLocationId === 1) {
