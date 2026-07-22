@@ -17,8 +17,8 @@ require_once 'koneksi.php';
 
 if (!$pdo_indoor) {
     die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
-        <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
-        <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel, membuat database <strong>firenet</strong> di phpMyAdmin, dan mengimpor tabel-tabel yang diperlukan.</p>
+        <h3>Error: Koneksi ke Database INDOOR ('indoor') Gagal.</h3>
+        <p>Pastikan Anda telah mengaktifkan MySQL di XAMPP Control Panel, membuat database <strong>indoor</strong> di phpMyAdmin, dan mengimpor tabel-tabel yang diperlukan.</p>
     </div>");
 }
 

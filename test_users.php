@@ -279,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
 
         <!-- DB INDOOR -->
         <div class="db-card">
-            <strong>Database INDOOR (firenet)</strong>
+            <strong>Database INDOOR (indoor)</strong>
             <div>
                 <?php
                 try {
@@ -294,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         </div>
     </div>
 
-    <h2><i class="fas fa-users"></i> Daftar Pengguna di Database INDOOR (firenet)</h2>
+    <h2><i class="fas fa-users"></i> Daftar Pengguna di Database INDOOR (indoor)</h2>
     <?php
     try {
         $stmt = $pdo_indoor->query("SELECT id, username, password, role FROM login");
@@ -332,7 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         <div class="form-group">
             <label for="target_db">Pilih Database Target</label>
             <select name="target_db" id="target_db">
-                <option value="indoor" <?= isset($_POST['target_db']) && $_POST['target_db'] === 'indoor' ? 'selected' : '' ?>>INDOOR (firenet)</option>
+                <option value="indoor" <?= isset($_POST['target_db']) && $_POST['target_db'] === 'indoor' ? 'selected' : '' ?>>INDOOR (indoor)</option>
                 <option value="outdoor" <?= isset($_POST['target_db']) && $_POST['target_db'] === 'outdoor' ? 'selected' : '' ?>>OUTDOOR (outdoor)</option>
             </select>
         </div>
@@ -354,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         <div class="form-group">
             <label for="new_target_db">Pilih Database Target</label>
             <select name="target_db" id="new_target_db">
-                <option value="indoor">INDOOR (firenet)</option>
+                <option value="indoor">INDOOR (indoor)</option>
                 <option value="outdoor">OUTDOOR (outdoor)</option>
             </select>
         </div>

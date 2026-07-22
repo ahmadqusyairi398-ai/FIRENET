@@ -18,9 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         try {
             if ($is_indoor) {
                 if (!$pdo_indoor) {
-                    throw new Exception("Database INDOOR ('firenet') gagal terhubung. Pastikan nama database 'firenet' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
+                    throw new Exception("Database INDOOR ('indoor') gagal terhubung. Pastikan nama database 'indoor' sudah benar di phpMyAdmin, MySQL aktif di XAMPP, dan privilese user sudah sesuai.");
                 }
-                // Untuk indoor, gunakan pdo_indoor (database firenet) dan tabel login
+                // Untuk indoor, gunakan pdo_indoor (database indoor) dan tabel login
                 $stmt = $pdo_indoor->prepare("SELECT * FROM login WHERE username = ?");
             } else {
                 if (!$pdo) {

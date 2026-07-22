@@ -29,7 +29,7 @@ $conn = isset($conn_indoor) ? $conn_indoor : null;
 
 if (!$conn) {
     die("<div style='padding: 20px; font-family: sans-serif; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; margin: 20px;'>
-        <h3>Error: Koneksi ke Database INDOOR ('firenet') Gagal.</h3>
+        <h3>Error: Koneksi ke Database INDOOR ('indoor') Gagal.</h3>
         <p>Silakan periksa konfigurasi database Anda pada file <code>koneksi.php</code>.</p>
     </div>");
 }
