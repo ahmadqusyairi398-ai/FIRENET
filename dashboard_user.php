@@ -192,13 +192,98 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* MODAL LOGOUT */
-.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; }
-.modal-box { background: #ffffff; border-radius: 20px; padding: 40px 35px 30px; max-width: 400px; width: 90%; text-align: center; }
-.modal-icon { font-size: 48px; color: #dc3545; background: rgba(220, 53, 69, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+.modal-overlay { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.7); 
+    backdrop-filter: blur(5px); 
+    z-index: 9999; 
+    justify-content: center; 
+    align-items: center; 
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal-box { 
+    background: linear-gradient(135deg, #ffffff, #f8f9fa); 
+    border-radius: 20px; 
+    padding: 40px 35px 30px; 
+    max-width: 400px; 
+    width: 90%; 
+    text-align: center; 
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease;
+}
+.modal-icon { 
+    font-size: 48px; 
+    color: #dc3545; 
+    background: rgba(220, 53, 69, 0.1); 
+    width: 80px; 
+    height: 80px; 
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    margin: 0 auto 20px; 
+}
+.modal-box h2 {
+    color: #1e3c72;
+    font-size: 22px;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
 .modal-buttons { display: flex; gap: 12px; justify-content: center; }
-.btn-modal { padding: 12px 35px; border-radius: 50px; border: none; font-weight: 600; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.btn-modal { 
+    padding: 12px 35px; 
+    border-radius: 50px; 
+    border: none; 
+    font-weight: 600; 
+    cursor: pointer; 
+    text-decoration: none; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    transition: all 0.3s ease;
+}
+.btn-modal:hover {
+    transform: translateY(-2px);
+}
 .btn-cancel { background: #e9ecef; color: #495057; }
-.btn-logout-confirm { background: #dc3545; color: white; }
+.btn-cancel:hover { background: #dee2e6; }
+.btn-logout-confirm { background: linear-gradient(135deg, #dc3545, #b91c1c); color: white; }
+.btn-logout-confirm:hover { background: linear-gradient(135deg, #c82333, #a71d2a); box-shadow: 0 5px 20px rgba(220, 53, 69, 0.4); }
+
+@media (max-width: 768px) {
+    .sidebar { width: 80px; padding: 20px 10px; }
+    .sidebar h3 { font-size: 12px; }
+    .menu-btn span { display: none; }
+    .menu-btn i { margin: 0; }
+    .main { padding: 15px; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    #map { height: 250px; }
+    .location-info { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .header { flex-direction: column; align-items: stretch; gap: 10px; }
+    .header-left { flex-direction: column; align-items: stretch; }
+    .node-status-header { justify-content: center; }
+    .header-right { justify-content: center; flex-wrap: wrap; }
+    .btn-home-header { padding: 6px 12px; font-size: 12px; }
+    .modal-box { padding: 30px 20px; }
+    .modal-buttons { flex-direction: column; }
+    .btn-modal { justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -248,7 +333,8 @@ body::before {
         </div>
         
         <div class="header-right">
-            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+            <!-- PERBAIKAN: Tombol HOME dengan Modal -->
+            <a href="#" class="btn-home-header" onclick="openHomeModal(); return false;"><i class="fas fa-home"></i> HOME</a>
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span><?= htmlspecialchars($user) ?><span class="user-tag">User</span></span>
@@ -311,7 +397,7 @@ body::before {
 <div class="modal-overlay" id="logoutModal">
     <div class="modal-box">
         <div class="modal-icon"><i class="fas fa-sign-out-alt"></i></div>
-        <h2 style="color: #1e3c72; margin-bottom: 20px;">Apakah Anda yakin keluar?</h2>
+        <h2>Apakah Anda yakin keluar?</h2>
         <div class="modal-buttons">
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()"><i class="fas fa-times"></i> CANCEL</button>
             <a href="logout.php" class="btn-modal btn-logout-confirm"><i class="fas fa-sign-out-alt"></i> LOGOUT</a>
@@ -319,95 +405,367 @@ body::before {
     </div>
 </div>
 
-<script>
-// FUNGSI MODAL LOGOUT
-function openLogoutModal() { document.getElementById('logoutModal').style.display = 'flex'; }
-function closeLogoutModal() { document.getElementById('logoutModal').style.display = 'none'; }
+<!-- ============================================================ -->
+<!-- ========== MODAL HOME SEDERHANA (TAMBAHAN) ========== -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="homeModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+            <i class="fas fa-home"></i>
+        </div>
+        
+        <h2>Kembali ke Halaman Utama?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                <i class="fas fa-check"></i> YA, KEMBALI
+            </a>
+        </div>
+    </div>
+</div>
 
-// PETA LEAFLET
+<script>
+// ================= FUNGSI MODAL LOGOUT =================
+function openLogoutModal() {
+    document.getElementById('logoutModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLogoutModal() {
+    document.getElementById('logoutModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Tutup modal jika klik di luar modal
+document.getElementById('logoutModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLogoutModal();
+    }
+});
+
+// ================= FUNGSI MODAL HOME (TAMBAHAN) =================
+function openHomeModal() {
+    document.getElementById('homeModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeHomeModal() {
+    document.getElementById('homeModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Tutup modal Home jika area luar modal diklik
+document.getElementById('homeModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHomeModal();
+    }
+});
+
+// Update fungsi tombol ESC agar bisa menutup modal Home atau Logout sekaligus
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('logoutModal').style.display === 'flex') {
+            closeLogoutModal();
+        }
+        if (document.getElementById('homeModal').style.display === 'flex') {
+            closeHomeModal();
+        }
+    }
+});
+
+// ================= PETA LEAFLET =================
 var fixedLat = -1.20249;
 var fixedLng = 116.88708;
 var map = L.map('map').setView([fixedLat, fixedLng], 15);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19 
+}).addTo(map);
 
 var safeIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center;"><i class="fas fa-check-circle" style="color: white; font-size: 20px;"></i></div>',
-    iconSize: [40, 40], iconAnchor: [20, 20]
+    html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-check-circle" style="color: white; font-size: 20px;"></i></div>',
+    iconSize: [40, 40], 
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    className: 'safe-marker'
 });
+
 var dangerIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
-    iconSize: [40, 40], iconAnchor: [20, 20]
+    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
+    iconSize: [40, 40], 
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    className: 'danger-marker'
 });
 
 var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon }).addTo(map);
-var dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
+sensorMarker.bindPopup(`
+    <b>📍 Lokasi Monitoring</b><br>
+    <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
+    Status: <span style="color: #28a745;">Aktif - Normal</span>
+`).openPopup();
 
-// CHART JS
+var dangerZone = L.circle([fixedLat, fixedLng], { 
+    color: '#28a745', 
+    fillColor: '#28a745', 
+    fillOpacity: 0.1, 
+    radius: 500 
+}).addTo(map);
+
+function updateLocationStatus(isDanger) {
+    if (isDanger) {
+        dangerZone.setStyle({ 
+            color: '#dc2626', 
+            fillColor: '#dc2626', 
+            fillOpacity: 0.3 
+        });
+        document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
+        document.getElementById('location-status').style.color = '#dc2626';
+        document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
+        sensorMarker.setIcon(dangerIcon);
+        sensorMarker.bindPopup(`
+            <b>🔥 PERINGATAN KEBAKARAN!</b><br>
+            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
+            Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
+        `).openPopup();
+    } else {
+        dangerZone.setStyle({ 
+            color: '#28a745', 
+            fillColor: '#28a745', 
+            fillOpacity: 0.1 
+        });
+        document.getElementById('location-status').innerHTML = 'Aman';
+        document.getElementById('location-status').style.color = '#28a745';
+        document.getElementById('zone').innerHTML = 'Zona Hijau (Aman)';
+        sensorMarker.setIcon(safeIcon);
+        sensorMarker.bindPopup(`
+            <b>📍 Lokasi Monitoring</b><br>
+            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
+            Status: <span style="color: #28a745;">Aktif - Normal</span>
+        `).openPopup();
+    }
+}
+
+// ================= CHART JS =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = { 
     labels: [], 
     datasets: [
-        { label: 'Tegangan (V)', data: [], borderColor: '#ffc107', tension: 0.4 },
-        { label: 'Arus (A)', data: [], borderColor: '#ff8c00', tension: 0.4 },
-        { label: 'Daya (W)', data: [], borderColor: '#28a745', tension: 0.4 },
-        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', tension: 0.4 },
-        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', tension: 0.4 },
-        { label: 'Angin (m/s)', data: [], borderColor: '#3399ff', tension: 0.4 },
-        { label: 'CO (ppm)', data: [], borderColor: '#aa96da', tension: 0.4 }
+        { 
+            label: 'Tegangan (V)', 
+            data: [], 
+            borderColor: '#ffc107', 
+            backgroundColor: 'rgba(255,193,7,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'Arus (A)', 
+            data: [], 
+            borderColor: '#ff8c00', 
+            backgroundColor: 'rgba(255,140,0,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'Daya (W)', 
+            data: [], 
+            borderColor: '#28a745', 
+            backgroundColor: 'rgba(40,167,69,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'Suhu (°C)', 
+            data: [], 
+            borderColor: '#ff6b6b', 
+            backgroundColor: 'rgba(255,107,107,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'Kelembapan (%)', 
+            data: [], 
+            borderColor: '#4ecdc4', 
+            backgroundColor: 'rgba(78,205,196,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'Angin (m/s)', 
+            data: [], 
+            borderColor: '#3399ff', 
+            backgroundColor: 'rgba(51,153,255,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        },
+        { 
+            label: 'CO (ppm)', 
+            data: [], 
+            borderColor: '#aa96da', 
+            backgroundColor: 'rgba(170,150,218,0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+        }
     ] 
 };
-const myChart = new Chart(ctx, { type: 'line', data: dataChart, options: { responsive: true } });
 
-// FETCH DATA DARI DATABASE MYSQL REALTIME
+const myChart = new Chart(ctx, { 
+    type: 'line', 
+    data: dataChart, 
+    options: { 
+        responsive: true, 
+        maintainAspectRatio: true,
+        animation: { duration: 500 },
+        plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        let value = context.raw;
+                        let unit = '';
+                        if (label.includes('Tegangan')) unit = ' V';
+                        else if (label.includes('Arus')) unit = ' A';
+                        else if (label.includes('Daya')) unit = ' W';
+                        else if (label.includes('Suhu')) unit = ' °C';
+                        else if (label.includes('Kelembapan')) unit = ' %';
+                        else if (label.includes('Angin')) unit = ' m/s';
+                        else if (label.includes('CO')) unit = ' ppm';
+                        return `${label}: ${value}${unit}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: { 
+                beginAtZero: true, 
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                title: { display: true, text: 'Nilai Sensor' }
+            },
+            x: { 
+                grid: { display: false },
+                title: { display: true, text: 'Waktu' }
+            }
+        }
+    } 
+});
+
+// ================= FETCH DATA DARI DATABASE REALTIME =================
 function fetchDataFromDB() {
     fetch('get_latest_data.php')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
-            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
-            document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-            document.getElementById("ip").innerHTML = data.ip;
-            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
 
-            document.getElementById("tegangan").innerHTML = `${data.tegangan} V`;
-            document.getElementById("arus").innerHTML = `${data.arus} A`;
-            document.getElementById("daya").innerHTML = `${data.daya} W`;
+            // Update status header
+            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
+            document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
+            document.getElementById("ip").innerHTML = data.ip || '-';
+            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
 
-            document.getElementById("arah").innerHTML = `<i class="fas fa-compass"></i> ${data.arah}`;
-            document.getElementById("kecepatan_angin").innerHTML = `${data.angin} m/s <i class="fas fa-wind"></i>`;
+            // Update sensor values
+            document.getElementById("tegangan").innerHTML = `${data.tegangan || 0} V`;
+            document.getElementById("arus").innerHTML = `${data.arus || 0} A`;
+            document.getElementById("daya").innerHTML = `${data.daya || 0} W`;
 
-            // Asap Status
+            // Update arah angin
+            var arahIcon = {
+                'Utara': 'up',
+                'Selatan': 'down',
+                'Timur': 'right',
+                'Barat': 'left',
+                'Timur Laut': 'up-right',
+                'Barat Daya': 'down-left',
+                'Tenggara': 'down-right',
+                'Barat Laut': 'up-left'
+            };
+            var arahValue = data.arah || 'Timur';
+            document.getElementById("arah").innerHTML = `<i class="fas fa-arrow-${arahIcon[arahValue] || 'right'}"></i> ${arahValue}`;
+            document.getElementById("kecepatan_angin").innerHTML = `${data.angin || 0} m/s <i class="fas fa-wind"></i>`;
+
+            // Update Asap status
             var asapElement = document.getElementById("asap");
             var asapBox = document.getElementById('asap-box');
             if (data.asap === "Tinggi") {
-                asapElement.innerHTML = 'Tinggi (Berbahaya)';
+                asapElement.innerHTML = '⚠️ Tinggi (Berbahaya)';
                 asapElement.className = 'status-bahaya';
                 asapBox.classList.add('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
             } else {
-                asapElement.innerHTML = 'Normal';
+                asapElement.innerHTML = '✅ Normal';
                 asapElement.className = 'status-aman';
                 asapBox.classList.remove('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
             }
 
-            document.getElementById("co").innerHTML = `${data.co} ppm`;
-            document.getElementById("suhu").innerHTML = `${data.suhu} °C`;
-            document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
+            // Update CO status
+            var coElement = document.getElementById("co");
+            var coBox = document.getElementById('co-box');
+            var coValue = parseFloat(data.co) || 0;
+            if (coValue > 50) {
+                coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (BAHAYA!)`;
+                coElement.className = 'status-bahaya';
+                coBox.classList.add('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else if (coValue > 35) {
+                coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
+                coElement.className = 'status-bahaya';
+                coBox.classList.remove('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+            } else {
+                coElement.innerHTML = `${coValue} ppm <i class="fas fa-industry"></i>`;
+                coElement.className = 'status-aman';
+                coBox.classList.remove('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
+            }
 
-            // Update Peta
+            document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
+            document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
+
+            // Update Peta & Koordinat
             if(data.lat && data.lng) {
                 document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
                 sensorMarker.setLatLng([data.lat, data.lng]);
                 dangerZone.setLatLng([data.lat, data.lng]);
+                
+                // Geser kamera peta ke koordinat baru
+                map.panTo(new L.LatLng(data.lat, data.lng));
             }
 
+            // Deteksi Bahaya
+            var isDanger = (data.asap === "Tinggi" || coValue > 50);
+            updateLocationStatus(isDanger);
+
             // Update Chart
-            dataChart.labels.push(data.waktu);
-            dataChart.datasets[0].data.push(parseFloat(data.tegangan));
-            dataChart.datasets[1].data.push(parseFloat(data.arus));
-            dataChart.datasets[2].data.push(parseFloat(data.daya));
-            dataChart.datasets[3].data.push(parseFloat(data.suhu));
-            dataChart.datasets[4].data.push(parseFloat(data.kelembapan));
-            dataChart.datasets[5].data.push(parseFloat(data.angin));
-            dataChart.datasets[6].data.push(data.co);
+            dataChart.labels.push(data.waktu || new Date().toLocaleTimeString());
+            dataChart.datasets[0].data.push(parseFloat(data.tegangan) || 0);
+            dataChart.datasets[1].data.push(parseFloat(data.arus) || 0);
+            dataChart.datasets[2].data.push(parseFloat(data.daya) || 0);
+            dataChart.datasets[3].data.push(parseFloat(data.suhu) || 0);
+            dataChart.datasets[4].data.push(parseFloat(data.kelembapan) || 0);
+            dataChart.datasets[5].data.push(parseFloat(data.angin) || 0);
+            dataChart.datasets[6].data.push(parseFloat(data.co) || 0);
 
             if(dataChart.labels.length > 20) {
                 dataChart.labels.shift();
@@ -415,11 +773,18 @@ function fetchDataFromDB() {
             }
             myChart.update();
         })
-        .catch(err => console.error(err));
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            document.getElementById("status").innerHTML = `<i class="fas fa-times-circle" style="color:#dc3545;"></i> Offline`;
+        });
 }
 
+// ================= JALANKAN FUNGSI =================
 setInterval(fetchDataFromDB, 3000);
 fetchDataFromDB();
+
+// Update koordinat awal
+document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>
 </body>
 </html>

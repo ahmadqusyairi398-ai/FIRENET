@@ -546,7 +546,7 @@ $totalUsers = count($users);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <style>
-        /* ... (style sama seperti sebelumnya) ... */
+        /* ========== STYLE ========== */
         * {
             margin: 0;
             padding: 0;
@@ -1139,7 +1139,8 @@ $totalUsers = count($users);
         <div class="header">
             <h2><i class="fas fa-cog"></i> Setting</h2>
             <div class="header-right">
-                <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+                <!-- PERBAIKAN: Tombol HOME dengan Modal -->
+                <a href="#" class="btn-home-header" onclick="openHomeModal(); return false;"><i class="fas fa-home"></i> HOME</a>
                 <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo, <?= htmlspecialchars($user) ?></span></div>
             </div>
         </div>
@@ -1153,7 +1154,6 @@ $totalUsers = count($users);
 
         <!-- TAB 1: Ubah Nilai Alarm -->
         <div id="tab1" class="tab-content active">
-            <!-- ... (konten tab 1 sama seperti sebelumnya) ... -->
             <div class="card">
                 <h3><i class="fas fa-exclamation-triangle"></i> Ubah Nilai Alarm Sensor</h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">
@@ -1290,7 +1290,6 @@ $totalUsers = count($users);
 
         <!-- TAB 3: DAFTAR AKUN USER -->
         <div id="tab3" class="tab-content">
-            <!-- ... (konten tab 3 sama seperti sebelumnya) ... -->
             <div class="welcome-banner">
                 <h3><i class="fas fa-user-shield"></i> HALO, Admin</h3>
                 <button class="btn-primary" onclick="openAddUserModal()"><i class="fas fa-user-plus"></i> TAMBAH AKUN</button>
@@ -1368,6 +1367,28 @@ $totalUsers = count($users);
                 </button>
                 <a href="logout.php" class="btn-modal btn-logout-confirm">
                     <i class="fas fa-sign-out-alt"></i> LOGOUT
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ========== MODAL HOME SEDERHANA (TAMBAHAN) ========== -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="homeModal">
+        <div class="modal-box">
+            <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+                <i class="fas fa-home"></i>
+            </div>
+            
+            <h2>Kembali ke Halaman Utama?</h2>
+            
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+                <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                    <i class="fas fa-check"></i> YA, KEMBALI
                 </a>
             </div>
         </div>
@@ -1592,9 +1613,33 @@ $totalUsers = count($users);
             }
         });
 
+        // ================= FUNGSI MODAL HOME (TAMBAHAN) =================
+        function openHomeModal() {
+            document.getElementById('homeModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeHomeModal() {
+            document.getElementById('homeModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Tutup modal Home jika area luar modal diklik
+        document.getElementById('homeModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHomeModal();
+            }
+        });
+
+        // Update fungsi tombol ESC agar bisa menutup modal Home atau Logout sekaligus
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-                closeLogoutModal();
+            if (e.key === 'Escape') {
+                if (document.getElementById('logoutModal').style.display === 'flex') {
+                    closeLogoutModal();
+                }
+                if (document.getElementById('homeModal').style.display === 'flex') {
+                    closeHomeModal();
+                }
             }
         });
 
