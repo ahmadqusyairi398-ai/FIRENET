@@ -1057,7 +1057,7 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= FUNGSI FETCH DATA DARI DATABASE =================
+// ================= FUNGSI FETCH DATA DARI DATABASE (DIPERBAIKI) =================
 function fetchDataFromDB() {
     fetch('get_latest_data.php')
         .then(response => {
@@ -1137,14 +1137,18 @@ function fetchDataFromDB() {
             document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
 
-            // ================= 6. Update Peta & Koordinat dari Database =================
+            // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
             if(data.lat && data.lng) {
+                // Selalu update teks koordinat dan posisi marker/zone di background
                 document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
                 sensorMarker.setLatLng([data.lat, data.lng]);
                 dangerZone.setLatLng([data.lat, data.lng]);
                 
-                // TAMBAHAN: Geser kamera peta ke koordinat baru
-                map.panTo(new L.LatLng(data.lat, data.lng));
+                // PERBAIKAN: Hanya geser peta otomatis jika user sedang aktif melihat Lokasi Utama (ID 1)
+                // Jika user sedang melihat lokasi lain (ID 2, 3, dst), jangan dipaksa geser.
+                if (activeSelectedLocationId === 1) {
+                    map.panTo(new L.LatLng(data.lat, data.lng));
+                }
             }
 
             // ================= 7. Deteksi Bahaya =================
