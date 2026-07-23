@@ -948,7 +948,7 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= FUNGSI FETCH DATA DARI DATABASE =================
+// ================= FUNGSI FETCH DATA DARI DATABASE (DIPERBAIKI) =================
 function fetchDataFromDB() {
     fetch('get_latest_data.php')
         .then(response => {
@@ -1030,12 +1030,15 @@ function fetchDataFromDB() {
 
             // ================= 6. Update Peta & Koordinat dari Database =================
             if(data.lat && data.lng) {
-                document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
+                // Update posisi marker dan danger zone (tetap berjalan di background)
                 sensorMarker.setLatLng([data.lat, data.lng]);
                 dangerZone.setLatLng([data.lat, data.lng]);
                 
-                // TAMBAHAN: Geser kamera peta ke koordinat baru
-                map.panTo(new L.LatLng(data.lat, data.lng));
+                // HANYA update teks koordinat dan geser peta jika user sedang melihat Lokasi Utama (ID 1)
+                if (activeSelectedLocationId === 1) {
+                    document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
+                    map.panTo(new L.LatLng(data.lat, data.lng));
+                }
             }
 
             // ================= 7. Deteksi Bahaya =================
