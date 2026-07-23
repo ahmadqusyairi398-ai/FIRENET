@@ -607,7 +607,8 @@ canvas {
         </div>
         
         <div class="header-right">
-            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+            <!-- PERBAIKAN: Tombol HOME dengan Modal -->
+            <a href="#" class="btn-home-header" onclick="openHomeModal(); return false;"><i class="fas fa-home"></i> HOME</a>
             <div class="user-info">
                 <i class="fas fa-user-shield"></i>
                 <span><?= htmlspecialchars($user) ?><span class="admin-tag">Admin</span></span>
@@ -744,6 +745,28 @@ canvas {
     </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- ========== MODAL HOME SEDERHANA (TAMBAHAN) ========== -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="homeModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+            <i class="fas fa-home"></i>
+        </div>
+        
+        <h2>Kembali ke Halaman Utama?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                <i class="fas fa-check"></i> YA, KEMBALI
+            </a>
+        </div>
+    </div>
+</div>
+
 <script>
 // ================= FUNGSI MODAL LOGOUT =================
 function openLogoutModal() {
@@ -763,10 +786,33 @@ document.getElementById('logoutModal').addEventListener('click', function(e) {
     }
 });
 
-// Tutup modal dengan tombol ESC
+// ================= FUNGSI MODAL HOME (TAMBAHAN) =================
+function openHomeModal() {
+    document.getElementById('homeModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeHomeModal() {
+    document.getElementById('homeModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Tutup modal Home jika area luar modal diklik
+document.getElementById('homeModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHomeModal();
+    }
+});
+
+// Update fungsi tombol ESC agar bisa menutup modal Home maupun Logout sekaligus
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-        closeLogoutModal();
+    if (e.key === 'Escape') {
+        if (document.getElementById('logoutModal').style.display === 'flex') {
+            closeLogoutModal();
+        }
+        if (document.getElementById('homeModal').style.display === 'flex') {
+            closeHomeModal();
+        }
     }
 });
 
@@ -865,7 +911,7 @@ if (!sensorMarker) {
     dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
 }
 
-// ================= FUNGSI FLY TO LOCATION (DIPERBAIKI) =================
+// ================= FUNGSI FLY TO LOCATION =================
 function flyToLocation(lat, lng, id) {
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
@@ -891,7 +937,7 @@ function flyToLocation(lat, lng, id) {
     }
 }
 
-// ================= FUNGSI UPDATE LOCATION STATUS (DISAMAKAN SEPERTI GAMBAR 1) =================
+// ================= FUNGSI UPDATE LOCATION STATUS =================
 function updateLocationStatus(isDanger, lat, lng) {
     // Ambil data lokasi utama (ID 1) dari array allLocations untuk mendapatkan nama & ID alatnya
     var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
