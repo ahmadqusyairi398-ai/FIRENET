@@ -429,7 +429,8 @@ canvas {
         <span>Dashboard Outdoor</span>
         <span class="user-badge">OUTDOOR</span>
     </a>
-    <a href="home.php" class="menu-btn logout">
+    <!-- PERBAIKAN: Tombol Home dengan Modal -->
+    <a href="#" class="menu-btn logout" onclick="openHomeModal(); return false;">
         <i class="fas fa-home"></i>
         <span>Home</span>
     </a>
@@ -572,6 +573,28 @@ canvas {
     </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- ========== MODAL HOME SEDERHANA (TAMBAHAN) ========== -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="homeModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+            <i class="fas fa-home"></i>
+        </div>
+        
+        <h2>Kembali ke Halaman Utama?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                <i class="fas fa-check"></i> YA, KEMBALI
+            </a>
+        </div>
+    </div>
+</div>
+
 <script>
 // ================= FUNGSI MODAL LOGOUT =================
 function openLogoutModal() {
@@ -584,6 +607,17 @@ function closeLogoutModal() {
     document.body.style.overflow = 'auto';
 }
 
+// ================= FUNGSI MODAL HOME (TAMBAHAN) =================
+function openHomeModal() {
+    document.getElementById('homeModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeHomeModal() {
+    document.getElementById('homeModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
 // Tutup modal jika klik di luar modal
 document.getElementById('logoutModal').addEventListener('click', function(e) {
     if (e.target === this) {
@@ -591,10 +625,21 @@ document.getElementById('logoutModal').addEventListener('click', function(e) {
     }
 });
 
+document.getElementById('homeModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHomeModal();
+    }
+});
+
 // Tutup modal dengan tombol ESC
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-        closeLogoutModal();
+    if (e.key === 'Escape') {
+        if (document.getElementById('logoutModal').style.display === 'flex') {
+            closeLogoutModal();
+        }
+        if (document.getElementById('homeModal').style.display === 'flex') {
+            closeHomeModal();
+        }
     }
 });
 
