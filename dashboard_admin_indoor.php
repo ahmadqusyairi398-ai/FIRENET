@@ -20,6 +20,29 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 
 // Tentukan tipe dashboard (selalu indoor untuk berkas ini)
 $dashboard_type = 'indoor';
+
+// Koneksi Database & Query Lokasi Monitoring
+require_once 'koneksi.php';
+$conn = isset($conn_indoor) ? $conn_indoor : null;
+
+$db_locations = [];
+if ($conn) {
+    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_monitoring'");
+    if ($checkTable && mysqli_num_rows($checkTable) > 0) {
+        $q_loc = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
+        if ($q_loc) {
+            while ($r = mysqli_fetch_assoc($q_loc)) {
+                $db_locations[] = [
+                    'id' => (int)$r['id'],
+                    'id_alat' => $r['id_alat'],
+                    'latitude' => (float)$r['latitude'],
+                    'longitude' => (float)$r['longitude'],
+                    'last_update' => $r['last_update']
+                ];
+            }
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -560,7 +583,7 @@ canvas {
     <!-- ========== 4. MAPS / LOKASI ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat (Indoor) <span style="font-size: 12px; color: #666; margin-left: auto;">Gedung Perkantoran</span></h3>
+        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat (Indoor) <span style="font-size: 12px; color: #666; margin-left: auto;">Total Lokasi: <span id="total-locations"><?= count($db_locations); ?></span></span></h3>
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
@@ -676,12 +699,12 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// ================= KOORDINAT STATIS (1 LOKASI) =================
-var fixedLat = -1.20249;
-var fixedLng = 116.88708;
+// ================= PETA & LOKASI DINAMIS DARI DATABASE (lokasi_monitoring) =================
+var defaultLat = -1.20249;
+var defaultLng = 116.88708;
+var initialLocations = <?= json_encode($db_locations); ?>;
 
-// Inisialisasi peta
-var map = L.map('map').setView([fixedLat, fixedLng], 15);
+var map = L.map('map').setView([defaultLat, defaultLng], 15);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
@@ -689,78 +712,146 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     minZoom: 3
 }).addTo(map);
 
-// Icon marker untuk Indoor
-var safeIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-building" style="color: white; font-size: 18px;"></i></div>',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -20],
-    className: 'indoor-marker'
-});
+var markers = [];
+var dangerZones = [];
+var hasFitBounds = false;
 
-var dangerIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-    popupAnchor: [0, -20],
-    className: 'indoor-marker-danger'
-});
-
-// Marker awal dengan icon aman
-var sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
-
-// POPUP
-sensorMarker.bindPopup(`
-    <b>🏢 Indoor Sensor</b><br>
-    <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
-    Status: <span style="color: #28a745;">Aktif - Normal</span>
-`).openPopup();
-
-// Circle zone - Warna Orange untuk Indoor
-var dangerZone = L.circle([fixedLat, fixedLng], {
-    color: '#e85d04',
-    fillColor: '#e85d04',
-    fillOpacity: 0.1,
-    radius: 500
-}).addTo(map);
-
-function updateLocationStatus(isDanger) {
+// Fungsi pembuat icon marker Leaflet untuk Indoor
+function createIndoorIcon(id_alat, isDanger) {
     if (isDanger) {
-        dangerZone.setStyle({ 
-            color: '#dc2626', 
-            fillColor: '#dc2626', 
-            fillOpacity: 0.3 
+        return L.divIcon({
+            html: `<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 42px; height: 42px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; flex-direction: column; animation: blink 1s infinite;">
+                    <i class="fas fa-exclamation-triangle" style="color: white; font-size: 14px;"></i>
+                    <span style="font-size: 8px; color: white; font-weight: bold; margin-top: 1px;">${id_alat || 'Indoor'}</span>
+                  </div>`,
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -21],
+            className: 'indoor-marker-danger'
         });
-        document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
-        document.getElementById('location-status').style.color = '#dc2626';
-        document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
-        
-        sensorMarker.setIcon(dangerIcon);
-        
-        sensorMarker.bindPopup(`
-            <b>🔥 PERINGATAN KEBAKARAN!</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
-            Status: <span style="color: #dc2626;">BAHAYA - Deteksi Kebakaran!</span>
-        `).openPopup();
     } else {
-        dangerZone.setStyle({ 
-            color: '#e85d04', 
-            fillColor: '#e85d04', 
-            fillOpacity: 0.1 
+        return L.divIcon({
+            html: `<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 42px; height: 42px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <i class="fas fa-building" style="color: white; font-size: 14px;"></i>
+                    <span style="font-size: 8px; color: white; font-weight: bold; margin-top: 1px;">${id_alat || 'Indoor'}</span>
+                  </div>`,
+            iconSize: [42, 42],
+            iconAnchor: [21, 21],
+            popupAnchor: [0, -21],
+            className: 'indoor-marker'
         });
-        document.getElementById('location-status').innerHTML = 'Aman';
-        document.getElementById('location-status').style.color = '#28a745';
-        document.getElementById('zone').innerHTML = 'Zona Indoor (Gedung)';
-        
-        sensorMarker.setIcon(safeIcon);
-        
-        sensorMarker.bindPopup(`
-            <b>🏢 Indoor Sensor</b><br>
-            <i class="fas fa-map-marker-alt"></i> Koordinat: ${fixedLat}, ${fixedLng}<br>
-            Status: <span style="color: #28a745;">Aktif - Normal</span>
-        `).openPopup();
     }
 }
+
+// Ambil data lokasi secara asynchronous dari API get_locations.php
+async function fetchLocationsFromDB() {
+    try {
+        const response = await fetch('get_locations.php');
+        const result = await response.json();
+        if (!result.error && Array.isArray(result.data) && result.data.length > 0) {
+            return result.data;
+        }
+    } catch (error) {
+        console.error('Gagal mengambil data lokasi dari database:', error);
+    }
+    return initialLocations;
+}
+
+// Render & update seluruh titik lokasi di peta sesuai tabel lokasi_monitoring
+async function updateLocationStatus(isDanger) {
+    const locations = await fetchLocationsFromDB();
+    
+    // Bersihkan marker & lingkaran zona lama
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+    dangerZones.forEach(z => map.removeLayer(z));
+    dangerZones = [];
+    
+    const totalElem = document.getElementById('total-locations');
+    if (totalElem) {
+        totalElem.innerHTML = locations.length;
+    }
+
+    const statusElem = document.getElementById('location-status');
+    const zoneElem = document.getElementById('zone');
+    
+    if (isDanger) {
+        if (statusElem) {
+            statusElem.innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
+            statusElem.style.color = '#dc2626';
+        }
+        if (zoneElem) zoneElem.innerHTML = 'Zona Merah (Peringatan Bahaya)';
+    } else {
+        if (statusElem) {
+            statusElem.innerHTML = 'Aman';
+            statusElem.style.color = '#28a745';
+        }
+        if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
+    }
+
+    if (!locations || locations.length === 0) {
+        // Fallback jika belum ada data di database
+        const icon = createIndoorIcon('001', isDanger);
+        const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
+        m.bindPopup(`<b>🏢 Indoor Sensor</b><br>Koordinat: ${defaultLat}, ${defaultLng}`);
+        markers.push(m);
+        return;
+    }
+
+    locations.forEach((loc, idx) => {
+        const lat = parseFloat(loc.latitude);
+        const lng = parseFloat(loc.longitude);
+        const idAlat = loc.id_alat || `Alat-${loc.id}`;
+        
+        const icon = createIndoorIcon(idAlat, isDanger);
+        const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+        
+        const statusText = isDanger ? '<span style="color: #dc2626; font-weight: bold;">⚠️ BAHAYA</span>' : '<span style="color: #28a745; font-weight: bold;">✅ Aktif - Normal</span>';
+        
+        marker.bindPopup(`
+            <div style="font-family: 'Segoe UI', sans-serif; padding: 2px;">
+                <b style="color: #1e3c72; font-size: 14px;"><i class="fas fa-building" style="color: #00b4db;"></i> Sensor Indoor (${idAlat})</b><br>
+                <span style="font-size: 12px; color: #555;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> ${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>
+                <span style="font-size: 11px; color: #777;"><i class="fas fa-clock"></i> Update: ${loc.last_update || '-'}</span><br>
+                <div style="margin-top: 4px; font-size: 12px;">Status: ${statusText}</div>
+            </div>
+        `);
+        
+        marker.on('click', function() {
+            document.getElementById('coordinates').innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        });
+        
+        const circleColor = isDanger ? '#dc2626' : '#e85d04';
+        const circleOpacity = isDanger ? 0.3 : 0.1;
+        const zone = L.circle([lat, lng], {
+            color: circleColor,
+            fillColor: circleColor,
+            fillOpacity: circleOpacity,
+            radius: 300
+        }).addTo(map);
+        
+        markers.push(marker);
+        dangerZones.push(zone);
+
+        if (idx === 0) {
+            document.getElementById('coordinates').innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+    });
+
+    // Sesuaikan batas pandang peta (fit bounds) jika terdapat banyak lokasi
+    if (!hasFitBounds && markers.length > 0) {
+        if (markers.length === 1) {
+            map.setView(markers[0].getLatLng(), 16);
+        } else {
+            const group = L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.2));
+        }
+        hasFitBounds = true;
+    }
+}
+
+// Render awal titik lokasi peta langsung saat pertama kali halaman dimuat
+updateLocationStatus(false);
 
 // ================= CHART =================
 const ctx = document.getElementById('myChart').getContext('2d');
@@ -843,11 +934,12 @@ async function updateDashboard() {
     const data = await fetchSensorData();
     
     if (!data) {
-        // Jika gagal ambil data, tampilkan pesan error
+        // Jika gagal ambil data sensor, tetap tampilkan titik lokasi dari database lokasi_monitoring
         document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
         document.getElementById("rssi").innerHTML = '-';
         document.getElementById("ip").innerHTML = '-';
         document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> Gagal ambil data`;
+        updateLocationStatus(false);
         return;
     }
     
@@ -915,8 +1007,6 @@ async function updateDashboard() {
 // Jalankan update pertama kali dan setiap 3 detik
 updateDashboard();
 setInterval(updateDashboard, 3000);
-
-document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
 </script>
 </body>
 </html>

@@ -618,7 +618,8 @@ canvas {
     <div class="header">
         <h2><i class="fas fa-chart-line"></i> Chart Monitoring Sensor</h2>
         <div class="header-right">
-            <a href="home.php" class="btn-home-header">
+            <!-- PERBAIKAN: Tombol HOME dengan Modal -->
+            <a href="#" class="btn-home-header" onclick="openHomeModal(); return false;">
                 <i class="fas fa-home"></i> HOME
             </a>
             <div class="user-info">
@@ -679,6 +680,28 @@ canvas {
     </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- ========== MODAL HOME SEDERHANA (TAMBAHAN) ========== -->
+<!-- ============================================================ -->
+<div class="modal-overlay" id="homeModal">
+    <div class="modal-box">
+        <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+            <i class="fas fa-home"></i>
+        </div>
+        
+        <h2>Kembali ke Halaman Utama?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                <i class="fas fa-check"></i> YA, KEMBALI
+            </a>
+        </div>
+    </div>
+</div>
+
 <script>
 // ================= FUNGSI MODAL LOGOUT =================
 function openLogoutModal() {
@@ -698,10 +721,33 @@ document.getElementById('logoutModal').addEventListener('click', function(e) {
     }
 });
 
-// Tutup modal dengan tombol ESC
+// ================= FUNGSI MODAL HOME (TAMBAHAN) =================
+function openHomeModal() {
+    document.getElementById('homeModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeHomeModal() {
+    document.getElementById('homeModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Tutup modal Home jika area luar modal diklik
+document.getElementById('homeModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHomeModal();
+    }
+});
+
+// Update fungsi tombol ESC agar bisa menutup modal Home atau Logout
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-        closeLogoutModal();
+    if (e.key === 'Escape') {
+        if (document.getElementById('logoutModal').style.display === 'flex') {
+            closeLogoutModal();
+        }
+        if (document.getElementById('homeModal').style.display === 'flex') {
+            closeHomeModal();
+        }
     }
 });
 

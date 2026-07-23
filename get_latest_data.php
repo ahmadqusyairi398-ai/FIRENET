@@ -13,6 +13,23 @@ if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
 }
 $data_lokasi = mysqli_fetch_assoc($query_lokasi);
 
+// 3. Logika penentuan status Asap yang lebih aman
+$raw_asap = $data_sensor['asap'] ?? 0;
+$status_asap = "Normal";
+
+if (is_numeric($raw_asap)) {
+    // JIKA Kolom 'asap' berupa ANGKA (Threshold bisa Anda ubah sesuai kebutuhan, misal > 50 atau > 100)
+    $threshold = 50; 
+    if ((float)$raw_asap > $threshold) {
+        $status_asap = "Tinggi";
+    }
+} else {
+    // JIKA Kolom 'asap' berupa TEKS STRING (misal 'Tinggi' atau 'Normal')
+    if (strcasecmp(trim($raw_asap), 'Tinggi') === 0) {
+        $status_asap = "Tinggi";
+    }
+}
+
 // Gabungkan response
 $response = [
     'waktu'      => date('H:i:s', strtotime($data_sensor['timestamp'] ?? 'now')),
@@ -21,7 +38,7 @@ $response = [
     'daya'       => $data_sensor['daya'] ?? 0,
     'arah'       => $data_sensor['arah_angin'] ?? 'Utara',
     'angin'      => $data_sensor['kecepatan_angin'] ?? 0,
-    'asap'       => ($data_sensor['asap'] > 20) ? "Tinggi" : "Normal", // Sesuai threshold
+    'asap'       => $status_asap, // Menggunakan hasil logika di atas
     'suhu'       => $data_sensor['suhu'] ?? 0,
     'kelembapan' => $data_sensor['kelembapan'] ?? 0,
     'co'         => $data_sensor['co'] ?? 0,
@@ -29,8 +46,6 @@ $response = [
     'ip'         => $data_sensor['ip_address'] ?? '127.0.0.1',
     'status'     => 'Online',
     
-    // ======== BAGIAN YANG DIPERBAIKI ========
-    // Sekarang murni hanya mengambil dari tabel lokasi_alat
     'lat'        => $data_lokasi['latitude'] ?? -1.20249,
     'lng'        => $data_lokasi['longitude'] ?? 116.88708
 ];

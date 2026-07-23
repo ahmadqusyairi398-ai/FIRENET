@@ -64,7 +64,6 @@ try {
         )";
         mysqli_query($conn, $createTable);
 
-        // Insert data default sensor
         $defaultSensors = [
             ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
             ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
@@ -86,7 +85,6 @@ try {
             }
         }
     } else {
-        // Cek dan tambahkan sensor baru jika belum ada
         $existingSensors = [];
         $checkExisting = mysqli_query($conn, "SELECT nama_sensor FROM batas_sensor");
         if ($checkExisting) {
@@ -129,7 +127,7 @@ try {
         mysqli_query($conn, $createPenggunaTable);
     }
 
-    // 3. Cek dan tambahkan kolom role, status, updated_at di tabel pengguna jika belum ada
+    // Cek kolom tambahan tabel pengguna
     $checkRole = mysqli_query($conn, "SHOW COLUMNS FROM pengguna LIKE 'role'");
     if (!$checkRole || mysqli_num_rows($checkRole) == 0) {
         mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN role ENUM('admin','user') DEFAULT 'user'");
@@ -143,12 +141,13 @@ try {
         mysqli_query($conn, "ALTER TABLE pengguna ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
 
-    // 4. Cek dan buat tabel lokasi_alat jika belum ada
+    // 3. Cek dan buat tabel lokasi_alat jika belum ada
     $checkLokasiTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_alat'");
     if (!$checkLokasiTable || mysqli_num_rows($checkLokasiTable) == 0) {
         $createLokasiTable = "CREATE TABLE lokasi_alat (
             id INT AUTO_INCREMENT PRIMARY KEY,
             id_alat VARCHAR(50) NOT NULL,
+            nama_lokasi VARCHAR(100) DEFAULT NULL,
             latitude DECIMAL(10,8) NOT NULL,
             longitude DECIMAL(11,8) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -156,17 +155,23 @@ try {
         )";
         mysqli_query($conn, $createLokasiTable);
         
-        // Insert default location
-        $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, latitude, longitude) VALUES (?, ?, ?)");
+        $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
         $defaultAlat = 'OUT-001';
+        $defaultNama = 'Lokasi Utama';
         $defaultLat = -1.20249;
         $defaultLng = 116.88708;
-        mysqli_stmt_bind_param($stmt, "sdd", $defaultAlat, $defaultLat, $defaultLng);
+        mysqli_stmt_bind_param($stmt, "ssdd", $defaultAlat, $defaultNama, $defaultLat, $defaultLng);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
+    } else {
+        // Pastikan kolom nama_lokasi ada jika tabel sudah terlanjur dibuat sebelumnya
+        $checkNamaLokasiCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_alat LIKE 'nama_lokasi'");
+        if (!$checkNamaLokasiCol || mysqli_num_rows($checkNamaLokasiCol) == 0) {
+            mysqli_query($conn, "ALTER TABLE lokasi_alat ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
+        }
     }
 
-    // 5. Cek dan hapus kolom device di batas_sensor jika ada
+    // 4. Cek dan hapus kolom device di batas_sensor jika ada
     $checkDevice = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'device'");
     if ($checkDevice && mysqli_num_rows($checkDevice) > 0) {
         mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
@@ -187,6 +192,7 @@ function getLocations($conn) {
             $locations[] = [
                 'id' => (int)$row['id'],
                 'id_alat' => $row['id_alat'],
+                'nama_lokasi' => $row['nama_lokasi'] ?? '',
                 'latitude' => (float)$row['latitude'],
                 'longitude' => (float)$row['longitude'],
                 'created_at' => $row['created_at'],
@@ -197,49 +203,11 @@ function getLocations($conn) {
     return $locations;
 }
 
-// ========== FUNGSI MENYIMPAN LOKASI KE TABEL DB lokasi_alat ==========
-function saveLocations($conn, $locations) {
-    if (empty($locations)) {
-        return false;
-    }
-    
-    // Ambil data lokasi pertama (karena hanya 1 lokasi yang dikelola)
-    $loc = $locations[0];
-    $id_alat = isset($loc['id_alat']) ? $loc['id_alat'] : 'OUT-001';
-    $latitude = isset($loc['latitude']) ? (float)$loc['latitude'] : 0;
-    $longitude = isset($loc['longitude']) ? (float)$loc['longitude'] : 0;
-    
-    // Cek apakah ada data di tabel
-    $check = mysqli_query($conn, "SELECT id FROM lokasi_alat LIMIT 1");
-    
-    if ($check && mysqli_num_rows($check) > 0) {
-        // Update data yang ada
-        $stmt = mysqli_prepare($conn, "UPDATE lokasi_alat SET id_alat = ?, latitude = ?, longitude = ? WHERE id = 1");
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "sdd", $id_alat, $latitude, $longitude);
-            $result = mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-            return $result;
-        }
-        return false;
-    } else {
-        // Insert data baru
-        $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, latitude, longitude) VALUES (?, ?, ?)");
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, "sdd", $id_alat, $latitude, $longitude);
-            $result = mysqli_stmt_execute($stmt);
-            mysqli_stmt_close($stmt);
-            return $result;
-        }
-        return false;
-    }
-}
-
 // ========== FUNGSI TAMBAH LOKASI BARU ==========
-function addLocation($conn, $id_alat, $latitude, $longitude) {
-    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, latitude, longitude) VALUES (?, ?, ?)");
+function addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude) {
+    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "sdd", $id_alat, $latitude, $longitude);
+        mysqli_stmt_bind_param($stmt, "ssdd", $id_alat, $nama_lokasi, $latitude, $longitude);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -308,7 +276,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_sensor'])) {
     $deskripsi = trim($_POST['deskripsi'] ?? '');
     
     if (!empty($nama_sensor) && !empty($satuan)) {
-        // Cek dengan Prepared Statement
         $stmt_cek = mysqli_prepare($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = ?");
         mysqli_stmt_bind_param($stmt_cek, "s", $nama_sensor);
         mysqli_stmt_execute($stmt_cek);
@@ -350,7 +317,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($batas_min >= $batas_max) {
             $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
         } else {
-            // Cek sensor dengan Prepared Statement
             $stmt_cek = mysqli_prepare($conn, "SELECT * FROM batas_sensor WHERE id = ?");
             mysqli_stmt_bind_param($stmt_cek, "i", $sensor_id);
             mysqli_stmt_execute($stmt_cek);
@@ -379,11 +345,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // TAMBAH LOKASI
     if (isset($_POST['add_location'])) {
         $id_alat = trim($_POST['id_alat']);
+        $nama_lokasi = trim($_POST['nama_lokasi'] ?? '');
         $latitude = floatval($_POST['latitude']);
         $longitude = floatval($_POST['longitude']);
         
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            if (addLocation($conn, $id_alat, $latitude, $longitude)) {
+            if (addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude)) {
                 $success_message = "Lokasi baru berhasil ditambahkan!";
             } else {
                 $error_message = "Gagal menambahkan lokasi!";
@@ -397,12 +364,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['edit_location'])) {
         $location_id = intval($_POST['location_id']);
         $id_alat = trim($_POST['edit_id_alat']);
+        $nama_lokasi = trim($_POST['edit_nama_lokasi'] ?? '');
         $latitude = floatval($_POST['edit_latitude']);
         $longitude = floatval($_POST['edit_longitude']);
         
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            $stmt = mysqli_prepare($conn, "UPDATE lokasi_alat SET id_alat = ?, latitude = ?, longitude = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "sddi", $id_alat, $latitude, $longitude, $location_id);
+            $stmt = mysqli_prepare($conn, "UPDATE lokasi_alat SET id_alat = ?, nama_lokasi = ?, latitude = ?, longitude = ? WHERE id = ?");
+            mysqli_stmt_bind_param($stmt, "ssddi", $id_alat, $nama_lokasi, $latitude, $longitude, $location_id);
             if (mysqli_stmt_execute($stmt)) {
                 $success_message = "Lokasi berhasil diperbarui!";
             } else {
@@ -418,7 +386,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['delete_location'])) {
         $location_id = intval($_POST['location_id']);
         
-        // Cek apakah lokasi dengan id tersebut ada
         $check = mysqli_query($conn, "SELECT id FROM lokasi_alat WHERE id = $location_id");
         if (mysqli_num_rows($check) > 0) {
             if (deleteLocationById($conn, $location_id)) {
@@ -440,7 +407,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $new_role = $_POST['new_role'] ?? 'user';
         
         if (!empty($new_username) && !empty($new_password)) {
-            // Prepared Statement Cek Username
             $stmt_cek = mysqli_prepare($conn, "SELECT id FROM pengguna WHERE username = ?");
             mysqli_stmt_bind_param($stmt_cek, "s", $new_username);
             mysqli_stmt_execute($stmt_cek);
@@ -450,7 +416,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $error_message = "Username sudah terdaftar!";
             } else {
                 $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                // Prepared Statement Insert
                 $stmt_ins = mysqli_prepare($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES (?, ?, ?, 'approved', NOW())");
                 mysqli_stmt_bind_param($stmt_ins, "sss", $new_username, $password_hash, $new_role);
                 if (mysqli_stmt_execute($stmt_ins)) {
@@ -475,12 +440,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         if (!empty($edit_username)) {
             if (!empty($edit_password)) {
-                // Update dengan password baru
                 $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
                 $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, password = ?, role = ?, updated_at = NOW() WHERE id = ?");
                 mysqli_stmt_bind_param($stmt_upd, "sssi", $edit_username, $password_hash, $edit_role, $user_id);
             } else {
-                // Update tanpa password
                 $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, role = ?, updated_at = NOW() WHERE id = ?");
                 mysqli_stmt_bind_param($stmt_upd, "ssi", $edit_username, $edit_role, $user_id);
             }
@@ -500,7 +463,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
         
-        // Cek apakah user adalah admin utama
         $stmt_cek = mysqli_prepare($conn, "SELECT username FROM pengguna WHERE id = ?");
         mysqli_stmt_bind_param($stmt_cek, "i", $user_id);
         mysqli_stmt_execute($stmt_cek);
@@ -511,7 +473,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($user_data && $user_data['username'] == 'admin') {
             $error_message = "Tidak dapat menghapus akun admin utama!";
         } else {
-            // Prepared Statement Delete
             $stmt_del = mysqli_prepare($conn, "DELETE FROM pengguna WHERE id = ?");
             mysqli_stmt_bind_param($stmt_del, "i", $user_id);
             if (mysqli_stmt_execute($stmt_del)) {
@@ -546,7 +507,7 @@ $totalUsers = count($users);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <style>
-        /* ... (style sama seperti sebelumnya) ... */
+        /* ========== STYLE ========== */
         * {
             margin: 0;
             padding: 0;
@@ -901,7 +862,6 @@ $totalUsers = count($users);
                 opacity: 0;
                 transform: translateY(-50px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -1139,7 +1099,7 @@ $totalUsers = count($users);
         <div class="header">
             <h2><i class="fas fa-cog"></i> Setting</h2>
             <div class="header-right">
-                <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+                <a href="#" class="btn-home-header" onclick="openHomeModal(); return false;"><i class="fas fa-home"></i> HOME</a>
                 <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo, <?= htmlspecialchars($user) ?></span></div>
             </div>
         </div>
@@ -1153,7 +1113,6 @@ $totalUsers = count($users);
 
         <!-- TAB 1: Ubah Nilai Alarm -->
         <div id="tab1" class="tab-content active">
-            <!-- ... (konten tab 1 sama seperti sebelumnya) ... -->
             <div class="card">
                 <h3><i class="fas fa-exclamation-triangle"></i> Ubah Nilai Alarm Sensor</h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">
@@ -1232,7 +1191,7 @@ $totalUsers = count($users);
         <div id="tab2" class="tab-content">
             <div class="card">
                 <h3><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</h3>
-                <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur koordinat lokasi monitoring.</p>
+                <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur nama, ID, dan koordinat lokasi monitoring alat.</p>
 
                 <div style="margin-bottom:20px;">
                     <button class="btn-primary" onclick="openAddLocationModal()"><i class="fas fa-plus"></i> Tambah Lokasi</button>
@@ -1243,6 +1202,7 @@ $totalUsers = count($users);
                             <tr>
                                 <th>NO</th>
                                 <th>ID ALAT</th>
+                                <th>NAMA LOKASI</th>
                                 <th>LATITUDE</th>
                                 <th>LONGITUDE</th>
                                 <th>WAKTU UPDATE</th>
@@ -1255,6 +1215,7 @@ $totalUsers = count($users);
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td><strong><?= htmlspecialchars($loc['id_alat'] ?? '-') ?></strong></td>
+                                        <td><?= htmlspecialchars($loc['nama_lokasi'] ?? '-') ?></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['updated_at']) ? $loc['updated_at'] : date('Y-m-d H:i:s') ?></td>
@@ -1262,10 +1223,11 @@ $totalUsers = count($users);
                                             <?php 
                                             $id = isset($loc['id']) ? (int)$loc['id'] : 0;
                                             $id_alat = isset($loc['id_alat']) ? $loc['id_alat'] : '';
+                                            $nama_lokasi = isset($loc['nama_lokasi']) ? $loc['nama_lokasi'] : '';
                                             $lat = isset($loc['latitude']) ? (float)$loc['latitude'] : 0;
                                             $lng = isset($loc['longitude']) ? (float)$loc['longitude'] : 0;
                                             ?>
-                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= htmlspecialchars($id_alat) ?>', <?= $lat ?>, <?= $lng ?>)">
+                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= htmlspecialchars($id_alat) ?>', '<?= htmlspecialchars($nama_lokasi) ?>', <?= $lat ?>, <?= $lng ?>)">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button class="btn-danger btn-delete-location" data-id="<?= $id ?>">
@@ -1276,7 +1238,7 @@ $totalUsers = count($users);
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" style="text-align: center; padding: 30px; color: #999;">
+                                    <td colspan="7" style="text-align: center; padding: 30px; color: #999;">
                                         <i class="fas fa-inbox" style="font-size: 30px; display: block; margin-bottom: 10px;"></i>
                                         Tidak ada data lokasi
                                     </td>
@@ -1290,7 +1252,6 @@ $totalUsers = count($users);
 
         <!-- TAB 3: DAFTAR AKUN USER -->
         <div id="tab3" class="tab-content">
-            <!-- ... (konten tab 3 sama seperti sebelumnya) ... -->
             <div class="welcome-banner">
                 <h3><i class="fas fa-user-shield"></i> HALO, Admin</h3>
                 <button class="btn-primary" onclick="openAddUserModal()"><i class="fas fa-user-plus"></i> TAMBAH AKUN</button>
@@ -1373,6 +1334,24 @@ $totalUsers = count($users);
         </div>
     </div>
 
+    <!-- MODAL HOME -->
+    <div class="modal-overlay" id="homeModal">
+        <div class="modal-box">
+            <div class="modal-icon" style="background: rgba(0, 180, 219, 0.1); color: #00b4db;">
+                <i class="fas fa-home"></i>
+            </div>
+            <h2>Kembali ke Halaman Utama?</h2>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+                <a href="home.php" class="btn-modal" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white;">
+                    <i class="fas fa-check"></i> YA, KEMBALI
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL EDIT NILAI ALARM -->
     <div id="editAlarmModal" class="modal">
         <div class="modal-content">
@@ -1390,16 +1369,10 @@ $totalUsers = count($users);
                 <div class="form-group">
                     <label>Batas Minimum</label>
                     <input type="number" name="batas_min" id="edit_batas_min" step="any" required>
-                    <small style="color:#666; display:block; margin-top:5px;">
-                        <i class="fas fa-info-circle"></i> Nilai terendah yang diperbolehkan untuk sensor ini
-                    </small>
                 </div>
                 <div class="form-group">
                     <label>Batas Maksimum</label>
                     <input type="number" name="batas_max" id="edit_batas_max" step="any" required>
-                    <small style="color:#666; display:block; margin-top:5px;">
-                        <i class="fas fa-info-circle"></i> Nilai tertinggi yang diperbolehkan untuk sensor ini
-                    </small>
                 </div>
                 <div class="form-group">
                     <label>Satuan</label>
@@ -1429,9 +1402,6 @@ $totalUsers = count($users);
                 <div class="form-group">
                     <label>Nama Sensor <span style="color:red;">*</span></label>
                     <input type="text" name="sensor_name" placeholder="Contoh: CO2, O2, dll" required>
-                    <small style="color:#666; display:block; margin-top:5px;">
-                        <i class="fas fa-info-circle"></i> Masukkan nama sensor baru (huruf kapital)
-                    </small>
                 </div>
                 <div class="form-group">
                     <label>Nilai Alarm <span style="color:red;">*</span></label>
@@ -1460,7 +1430,7 @@ $totalUsers = count($users);
         </div>
     </div>
 
-    <!-- MODAL TAMBAH LOKASI - MENGGUNAKAN DATABASE -->
+    <!-- MODAL TAMBAH LOKASI -->
     <div id="addLocationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1470,25 +1440,26 @@ $totalUsers = count($users);
             <form method="POST">
                 <div class="form-group">
                     <label>ID Alat <span style="color:red;">*</span></label>
-                    <input type="text" name="id_alat" placeholder="Contoh: OUT-001" required>
-                    <small>Masukkan ID alat yang unik</small>
+                    <input type="text" name="id_alat" placeholder="Contoh: 001 atau OUT-001" required>
+                </div>
+                <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="nama_lokasi" placeholder="Contoh: Gerbang Utama / Gedung A">
                 </div>
                 <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
-                    <input type="number" name="latitude" step="any" required>
-                    <small>Contoh: -1.20249 (negatif untuk selatan)</small>
+                    <input type="number" name="latitude" step="any" required placeholder="Contoh: -0.966113">
                 </div>
                 <div class="form-group">
                     <label>Longitude <span style="color:red;">*</span></label>
-                    <input type="number" name="longitude" step="any" required>
-                    <small>Contoh: 116.88708</small>
+                    <input type="number" name="longitude" step="any" required placeholder="Contoh: 116.702781">
                 </div>
-                <button type="submit" name="add_location" class="btn-primary">Simpan Lokasi</button>
+                <button type="submit" name="add_location" class="btn-primary" style="width:100%">Simpan Lokasi</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL EDIT LOKASI - MENGGUNAKAN DATABASE -->
+    <!-- MODAL EDIT LOKASI -->
     <div id="editLocationModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1502,6 +1473,10 @@ $totalUsers = count($users);
                     <input type="text" name="edit_id_alat" id="edit_id_alat" required>
                 </div>
                 <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="edit_nama_lokasi" id="edit_nama_lokasi">
+                </div>
+                <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
                     <input type="number" name="edit_latitude" id="edit_latitude" step="any" required>
                 </div>
@@ -1509,7 +1484,7 @@ $totalUsers = count($users);
                     <label>Longitude <span style="color:red;">*</span></label>
                     <input type="number" name="edit_longitude" id="edit_longitude" step="any" required>
                 </div>
-                <button type="submit" name="edit_location" class="btn-primary">Simpan Perubahan</button>
+                <button type="submit" name="edit_location" class="btn-primary" style="width:100%">Simpan Perubahan</button>
             </form>
         </div>
     </div>
@@ -1537,7 +1512,7 @@ $totalUsers = count($users);
                         <option value="admin" <?= !$canAddAdmin ? 'disabled' : '' ?>><?= !$canAddAdmin ? 'Admin (Batas tercapai)' : 'Admin' ?></option>
                     </select>
                 </div>
-                <button type="submit" name="add_user" class="btn-primary">Tambah Akun</button>
+                <button type="submit" name="add_user" class="btn-primary" style="width:100%">Tambah Akun</button>
             </form>
         </div>
     </div>
@@ -1575,7 +1550,6 @@ $totalUsers = count($users);
     </div>
 
     <script>
-        // ========== FUNGSI MODAL LOGOUT ==========
         function openLogoutModal() {
             document.getElementById('logoutModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
@@ -1592,13 +1566,33 @@ $totalUsers = count($users);
             }
         });
 
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-                closeLogoutModal();
+        function openHomeModal() {
+            document.getElementById('homeModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeHomeModal() {
+            document.getElementById('homeModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        document.getElementById('homeModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHomeModal();
             }
         });
 
-        // ========== FUNGSI OPEN EDIT ALARM MODAL ==========
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.getElementById('logoutModal').style.display === 'flex') {
+                    closeLogoutModal();
+                }
+                if (document.getElementById('homeModal').style.display === 'flex') {
+                    closeHomeModal();
+                }
+            }
+        });
+
         function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
             try {
                 document.getElementById('edit_sensor_id').value = id;
@@ -1622,62 +1616,31 @@ $totalUsers = count($users);
                 }
             } catch (e) {
                 console.error('Error:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan: ' + e.message,
-                    confirmButtonColor: '#dc3545'
-                });
             }
         }
 
-        // ========== FUNGSI OPEN EDIT USER MODAL ==========
         function openEditUserModal(id, username, role) {
             try {
-                console.log('Opening edit user modal:', id, username, role);
+                document.getElementById('edit_user_id').value = id;
+                document.getElementById('edit_username').value = username;
+                document.getElementById('edit_role').value = role;
                 
-                var userIdField = document.getElementById('edit_user_id');
-                var usernameField = document.getElementById('edit_username');
-                var roleField = document.getElementById('edit_role');
                 var modal = document.getElementById('editUserModal');
-                
-                if (!userIdField || !usernameField || !roleField || !modal) {
-                    console.error('Element not found!');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'Elemen modal tidak ditemukan. Refresh halaman.',
-                        confirmButtonColor: '#dc3545'
-                    });
-                    return;
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.style.visibility = 'visible';
+                    modal.style.opacity = '1';
                 }
-                
-                userIdField.value = id;
-                usernameField.value = username;
-                roleField.value = role;
-                
-                modal.style.display = 'flex';
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
-                
             } catch (e) {
                 console.error('Error in openEditUserModal:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan: ' + e.message,
-                    confirmButtonColor: '#dc3545'
-                });
             }
         }
 
-        // ========== FUNGSI OPEN EDIT LOCATION MODAL ==========
-        function openEditLocationModal(id, id_alat, lat, lng) {
-            console.log('Edit Location:', id, id_alat, lat, lng);
-            
+        function openEditLocationModal(id, id_alat, nama_lokasi, lat, lng) {
             try {
                 document.getElementById('edit_location_id').value = id;
                 document.getElementById('edit_id_alat').value = id_alat;
+                document.getElementById('edit_nama_lokasi').value = nama_lokasi;
                 document.getElementById('edit_latitude').value = lat;
                 document.getElementById('edit_longitude').value = lng;
                 
@@ -1689,38 +1652,21 @@ $totalUsers = count($users);
                 }
             } catch (e) {
                 console.error('Error in openEditLocationModal:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan saat membuka modal edit: ' + e.message,
-                    confirmButtonColor: '#dc3545'
-                });
             }
         }
 
-        // ========== EVENT LISTENER ==========
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded - Setting up event listeners');
-            
-            // Event listener untuk tombol edit user
             var editButtons = document.querySelectorAll('.btn-edit-user');
-            console.log('Found ' + editButtons.length + ' edit user buttons');
-            
             editButtons.forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
-                    e.stopPropagation();
-                    
                     var id = this.getAttribute('data-id');
                     var username = this.getAttribute('data-username');
                     var role = this.getAttribute('data-role');
-                    
-                    console.log('Edit button clicked:', id, username, role);
                     openEditUserModal(id, username, role);
                 });
             });
             
-            // Event listener untuk tombol delete user
             document.querySelectorAll('.btn-delete-user').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -1730,7 +1676,6 @@ $totalUsers = count($users);
                 });
             });
 
-            // Event listener untuk tombol delete location
             document.querySelectorAll('.btn-delete-location').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -1739,7 +1684,6 @@ $totalUsers = count($users);
                 });
             });
             
-            // Event listener untuk tombol edit alarm (menggunakan jQuery)
             if (typeof $ !== 'undefined') {
                 $('.btn-edit-alarm').on('click', function() {
                     var id = $(this).data('id');
@@ -1748,18 +1692,15 @@ $totalUsers = count($users);
                     var satuan = $(this).data('satuan');
                     var min = $(this).data('min');
                     var max = $(this).data('max');
-                    
                     openEditAlarmModal(id, nama, nilai, satuan, min, max);
                 });
             }
 
-            // Set default tab
             document.getElementById('tab1').style.display = 'block';
             document.getElementById('tab2').style.display = 'none';
             document.getElementById('tab3').style.display = 'none';
         });
 
-        // ========== FUNGSI MODAL LAINNYA ==========
         function openAddSensorModal() {
             document.getElementById('addSensorModal').style.display = 'flex';
         }
@@ -1797,7 +1738,6 @@ $totalUsers = count($users);
             }
         }
 
-        // ========== FUNGSI HAPUS ==========
         function deleteUser(userId, username) {
             Swal.fire({
                 title: 'Hapus Akun?',
@@ -1854,7 +1794,6 @@ $totalUsers = count($users);
             });
         }
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             if (event.target.classList.contains('modal')) {
                 event.target.style.display = 'none';
