@@ -778,6 +778,9 @@ async function updateLocationStatus(isDanger) {
     }
 }
 
+// Render awal titik lokasi peta langsung saat pertama kali halaman dimuat
+updateLocationStatus(false);
+
 // ================= CHART =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = {
@@ -859,11 +862,12 @@ async function updateDashboard() {
     const data = await fetchSensorData();
     
     if (!data) {
-        // Jika gagal ambil data, tampilkan pesan error
+        // Jika gagal ambil data sensor, tetap tampilkan titik lokasi dari database lokasi_monitoring
         document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
         document.getElementById("rssi").innerHTML = '-';
         document.getElementById("ip").innerHTML = '-';
         document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> Gagal ambil data`;
+        updateLocationStatus(false);
         return;
     }
     
