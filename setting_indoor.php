@@ -992,6 +992,19 @@ $totalUsers = count($users);
             margin: 0 auto 20px;
         }
 
+        .modal-icon-home {
+            font-size: 48px;
+            color: #0083b0;
+            background: rgba(0, 131, 176, 0.1);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
         .modal-box h2 {
             color: #1e3c72;
             font-size: 22px;
@@ -1038,6 +1051,17 @@ $totalUsers = count($users);
             background: linear-gradient(135deg, #c82333, #a71d2a);
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-home-confirm {
+            background: linear-gradient(135deg, #0083b0, #00b4db);
+            color: white;
+        }
+
+        .btn-home-confirm:hover {
+            background: linear-gradient(135deg, #007299, #0099b8);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 131, 176, 0.4);
         }
 
         @media (max-width: 768px) {
@@ -1104,7 +1128,10 @@ $totalUsers = count($users);
         <div class="header">
             <h2><i class="fas fa-cog"></i> Setting</h2>
             <div class="header-right">
-                <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+                <!-- Tombol HOME dengan onclick untuk membuka modal -->
+                <button class="btn-home-header" onclick="openHomeModal()">
+                    <i class="fas fa-home"></i> HOME
+                </button>
                 <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo, <?= htmlspecialchars($user) ?></span></div>
             </div>
         </div>
@@ -1351,6 +1378,28 @@ $totalUsers = count($users);
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- ========== MODAL HOME ========== -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="homeModal">
+        <div class="modal-box">
+            <div class="modal-icon-home">
+                <i class="fas fa-home"></i>
+            </div>
+            
+            <h2>Apakah Anda yakin ingin kembali ke Halaman Utama?</h2>
+            
+            <div class="modal-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+                <a href="home.php" class="btn-modal btn-home-confirm">
+                    <i class="fas fa-home"></i> YES
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL EDIT NILAI ALARM -->
     <div id="editAlarmModal" class="modal">
         <div class="modal-content">
@@ -1577,10 +1626,33 @@ $totalUsers = count($users);
             }
         });
 
+        // ========== FUNGSI MODAL HOME ==========
+        function openHomeModal() {
+            document.getElementById('homeModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeHomeModal() {
+            document.getElementById('homeModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Tutup modal jika klik di luar modal
+        document.getElementById('homeModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHomeModal();
+            }
+        });
+
         // Tutup modal dengan tombol ESC
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('logoutModal').style.display === 'flex') {
-                closeLogoutModal();
+            if (e.key === 'Escape') {
+                if (document.getElementById('logoutModal').style.display === 'flex') {
+                    closeLogoutModal();
+                }
+                if (document.getElementById('homeModal').style.display === 'flex') {
+                    closeHomeModal();
+                }
             }
         });
 
