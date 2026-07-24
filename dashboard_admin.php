@@ -167,7 +167,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
-    background-image: url('https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+    background-image: url('https://i.pinimg.com/736x/ea/7c/ca/ea7cca792d193c0a4599fbcf96f21fa3.jpg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
