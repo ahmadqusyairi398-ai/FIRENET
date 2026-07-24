@@ -517,7 +517,7 @@ $totalUsers = count($users);
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
-            background-image: url('https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-image: url('https://bpbd.limapuluhkotakab.go.id/assets/img/berita/91kebakaran.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
