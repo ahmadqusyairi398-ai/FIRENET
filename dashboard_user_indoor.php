@@ -651,12 +651,20 @@ function addMarkerToMap(location, isDanger) {
         draggable: false 
     }).addTo(map);
     
+    var namaLokasi = location.nama_lokasi && location.nama_lokasi.trim() !== '' ? location.nama_lokasi : (location.id_alat ? `Indoor (${location.id_alat})` : 'Lokasi Gedung');
+    var statusBadge = isDanger 
+        ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
+        : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
+
     // Popup
     marker.bindPopup(`
-        <b>🏢 ${location.id_alat || 'Sensor'}</b><br>
-        <i class="fas fa-map-marker-alt"></i> Koordinat: ${location.latitude}, ${location.longitude}<br>
-        <i class="fas fa-clock"></i> Update: ${location.last_update || '-'}<br>
-        Status: <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
+        <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
+            <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
+            <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${location.id_alat || '-'}</strong></small>
+            <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${location.latitude}, ${location.longitude}</div>
+            <div style="font-size: 11px; color: #777; margin-bottom: 6px;"><i class="fas fa-clock"></i> <b>Update:</b> ${location.last_update || '-'}</div>
+            <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
+        </div>
     `);
     
     // Simpan marker ke array

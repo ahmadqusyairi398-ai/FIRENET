@@ -588,6 +588,11 @@ canvas {
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
+                <i class="fas fa-map-marked-alt"></i>
+                <span class="label">Nama Lokasi:</span>
+                <span class="value" id="location-name-val"><?= htmlspecialchars($db_locations[0]['nama_lokasi'] ?? 'Indoor Sensor') ?></span>
+            </div>
+            <div class="location-info-item">
                 <i class="fas fa-globe"></i>
                 <span class="label">Koordinat:</span>
                 <span class="value" id="coordinates">-1.202490, 116.887080</span>
@@ -600,7 +605,7 @@ canvas {
             <div class="location-info-item">
                 <i class="fas fa-flag-checkered"></i>
                 <span class="label">Status:</span>
-                <span class="value" id="location-status" style="color: #28a745;">Aman</span>
+                <span class="value" id="location-status" style="color: #28a745; font-weight: bold;">Aman</span>
             </div>
         </div>
     </div>
@@ -794,7 +799,24 @@ async function updateLocationStatus(isDanger) {
         // Fallback jika belum ada data di database
         const icon = createIndoorIcon('001', isDanger);
         const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
-        m.bindPopup(`<b>🏢 Indoor Sensor</b><br>Koordinat: ${defaultLat}, ${defaultLng}`);
+        const statusBadge = isDanger 
+            ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
+            : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
+        
+        m.bindPopup(`
+            <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 180px;">
+                <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> Indoor Sensor</b>
+                <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>001</strong></small>
+                <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${defaultLat}, ${defaultLng}</div>
+                <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
+            </div>
+        `);
+        m.on('click', function() {
+            const locNameElem = document.getElementById('location-name-val');
+            if (locNameElem) locNameElem.innerText = 'Indoor Sensor';
+            const coordElem = document.getElementById('coordinates');
+            if (coordElem) coordElem.innerHTML = `${defaultLat}, ${defaultLng}`;
+        });
         markers.push(m);
         return;
     }
@@ -803,23 +825,44 @@ async function updateLocationStatus(isDanger) {
         const lat = parseFloat(loc.latitude);
         const lng = parseFloat(loc.longitude);
         const idAlat = loc.id_alat || `Alat-${loc.id}`;
+        const namaLokasi = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : (loc.id_alat ? `Indoor (${loc.id_alat})` : `Lokasi ${loc.id}`);
         
         const icon = createIndoorIcon(idAlat, isDanger);
         const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
         
-        const statusText = isDanger ? '<span style="color: #dc2626; font-weight: bold;">⚠️ BAHAYA</span>' : '<span style="color: #28a745; font-weight: bold;">✅ Aktif - Normal</span>';
+        const statusBadge = isDanger 
+            ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
+            : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
         
         marker.bindPopup(`
-            <div style="font-family: 'Segoe UI', sans-serif; padding: 2px;">
-                <b style="color: #1e3c72; font-size: 14px;"><i class="fas fa-building" style="color: #00b4db;"></i> Sensor Indoor (${idAlat})</b><br>
-                <span style="font-size: 12px; color: #555;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> ${lat.toFixed(6)}, ${lng.toFixed(6)}</span><br>
-                <span style="font-size: 11px; color: #777;"><i class="fas fa-clock"></i> Update: ${loc.last_update || '-'}</span><br>
-                <div style="margin-top: 4px; font-size: 12px;">Status: ${statusText}</div>
+            <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
+                <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
+                <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${idAlat}</strong></small>
+                <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+                <div style="font-size: 11px; color: #777; margin-bottom: 6px;"><i class="fas fa-clock"></i> <b>Update:</b> ${loc.last_update || '-'}</div>
+                <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
             </div>
         `);
         
         marker.on('click', function() {
-            document.getElementById('coordinates').innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            const locNameElem = document.getElementById('location-name-val');
+            if (locNameElem) locNameElem.innerText = namaLokasi;
+            
+            const coordElem = document.getElementById('coordinates');
+            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            
+            const statusElem = document.getElementById('location-status');
+            if (statusElem) {
+                if (isDanger) {
+                    statusElem.innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
+                    statusElem.style.color = '#dc2626';
+                    statusElem.style.fontWeight = 'bold';
+                } else {
+                    statusElem.innerHTML = 'Aman';
+                    statusElem.style.color = '#28a745';
+                    statusElem.style.fontWeight = 'bold';
+                }
+            }
         });
         
         const circleColor = isDanger ? '#dc2626' : '#e85d04';
@@ -835,7 +878,10 @@ async function updateLocationStatus(isDanger) {
         dangerZones.push(zone);
 
         if (idx === 0) {
-            document.getElementById('coordinates').innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            const locNameElem = document.getElementById('location-name-val');
+            if (locNameElem) locNameElem.innerText = namaLokasi;
+            const coordElem = document.getElementById('coordinates');
+            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     });
 
