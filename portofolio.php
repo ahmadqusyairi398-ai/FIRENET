@@ -116,6 +116,9 @@ foreach ($locations as &$loc) {
     if (!isset($loc['nama_lokasi'])) {
         $loc['nama_lokasi'] = 'Lokasi ' . $loc['id'];
     }
+    // Pastikan latitude dan longitude adalah float
+    $loc['latitude'] = (float)$loc['latitude'];
+    $loc['longitude'] = (float)$loc['longitude'];
 }
 unset($loc);
 ?>
@@ -1048,17 +1051,20 @@ var fireIcon = L.divIcon({
 
 var markersMap = {};
 
+// ================= FUNGSI SELECT LOCATION (DIPERBAIKI) =================
 function selectLocation(id, panTo) {
     if (panTo === undefined) panTo = true;
     var item = markersMap[id];
     if (!item) return;
     
     document.getElementById('locationName').innerText = item.data.nama_lokasi || 'Lokasi ' + id;
-    document.getElementById('coordValue').innerText = item.data.latitude.toFixed(6) + ', ' + item.data.longitude.toFixed(6);
+    
+    // PERBAIKAN: Gunakan parseFloat() untuk memastikan koordinat adalah angka
+    document.getElementById('coordValue').innerText = parseFloat(item.data.latitude).toFixed(6) + ', ' + parseFloat(item.data.longitude).toFixed(6);
     document.getElementById('alatId').innerText = item.data.id_alat || '-';
     
     if (panTo) {
-        map.flyTo([item.data.latitude, item.data.longitude], 17, { animate: true, duration: 1.5 });
+        map.flyTo([parseFloat(item.data.latitude), parseFloat(item.data.longitude)], 17, { animate: true, duration: 1.5 });
         setTimeout(function() { item.marker.openPopup(); }, 1500);
     } else {
         item.marker.openPopup();
@@ -1073,9 +1079,13 @@ function renderMarkers() {
     markersMap = {};
 
     locations.forEach(function(loc) {
-        var marker = L.marker([parseFloat(loc.latitude), parseFloat(loc.longitude)], { icon: fireIcon }).addTo(map);
+        // Pastikan koordinat adalah angka dengan parseFloat
+        var lat = parseFloat(loc.latitude);
+        var lng = parseFloat(loc.longitude);
         
-        var circle = L.circle([parseFloat(loc.latitude), parseFloat(loc.longitude)], {
+        var marker = L.marker([lat, lng], { icon: fireIcon }).addTo(map);
+        
+        var circle = L.circle([lat, lng], {
             color: '#e85d04',
             fillColor: '#e85d04',
             fillOpacity: 0.15,
@@ -1088,7 +1098,7 @@ function renderMarkers() {
                 <div style="font-weight: 600; font-size: 14px;">${loc.nama_lokasi || 'Lokasi ' + loc.id}</div>
                 <div style="font-size: 12px; color: #666; margin-top: 2px;">ID: ${loc.id_alat || '-'}</div>
                 <div style="font-size: 13px; background: #f0f0f0; padding: 5px; border-radius: 8px; margin-top: 5px;">
-                    ${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}
+                    ${lat.toFixed(6)}, ${lng.toFixed(6)}
                 </div>
             </div>
         `;
