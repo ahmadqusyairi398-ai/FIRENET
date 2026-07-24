@@ -64,7 +64,7 @@ if (!$checkTable || mysqli_num_rows($checkTable) == 0) {
 // 3. AMBIL SEMUA DATA LOKASI
 // ================================================
 
-$query = "SELECT id, id_alat, latitude, longitude, updated_at as last_update 
+$query = "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at as last_update 
           FROM lokasi_monitoring 
           ORDER BY id ASC";
 
@@ -86,6 +86,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $locations[] = [
         'id' => (int)$row['id'],
         'id_alat' => $row['id_alat'],
+        'nama_lokasi' => $row['nama_lokasi'] ?? '',
         'latitude' => (float)$row['latitude'],
         'longitude' => (float)$row['longitude'],
         'last_update' => $row['last_update']

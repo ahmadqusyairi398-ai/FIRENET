@@ -58,6 +58,7 @@ function ensureLocationTable($conn) {
         $createTable = "CREATE TABLE lokasi_monitoring (
             id INT AUTO_INCREMENT PRIMARY KEY,
             id_alat VARCHAR(50) NOT NULL,
+            nama_lokasi VARCHAR(100) DEFAULT NULL,
             latitude DECIMAL(10,8) NOT NULL,
             longitude DECIMAL(11,8) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -65,21 +66,27 @@ function ensureLocationTable($conn) {
         )";
         mysqli_query($conn, $createTable);
         
-        // Insert default location (Sertakan id_alat)
+        // Insert default location (Sertakan id_alat & nama_lokasi)
         $defaultLocations = [
-            ['id_alat' => '001', 'latitude' => -1.20249, 'longitude' => 116.88708],
-            ['id_alat' => '002', 'latitude' => -1.20250, 'longitude' => 116.88710],
+            ['id_alat' => '001', 'nama_lokasi' => 'Gedung A - Ruang 101', 'latitude' => -1.20249, 'longitude' => 116.88708],
+            ['id_alat' => '002', 'nama_lokasi' => 'Gedung B - Ruang 202', 'latitude' => -1.20250, 'longitude' => 116.88710],
         ];
         
         foreach ($defaultLocations as $loc) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude) VALUES (?, ?, ?)");
+            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
             if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "sdd", $loc['id_alat'], $loc['latitude'], $loc['longitude']);
+                mysqli_stmt_bind_param($stmt, "ssdd", $loc['id_alat'], $loc['nama_lokasi'], $loc['latitude'], $loc['longitude']);
                 mysqli_stmt_execute($stmt);
                 mysqli_stmt_close($stmt);
             }
         }
         return true;
+    } else {
+        // Pastikan kolom nama_lokasi ada jika tabel sudah ada sebelumnya
+        $checkNamaLokasiCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_monitoring LIKE 'nama_lokasi'");
+        if (!$checkNamaLokasiCol || mysqli_num_rows($checkNamaLokasiCol) == 0) {
+            mysqli_query($conn, "ALTER TABLE lokasi_monitoring ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
+        }
     }
     return true;
 }
@@ -93,7 +100,7 @@ function getLocations($conn) {
     $locations = [];
     if ($conn) {
         // Sesuaikan select dengan last_update alias dari updated_at agar tabel UI tetap terbaca
-        $query = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
+        $query = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 $locations[] = $row;
@@ -103,11 +110,11 @@ function getLocations($conn) {
     return $locations;
 }
 
-function addLocation($conn, $id_alat, $latitude, $longitude) {
+function addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude) {
     if (!$conn) return false;
-    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude) VALUES (?, ?, ?)");
+    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "sdd", $id_alat, $latitude, $longitude);
+        mysqli_stmt_bind_param($stmt, "ssdd", $id_alat, $nama_lokasi, $latitude, $longitude);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -115,11 +122,11 @@ function addLocation($conn, $id_alat, $latitude, $longitude) {
     return false;
 }
 
-function updateLocation($conn, $id, $id_alat, $latitude, $longitude) {
+function updateLocation($conn, $id, $id_alat, $nama_lokasi, $latitude, $longitude) {
     if (!$conn) return false;
-    $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET id_alat = ?, latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET id_alat = ?, nama_lokasi = ?, latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "sddi", $id_alat, $latitude, $longitude, $id);
+        mysqli_stmt_bind_param($stmt, "ssddi", $id_alat, $nama_lokasi, $latitude, $longitude, $id);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -141,7 +148,7 @@ function deleteLocation($conn, $id) {
 
 function getLocationById($conn, $id) {
     if (!$conn) return null;
-    $stmt = mysqli_prepare($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring WHERE id = ?");
     if ($stmt) {
         mysqli_stmt_bind_param($stmt, "i", $id);
         mysqli_stmt_execute($stmt);
@@ -398,11 +405,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // CRUD Lokasi (menggunakan database)
     if (isset($_POST['add_location'])) {
         $id_alat = trim($_POST['id_alat']);
+        $nama_lokasi = trim($_POST['nama_lokasi'] ?? '');
         $latitude = floatval($_POST['latitude']);
         $longitude = floatval($_POST['longitude']);
         
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            if (addLocation($conn, $id_alat, $latitude, $longitude)) {
+            if (addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude)) {
                 $success_message = "Lokasi baru berhasil ditambahkan!";
             } else {
                 $error_message = "Gagal menambahkan lokasi!";
@@ -415,11 +423,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['edit_location'])) {
         $location_id = intval($_POST['location_id']);
         $id_alat = trim($_POST['edit_id_alat']);
+        $nama_lokasi = trim($_POST['edit_nama_lokasi'] ?? '');
         $latitude = floatval($_POST['edit_latitude']);
         $longitude = floatval($_POST['edit_longitude']);
         
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            if (updateLocation($conn, $location_id, $id_alat, $latitude, $longitude)) {
+            if (updateLocation($conn, $location_id, $id_alat, $nama_lokasi, $latitude, $longitude)) {
                 $success_message = "Lokasi berhasil diperbarui!";
             } else {
                 $error_message = "Gagal memperbarui lokasi!";
@@ -1245,6 +1254,7 @@ $totalUsers = count($users);
                             <tr>
                                 <th>NO</th>
                                 <th>ID ALAT</th>
+                                <th>NAMA LOKASI</th>
                                 <th>LATITUDE</th>
                                 <th>LONGITUDE</th>
                                 <th>WAKTU UPDATE</th>
@@ -1257,17 +1267,19 @@ $totalUsers = count($users);
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td><strong><?= isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '-' ?></strong></td>
+                                        <td><?= isset($loc['nama_lokasi']) && $loc['nama_lokasi'] !== '' ? htmlspecialchars($loc['nama_lokasi']) : '-' ?></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
                                         <td class="action-buttons">
                                             <?php 
                                             $id = isset($loc['id']) ? (int)$loc['id'] : 0;
-                                            $id_alat = isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat']) : '';
+                                            $id_alat = isset($loc['id_alat']) ? htmlspecialchars($loc['id_alat'], ENT_QUOTES) : '';
+                                            $nama_lokasi = isset($loc['nama_lokasi']) ? htmlspecialchars($loc['nama_lokasi'], ENT_QUOTES) : '';
                                             $lat = isset($loc['latitude']) ? (float)$loc['latitude'] : 0;
                                             $lng = isset($loc['longitude']) ? (float)$loc['longitude'] : 0;
                                             ?>
-                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= $id_alat ?>', <?= $lat ?>, <?= $lng ?>)">
+                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= $id_alat ?>', '<?= $nama_lokasi ?>', <?= $lat ?>, <?= $lng ?>)">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button class="btn-danger btn-delete-location" data-id="<?= $id ?>">
@@ -1278,7 +1290,7 @@ $totalUsers = count($users);
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" style="text-align: center; padding: 30px; color: #999;">
+                                    <td colspan="7" style="text-align: center; padding: 30px; color: #999;">
                                         <i class="fas fa-inbox" style="font-size: 30px; display: block; margin-bottom: 10px;"></i>
                                         Tidak ada data lokasi
                                     </td>
@@ -1503,6 +1515,13 @@ $totalUsers = count($users);
                     </small>
                 </div>
                 <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="nama_lokasi" id="add_nama_lokasi" placeholder="Contoh: Gedung A - Ruang 101">
+                    <small style="color:#666; display:block; margin-top:5px;">
+                        <i class="fas fa-info-circle"></i> Masukkan nama lokasi tempat alat dipasang
+                    </small>
+                </div>
+                <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
                     <input type="number" name="latitude" id="add_latitude" step="any" required>
                     <small>Contoh: -1.20249 (negatif untuk selatan)</small>
@@ -1531,6 +1550,10 @@ $totalUsers = count($users);
                 <div class="form-group">
                     <label>ID Alat <span style="color:red;">*</span></label>
                     <input type="text" name="edit_id_alat" id="edit_id_alat" required>
+                </div>
+                <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="edit_nama_lokasi" id="edit_nama_lokasi" placeholder="Contoh: Gedung A - Ruang 101">
                 </div>
                 <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
@@ -1738,12 +1761,13 @@ $totalUsers = count($users);
         }
 
         // ========== FUNGSI OPEN EDIT LOCATION MODAL ==========
-        function openEditLocationModal(id, id_alat, lat, lng) {
-            console.log('Edit Location:', id, id_alat, lat, lng);
+        function openEditLocationModal(id, id_alat, nama_lokasi, lat, lng) {
+            console.log('Edit Location:', id, id_alat, nama_lokasi, lat, lng);
             
             try {
                 document.getElementById('edit_location_id').value = id;
                 document.getElementById('edit_id_alat').value = id_alat || '';
+                document.getElementById('edit_nama_lokasi').value = nama_lokasi || '';
                 document.getElementById('edit_latitude').value = lat;
                 document.getElementById('edit_longitude').value = lng;
                 

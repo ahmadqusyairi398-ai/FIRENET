@@ -29,12 +29,13 @@ $db_locations = [];
 if ($conn) {
     $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_monitoring'");
     if ($checkTable && mysqli_num_rows($checkTable) > 0) {
-        $q_loc = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
+        $q_loc = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($q_loc) {
             while ($r = mysqli_fetch_assoc($q_loc)) {
                 $db_locations[] = [
                     'id' => (int)$r['id'],
                     'id_alat' => $r['id_alat'],
+                    'nama_lokasi' => $r['nama_lokasi'] ?? '',
                     'latitude' => (float)$r['latitude'],
                     'longitude' => (float)$r['longitude'],
                     'last_update' => $r['last_update']
