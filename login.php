@@ -155,7 +155,8 @@ if (isset($_SESSION['username'])) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - FIREDETECTOR</title>
+<!-- PERBAIKAN: Judul Tab Browser dinamis -->
+<title>Login <?= $is_indoor ? 'Indoor' : 'Outdoor' ?> - FIREDETECTOR</title>
 
 <!-- Font Awesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -544,7 +545,8 @@ body::before {
     <div class="login-header">
         <i class="fas fa-fire" style="color: #ff6b6b; text-shadow: 0 0 20px rgba(255,107,107,0.5);"></i>
         <h1>LOGIN</h1>
-        <p>Sistem Deteksi & Monitoring</p>
+        <!-- PERBAIKAN: Teks ini akan berubah otomatis menjadi Dashboard Indoor atau Dashboard Outdoor -->
+        <p>Dashboard <?= $is_indoor ? 'Indoor' : 'Outdoor' ?></p>
     </div>
     
     <div class="login-form">
@@ -588,9 +590,9 @@ body::before {
         </form>
         
         <div class="register-link">
-        <a href="home.php" class="back-home">
-            <i class="fas fa-arrow-left"></i> Kembali ke Beranda
-        </a>
+            <a href="home.php" class="back-home">
+                <i class="fas fa-arrow-left"></i> Kembali ke Beranda
+            </a>
         </div>
     </div>
 </div>
