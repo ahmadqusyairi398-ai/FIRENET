@@ -17,6 +17,82 @@ if (!isset($_SESSION['username'])) {
 
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
+
+// Koneksi Database & Query Data Sensor (Database Indoor)
+require_once 'koneksi.php';
+$conn = isset($conn_indoor) ? $conn_indoor : null;
+
+$latest_sensor = [
+    'waktu' => '-',
+    'api' => 'Aman',
+    'asap' => 'Normal',
+    'suhu' => '-',
+    'kelembapan' => '-',
+    'tegangan' => '-',
+    'arus' => '-',
+    'rssi' => '-',
+    'ip' => '-',
+    'status' => 'Offline',
+    'isDanger' => false,
+    'apiValue' => 0
+];
+
+$chart_labels = [];
+$chart_suhu = [];
+$chart_kelembapan = [];
+$chart_tegangan = [];
+$chart_arus = [];
+$chart_api = [];
+
+if ($conn) {
+    $checkSensorTable = mysqli_query($conn, "SHOW TABLES LIKE 'data_sensor'");
+    if ($checkSensorTable && mysqli_num_rows($checkSensorTable) > 0) {
+        // Ambil 1 data sensor terbaru
+        $q_latest = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
+        if ($q_latest && mysqli_num_rows($q_latest) > 0) {
+            $s = mysqli_fetch_assoc($q_latest);
+            $apiVal = isset($s['api']) ? (float)$s['api'] : 0;
+            $asapVal = isset($s['asap']) ? (float)$s['asap'] : 0;
+            
+            $apiStatus = ($apiVal > 0.5 || (isset($s['api']) && strtolower($s['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
+            $asapStatus = ($asapVal > 0.5 || (isset($s['asap']) && strtolower($s['asap']) === 'tinggi')) ? "Tinggi" : "Normal";
+            
+            $waktu_raw = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? 'now');
+            $waktu_str = date('H:i:s', strtotime($waktu_raw));
+            
+            $latest_sensor = [
+                'waktu' => $waktu_str,
+                'api' => $apiStatus,
+                'asap' => $asapStatus,
+                'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "-",
+                'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
+                'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
+                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "-",
+                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+                'status' => 'Online',
+                'isDanger' => ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi"),
+                'apiValue' => ($apiStatus === "Terdeteksi Api") ? 1 : 0
+            ];
+        }
+
+        // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru)
+        $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
+        if ($q_chart && mysqli_num_rows($q_chart) > 0) {
+            while ($r = mysqli_fetch_assoc($q_chart)) {
+                $waktu_raw = $r['timestamp'] ?? ($r['tanggal_dan_waktu'] ?? 'now');
+                $waktu = date('H:i:s', strtotime($waktu_raw));
+                $chart_labels[] = $waktu;
+                $chart_suhu[] = (float)($r['suhu'] ?? 0);
+                $chart_kelembapan[] = (float)($r['kelembapan'] ?? 0);
+                $chart_tegangan[] = (float)($r['tegangan'] ?? 0);
+                $chart_arus[] = (float)($r['arus'] ?? 0);
+                $api_raw = (float)($r['api'] ?? 0);
+                $chart_api[] = ($api_raw > 0.5 || (isset($r['api']) && strtolower($r['api']) === 'terdeteksi api')) ? 1 : 0;
+            }
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -458,19 +534,19 @@ canvas {
             <!-- Status Node di dalam Header -->
             <div class="node-status-header">
                 <div class="status-item-header">
-                    <i class="fas fa-circle" id="status-icon" style="color: #28a745;"></i>
+                    <i class="fas fa-circle" id="status-icon" style="<?= $latest_sensor['status'] === 'Online' ? 'color: #28a745;' : 'color: #dc3545;' ?>"></i>
                     <span>Status:</span>
-                    <span class="value" id="status">-</span>
+                    <span class="value" id="status"><?= htmlspecialchars($latest_sensor['status']) ?></span>
                 </div>
                 <div class="status-item-header">
                     <i class="fas fa-signal"></i>
                     <span>RSSI:</span>
-                    <span class="value" id="rssi">-</span>
+                    <span class="value" id="rssi"><?= htmlspecialchars($latest_sensor['rssi']) ?><?= $latest_sensor['rssi'] !== '-' ? ' dBm' : '' ?></span>
                 </div>
                 <div class="status-item-header">
                     <i class="fas fa-network-wired"></i>
                     <span>IP:</span>
-                    <span class="value" id="ip">-</span>
+                    <span class="value" id="ip"><?= htmlspecialchars($latest_sensor['ip']) ?></span>
                 </div>
             </div>
         </div>
@@ -488,14 +564,14 @@ canvas {
     <!-- ========== 2. DATA SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span id="waktu" style="font-size:12px; color:#666;">-</span></h3>
+        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
         <div class="grid">
-            <div class="box api-box" id="api-box"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api-status">-</b></div>
-            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap">-</b></div>
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Sensor Suhu</div><b id="suhu">-</b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Sensor Kelembapan</div><b id="kelembapan">-</b></div>
-            <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Sensor Tegangan</div><b id="tegangan">-</b></div>
-            <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Sensor Arus</div><b id="arus">-</b></div>
+            <div class="box api-box <?= $latest_sensor['api'] === 'Terdeteksi Api' ? 'pulse-animation' : '' ?>" id="api-box" style="<?= $latest_sensor['api'] === 'Terdeteksi Api' ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api-status"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b></div>
+            <div class="box asap-box <?= $latest_sensor['asap'] === 'Tinggi' ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= $latest_sensor['asap'] === 'Tinggi' ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap"><?= $latest_sensor['asap'] === 'Tinggi' ? '<i class="fas fa-smog"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal' ?></b></div>
+            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Sensor Suhu</div><b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b></div>
+            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Sensor Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b></div>
+            <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Sensor Tegangan</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b></div>
+            <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Sensor Arus</div><b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b></div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-building" style="color: #0083b0;"></i>
@@ -742,15 +818,16 @@ async function fetchLocations() {
     }
 }
 
-// ================= CHART =================
+// ================= CHART (Terhubung ke Database indoor -> data_sensor) =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = {
-    labels: [],
+    labels: <?= json_encode($chart_labels); ?>,
     datasets: [
-        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Tegangan (V)', data: [], borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus (A)', data: [], borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu); ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan); ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Tegangan (V)', data: <?= json_encode($chart_tegangan); ?>, borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Arus (A)', data: <?= json_encode($chart_arus); ?>, borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Status Api', data: <?= json_encode($chart_api); ?>, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ]
 };
 
@@ -775,6 +852,10 @@ const myChart = new Chart(ctx, {
                         else if (label.includes('Arus')) unit = ' A';
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
+                        else if (label.includes('Status Api')) {
+                            let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
+                            return `${label}: ${status}`;
+                        }
                         return `${label}: ${value}${unit}`;
                     }
                 }
@@ -878,18 +959,24 @@ async function updateDashboard() {
         document.getElementById('zone').innerHTML = 'Zona Indoor (Gedung)';
     }
     
-    // Update chart
-    dataChart.labels.push(data.waktu);
-    dataChart.datasets[0].data.push(parseFloat(data.suhu));
-    dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-    dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-    dataChart.datasets[3].data.push(parseFloat(data.arus));
-    
-    if(dataChart.labels.length > 20) { 
-        dataChart.labels.shift(); 
-        dataChart.datasets.forEach(ds => ds.data.shift()); 
+    // Update chart real-time (hanya tambah jika timestamp belum ada di chart)
+    const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
+    if (lastTime !== data.waktu) {
+        dataChart.labels.push(data.waktu);
+        dataChart.datasets[0].data.push(parseFloat(data.suhu));
+        dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
+        dataChart.datasets[2].data.push(parseFloat(data.tegangan));
+        dataChart.datasets[3].data.push(parseFloat(data.arus));
+        if (dataChart.datasets[4]) {
+            dataChart.datasets[4].data.push(data.apiValue);
+        }
+        
+        if (dataChart.labels.length > 20) { 
+            dataChart.labels.shift(); 
+            dataChart.datasets.forEach(ds => ds.data.shift()); 
+        }
+        myChart.update();
     }
-    myChart.update();
 }
 
 // ================= AMBIL DAN TAMPILKAN LOKASI =================

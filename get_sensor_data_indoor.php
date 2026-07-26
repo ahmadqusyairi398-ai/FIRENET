@@ -2,80 +2,68 @@
 // Tentukan header agar output dibaca sebagai JSON
 header('Content-Type: application/json');
 
-// ========================================================
-// 1. Konfigurasi Database
-// Sesuaikan dengan pengaturan database server Anda (biasanya localhost/root)
-// ========================================================
-$host     = "localhost";
-$username = "root";       // Default XAMPP biasanya "root"
-$password = "";           // Default XAMPP biasanya kosong
-$dbname   = "indoor";     // Sesuai dengan nama database Anda
+// 1. Load koneksi database dari koneksi.php
+require_once 'koneksi.php';
 
-// Membuat koneksi ke database menggunakan MySQLi
-$conn = new mysqli($host, $username, $password, $dbname);
+$conn = isset($conn_indoor) && $conn_indoor ? $conn_indoor : null;
+
+if (!$conn) {
+    // Fallback koneksi manual jika koneksi.php belum terdefinisi
+    $conn = @mysqli_connect("localhost", "root", "", "indoor");
+}
 
 // Cek koneksi
-if ($conn->connect_error) {
-    // Jika gagal, kirim pesan error dalam bentuk JSON
+if (!$conn || mysqli_connect_errno()) {
     echo json_encode([
         "error" => true,
-        "message" => "Koneksi database gagal: " . $conn->connect_error
+        "message" => "Koneksi database indoor gagal: " . (mysqli_connect_error() ?: 'Unknown error')
     ]);
     exit();
 }
 
-// ========================================================
-// 2. Query Ambil Data Sensor Terbaru
-// Mengambil 1 baris terakhir berdasarkan ID tertinggi (terbaru)
-// ========================================================
+// 2. Query Ambil Data Sensor Terbaru dari tabel data_sensor (database indoor)
 $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
-$result = $conn->query($sql);
+$result = mysqli_query($conn, $sql);
 
-if ($result->num_rows > 0) {
-    // Jika data ditemukan, ambil datanya
-    $row = $result->fetch_assoc();
+if ($result && mysqli_num_rows($result) > 0) {
+    $row = mysqli_fetch_assoc($result);
     
-    // Kita juga perlu memformat data agar sesuai dengan yang diharapkan oleh JavaScript di dashboard
-    // Misalnya menentukan apakah statusnya "Terdeteksi Api" atau "Aman" berdasarkan nilai dari sensor
+    $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
+    $asapValue = isset($row['asap']) ? (float)$row['asap'] : 0;
     
-    $apiValue = (float)$row['api'];
-    $asapValue = (float)$row['asap'];
-    
-    // Asumsi: jika sensor api bernilai lebih dari 0.5 (atau logika batas Anda), maka terdeteksi
-    $apiStatus = ($apiValue > 0.5) ? "Terdeteksi Api" : "Aman";
-    
-    // Asumsi: jika sensor asap bernilai tinggi
-    $asapStatus = ($asapValue > 100) ? "Tinggi" : "Normal"; 
+    // Penentuan status api & asap
+    $apiStatus = ($apiValue > 0.5 || (isset($row['api']) && strtolower($row['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
+    $asapStatus = ($asapValue > 0.5 || (isset($row['asap']) && strtolower($row['asap']) === 'tinggi')) ? "Tinggi" : "Normal"; 
     
     $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi");
+
+    // Format waktu dari timestamp / tanggal_dan_waktu
+    $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? 'now');
+    $waktu_formatted = date('H:i:s', strtotime($waktu_raw));
     
-    // Susun data yang akan dikirimkan ke frontend (dashboard)
+    // Susun data JSON untuk response
     $data = [
         "error"      => false,
-        "waktu"      => date('H:i:s', strtotime($row['timestamp'])), // Format jam dari timestamp database
+        "waktu"      => $waktu_formatted,
         "api"        => $apiStatus,
         "asap"       => $asapStatus,
-        "suhu"       => $row['suhu'],
-        "kelembapan" => $row['kelembapan'],
-        "tegangan"   => $row['tegangan'],
-        "arus"       => $row['arus'],
-        "rssi"       => $row['rssi'],
-        "ip"         => $row['ip_address'],
-        "latitude"   => $row['latitude'],
-        "longitude"  => $row['longitude'],
+        "suhu"       => isset($row['suhu']) ? number_format((float)$row['suhu'], 1) : "0.0",
+        "kelembapan" => isset($row['kelembapan']) ? number_format((float)$row['kelembapan'], 1) : "0.0",
+        "tegangan"   => isset($row['tegangan']) ? number_format((float)$row['tegangan'], 1) : "0.0",
+        "arus"       => isset($row['arus']) ? number_format((float)$row['arus'], 2) : "0.00",
+        "rssi"       => $row['rssi'] ?? '-',
+        "ip"         => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+        "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
+        "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
         "isDanger"   => $isDanger,
         "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0
     ];
     
     echo json_encode($data);
 } else {
-    // Jika tabel data_sensor masih kosong
     echo json_encode([
         "error" => true,
-        "message" => "Belum ada data sensor di database."
+        "message" => "Belum ada data sensor di database indoor."
     ]);
 }
-
-// Tutup koneksi
-$conn->close();
 ?>
