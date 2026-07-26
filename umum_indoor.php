@@ -31,6 +31,86 @@ if ($conn) {
         }
     }
 }
+
+// Data Sensor & Status Node terbaru dari database indoor (tabel data_sensor)
+$latest_sensor = [
+    'waktu' => '-',
+    'api' => 'Aman',
+    'asap' => 'Normal',
+    'suhu' => '-',
+    'kelembapan' => '-',
+    'tegangan' => '-',
+    'arus' => '-',
+    'rssi' => '-',
+    'ip' => '-',
+    'status' => 'Offline'
+];
+
+if ($conn) {
+    $checkSensorTable = mysqli_query($conn, "SHOW TABLES LIKE 'data_sensor'");
+    if ($checkSensorTable && mysqli_num_rows($checkSensorTable) > 0) {
+        $q_latest = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
+        if ($q_latest && mysqli_num_rows($q_latest) > 0) {
+            $s = mysqli_fetch_assoc($q_latest);
+            $latest_sensor = [
+                'waktu' => isset($s['timestamp']) ? date('H:i:s', strtotime($s['timestamp'])) : '-',
+                'api' => (isset($s['api']) && (float)$s['api'] > 0.5) ? "Terdeteksi Api" : "Aman",
+                'asap' => (isset($s['asap']) && (float)$s['asap'] > 0.5) ? "Tinggi" : "Normal",
+                'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "-",
+                'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
+                'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
+                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "-",
+                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+                'status' => 'Online'
+            ];
+        }
+    }
+}
+
+// Ambil data Batas Sensor dari database indoor (tabel batas_indoor atau batas_sensor)
+$batas_sensor = [];
+$tb_batas_name = 'batas_indoor';
+if ($conn) {
+    $checkBatasIndoor = mysqli_query($conn, "SHOW TABLES LIKE 'batas_indoor'");
+    if ($checkBatasIndoor && mysqli_num_rows($checkBatasIndoor) > 0) {
+        $tb_batas_name = 'batas_indoor';
+    } else {
+        $checkBatasSensor = mysqli_query($conn, "SHOW TABLES LIKE 'batas_sensor'");
+        if ($checkBatasSensor && mysqli_num_rows($checkBatasSensor) > 0) {
+            $tb_batas_name = 'batas_sensor';
+        } else {
+            // Buat tabel batas_indoor secara otomatis jika belum ada
+            $createBatasTable = "CREATE TABLE IF NOT EXISTS batas_indoor (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nama_sensor VARCHAR(50) NOT NULL,
+                nilai_alarm DECIMAL(10,2) NOT NULL,
+                satuan VARCHAR(20) NOT NULL,
+                batas_min DECIMAL(10,2),
+                batas_max DECIMAL(10,2),
+                deskripsi TEXT,
+                last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )";
+            @mysqli_query($conn, $createBatasTable);
+            $tb_batas_name = 'batas_indoor';
+        }
+    }
+
+    $q_batas = mysqli_query($conn, "SELECT * FROM {$tb_batas_name} ORDER BY id ASC");
+    if ($q_batas) {
+        while ($b = mysqli_fetch_assoc($q_batas)) {
+            $nama_key = strtoupper(trim($b['nama_sensor']));
+            $batas_sensor[$nama_key] = [
+                'nama_sensor' => $b['nama_sensor'],
+                'nilai_alarm' => (float)$b['nilai_alarm'],
+                'satuan' => $b['satuan'],
+                'batas_min' => isset($b['batas_min']) ? (float)$b['batas_min'] : null,
+                'batas_max' => isset($b['batas_max']) ? (float)$b['batas_max'] : null,
+                'deskripsi' => $b['deskripsi'] ?? ''
+            ];
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -299,9 +379,9 @@ canvas {
     <div class="card">
         <h3><i class="fas fa-microchip"></i> Status Node Indoor</h3>
         <div class="node-status">
-            <div class="status-item"><i class="fas fa-circle status-online"></i><div class="label">Status</div><div class="value" id="status">-</div></div>
-            <div class="status-item"><i class="fas fa-signal"></i><div class="label">RSSI</div><div class="value" id="rssi">-</div></div>
-            <div class="status-item"><i class="fas fa-network-wired"></i><div class="label">IP Address</div><div class="value" id="ip">-</div></div>
+            <div class="status-item"><i class="fas fa-circle <?= $latest_sensor['status'] === 'Online' ? 'status-online' : '' ?>" style="<?= $latest_sensor['status'] !== 'Online' ? 'color:#dc3545;' : '' ?>"></i><div class="label">Status</div><div class="value" id="status"><?= htmlspecialchars($latest_sensor['status']) ?></div></div>
+            <div class="status-item"><i class="fas fa-signal"></i><div class="label">RSSI</div><div class="value" id="rssi"><?= htmlspecialchars($latest_sensor['rssi']) ?><?= $latest_sensor['rssi'] !== '-' ? ' dBm' : '' ?></div></div>
+            <div class="status-item"><i class="fas fa-network-wired"></i><div class="label">IP Address</div><div class="value" id="ip"><?= htmlspecialchars($latest_sensor['ip']) ?></div></div>
         </div>
     </div>
 
@@ -364,18 +444,48 @@ canvas {
 
     <!-- SENSOR DATA -->
     <div class="card">
-        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span style="font-size: 12px; color: #666;" id="waktu">-</span></h3>
+        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span style="font-size: 12px; color: #666;" id="waktu"><?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
         <div class="grid">
-            <div class="box api-box" id="api-box"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api">-</b></div>
-            <div class="box asap-box" id="asap-box"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap">-</b></div>
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Sensor Suhu</div><b id="suhu">-</b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Sensor Kelembapan</div><b id="kelembapan">-</b></div>
-            <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Sensor Tegangan</div><b id="tegangan">-</b></div>
-            <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Sensor Arus</div><b id="arus">-</b></div>
+            <div class="box api-box" id="api-box">
+                <i class="fas fa-fire"></i>
+                <div class="sensor-label">Sensor Api</div>
+                <b id="api"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b>
+                <small id="api-threshold">Batas Alarm: <?= isset($batas_sensor['API']) ? $batas_sensor['API']['nilai_alarm'] : 1 ?></small>
+            </div>
+            <div class="box asap-box" id="asap-box">
+                <i class="fas fa-smog"></i>
+                <div class="sensor-label">Sensor Asap</div>
+                <b id="asap"><?= $latest_sensor['asap'] === 'Tinggi' ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal' ?></b>
+                <small id="asap-threshold">Batas Alarm: <?= isset($batas_sensor['ASAP']) ? $batas_sensor['ASAP']['nilai_alarm'] . '%' : '70%' ?></small>
+            </div>
+            <div class="box" id="suhu-box">
+                <i class="fas fa-temperature-high"></i>
+                <div class="sensor-label">Sensor Suhu</div>
+                <b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b>
+                <small id="suhu-threshold">Batas Max: <?= isset($batas_sensor['SUHU']) ? $batas_sensor['SUHU']['nilai_alarm'] . ' °C' : '45 °C' ?></small>
+            </div>
+            <div class="box" id="kelembapan-box">
+                <i class="fas fa-tint"></i>
+                <div class="sensor-label">Sensor Kelembapan</div>
+                <b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b>
+                <small id="kelembapan-threshold">Batas Alarm: <?= isset($batas_sensor['KELEMBAPAN']) ? $batas_sensor['KELEMBAPAN']['nilai_alarm'] . ' %' : '85 %' ?></small>
+            </div>
+            <div class="box" id="tegangan-box">
+                <i class="fas fa-bolt"></i>
+                <div class="sensor-label">Sensor Tegangan</div>
+                <b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b>
+                <small id="tegangan-threshold">Batas Min: <?= isset($batas_sensor['TEGANGAN']) ? $batas_sensor['TEGANGAN']['nilai_alarm'] . ' V' : '190 V' ?></small>
+            </div>
+            <div class="box" id="arus-box">
+                <i class="fas fa-charging-station"></i>
+                <div class="sensor-label">Sensor Arus</div>
+                <b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b>
+                <small id="arus-threshold">Batas Max: <?= isset($batas_sensor['ARUS']) ? $batas_sensor['ARUS']['nilai_alarm'] . ' A' : '15 A' ?></small>
+            </div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-building" style="color: #0083b0;"></i>
-            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Sensor terpasang di dalam gedung untuk deteksi dini kebakaran.</span>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Terhubung ke database indoor (tabel <code>data_sensor</code> &amp; <code>batas_sensor</code>).</span>
         </div>
     </div>
 
@@ -589,6 +699,8 @@ const myChart = new Chart(ctx, {
 });
 
 // ================= DATA DARI DATABASE (FETCH API) =================
+var batasSensorConfig = <?= json_encode($batas_sensor); ?>;
+
 function fetchDataFromDB() {
     fetch('api_get_data.php?device=indoor')
     .then(response => response.json())
