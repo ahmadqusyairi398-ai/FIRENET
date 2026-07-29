@@ -422,6 +422,62 @@ canvas {
         </div>
     </div>
 
+    <!-- SENSOR DATA -->
+    <div class="card">
+        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span style="font-size: 12px; color: #666;" id="waktu"><?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
+        <div class="grid">
+            <div class="box api-box" id="api-box">
+                <i class="fas fa-fire"></i>
+                <div class="sensor-label">Sensor Api</div>
+                <b id="api"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b>
+                <small id="api-threshold">Batas Alarm: <?= isset($batas_sensor['API']) ? $batas_sensor['API']['nilai_alarm'] : 1 ?></small>
+            </div>
+            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
+                <i class="fas fa-smog"></i>
+                <div class="sensor-label">Sensor Asap</div>
+                <b id="asap">
+                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
+                        <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
+                    <?php elseif ($latest_sensor['asap'] === 'Sedang'): ?>
+                        <i class="fas fa-exclamation-circle"></i> Sedang (Waspada)
+                    <?php else: ?>
+                        <i class="fas fa-check"></i> Normal
+                    <?php endif; ?>
+                </b>
+                <small id="asap-threshold">Batas Alarm: <?= isset($batas_sensor['ASAP']) ? $batas_sensor['ASAP']['nilai_alarm'] . '%' : '70%' ?></small>
+            </div>
+
+            <div class="box" id="suhu-box">
+                <i class="fas fa-temperature-high"></i>
+                <div class="sensor-label">Sensor Suhu</div>
+                <b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b>
+                <small id="suhu-threshold">Batas Max: <?= isset($batas_sensor['SUHU']) ? $batas_sensor['SUHU']['nilai_alarm'] . ' °C' : '45 °C' ?></small>
+            </div>
+            <div class="box" id="kelembapan-box">
+                <i class="fas fa-tint"></i>
+                <div class="sensor-label">Sensor Kelembapan</div>
+                <b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b>
+                <small id="kelembapan-threshold">Batas Alarm: <?= isset($batas_sensor['KELEMBAPAN']) ? $batas_sensor['KELEMBAPAN']['nilai_alarm'] . ' %' : '85 %' ?></small>
+            </div>
+            <div class="box" id="tegangan-box">
+                <i class="fas fa-bolt"></i>
+                <div class="sensor-label">Sensor Tegangan</div>
+                <b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b>
+                <small id="tegangan-threshold">Batas Min: <?= isset($batas_sensor['TEGANGAN']) ? $batas_sensor['TEGANGAN']['nilai_alarm'] . ' V' : '190 V' ?></small>
+            </div>
+            <div class="box" id="arus-box">
+                <i class="fas fa-charging-station"></i>
+                <div class="sensor-label">Sensor Arus</div>
+                <b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b>
+                <small id="arus-threshold">Batas Max: <?= isset($batas_sensor['ARUS']) ? $batas_sensor['ARUS']['nilai_alarm'] . ' A' : '15 A' ?></small>
+            </div>
+        </div>
+        <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-building" style="color: #0083b0;"></i>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Terhubung ke database indoor (tabel <code>data_sensor</code> &amp; <code>batas_sensor</code>).</span>
+        </div>
+    </div>
+
     <!-- LOKASI / MAP CARD (DIPERBAIKI: TERHUBUNG KE TABEL lokasi_monitoring DATABASE INDOOR) -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
@@ -487,62 +543,6 @@ canvas {
                 <span class="label">Status:</span>
                 <span class="value" id="location-status" style="color: #28a745; font-weight: bold;">Aman</span>
             </div>
-        </div>
-    </div>
-
-    <!-- SENSOR DATA -->
-    <div class="card">
-        <h3><i class="fas fa-microphone-alt"></i> Data Sensor Real Time (Indoor) <span style="font-size: 12px; color: #666;" id="waktu"><?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
-        <div class="grid">
-            <div class="box api-box" id="api-box">
-                <i class="fas fa-fire"></i>
-                <div class="sensor-label">Sensor Api</div>
-                <b id="api"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b>
-                <small id="api-threshold">Batas Alarm: <?= isset($batas_sensor['API']) ? $batas_sensor['API']['nilai_alarm'] : 1 ?></small>
-            </div>
-            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
-                <i class="fas fa-smog"></i>
-                <div class="sensor-label">Sensor Asap</div>
-                <b id="asap">
-                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
-                        <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
-                    <?php elseif ($latest_sensor['asap'] === 'Sedang'): ?>
-                        <i class="fas fa-exclamation-circle"></i> Sedang (Waspada)
-                    <?php else: ?>
-                        <i class="fas fa-check"></i> Normal
-                    <?php endif; ?>
-                </b>
-                <small id="asap-threshold">Batas Alarm: <?= isset($batas_sensor['ASAP']) ? $batas_sensor['ASAP']['nilai_alarm'] . '%' : '70%' ?></small>
-            </div>
-
-            <div class="box" id="suhu-box">
-                <i class="fas fa-temperature-high"></i>
-                <div class="sensor-label">Sensor Suhu</div>
-                <b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b>
-                <small id="suhu-threshold">Batas Max: <?= isset($batas_sensor['SUHU']) ? $batas_sensor['SUHU']['nilai_alarm'] . ' °C' : '45 °C' ?></small>
-            </div>
-            <div class="box" id="kelembapan-box">
-                <i class="fas fa-tint"></i>
-                <div class="sensor-label">Sensor Kelembapan</div>
-                <b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b>
-                <small id="kelembapan-threshold">Batas Alarm: <?= isset($batas_sensor['KELEMBAPAN']) ? $batas_sensor['KELEMBAPAN']['nilai_alarm'] . ' %' : '85 %' ?></small>
-            </div>
-            <div class="box" id="tegangan-box">
-                <i class="fas fa-bolt"></i>
-                <div class="sensor-label">Sensor Tegangan</div>
-                <b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b>
-                <small id="tegangan-threshold">Batas Min: <?= isset($batas_sensor['TEGANGAN']) ? $batas_sensor['TEGANGAN']['nilai_alarm'] . ' V' : '190 V' ?></small>
-            </div>
-            <div class="box" id="arus-box">
-                <i class="fas fa-charging-station"></i>
-                <div class="sensor-label">Sensor Arus</div>
-                <b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b>
-                <small id="arus-threshold">Batas Max: <?= isset($batas_sensor['ARUS']) ? $batas_sensor['ARUS']['nilai_alarm'] . ' A' : '15 A' ?></small>
-            </div>
-        </div>
-        <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-building" style="color: #0083b0;"></i>
-            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Indoor</strong> - Terhubung ke database indoor (tabel <code>data_sensor</code> &amp; <code>batas_sensor</code>).</span>
         </div>
     </div>
 
