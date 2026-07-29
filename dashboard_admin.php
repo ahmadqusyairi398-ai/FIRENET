@@ -86,7 +86,7 @@ if ($conn) {
         }
         
         $latest_sensor = [
-            'waktu' => date('H:i:s', strtotime($s['timestamp'])),
+            'waktu' => date('H:i:s'),
             'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
             'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
             'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
@@ -1129,10 +1129,11 @@ function fetchDataFromDB() {
             }
 
             // 1. Update status header
+            var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
             document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
             document.getElementById("ip").innerHTML = data.ip || '-';
-            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
+            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
 
             // 2. Update sensor panel surya
             document.getElementById("tegangan").innerHTML = `${data.tegangan || 0} V`;
