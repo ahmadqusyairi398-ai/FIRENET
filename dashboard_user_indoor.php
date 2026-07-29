@@ -618,34 +618,18 @@ canvas {
             </span>
         </div>
 
-        <!-- SEARCH BAR LOKASI -->
-        <div style="margin-bottom: 15px; position: relative;">
+        <!-- SEARCH BAR LOKASI TANPA BUTTON -->
+        <div class="search-location-wrapper" style="margin-bottom: 15px; position: relative;">
             <div style="display: flex; align-items: center; background: white; border: 1px solid rgba(0,0,0,0.15); border-radius: 25px; padding: 8px 16px; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); transition: all 0.3s;">
-                <i class="fas fa-search" style="color: #0083b0; font-size: 14px;"></i>
-                <input type="text" id="search-location-input" placeholder="Cari nama lokasi / ID alat..." oninput="filterLocationButtons()" autocomplete="off" style="border: none; outline: none; background: transparent; width: 100%; font-size: 13px; color: #333; font-family: inherit;">
+                <i class="fas fa-search" style="color: #0083b0; font-size: 15px;"></i>
+                <input type="text" id="search-location-input" placeholder="Cari nama lokasi / ID alat..." oninput="filterLocationDropdown()" onfocus="filterLocationDropdown()" autocomplete="off" style="border: none; outline: none; background: transparent; width: 100%; font-size: 13px; color: #333; font-family: inherit;">
                 <button type="button" id="clear-search-btn" onclick="clearLocationSearch()" style="display: none; background: none; border: none; color: #999; cursor: pointer; font-size: 14px; padding: 0 4px;" title="Bersihkan pencarian">
                     <i class="fas fa-times-circle"></i>
                 </button>
             </div>
+            <!-- DROPDOWN HASIL PENCARIAN -->
+            <div id="search-location-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; margin-top: 6px; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 25px rgba(0,0,0,0.15); z-index: 100; backdrop-filter: blur(10px);"></div>
         </div>
-
-        <?php if (!empty($db_locations)): ?>
-        <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
-            <?php foreach ($db_locations as $index => $loc): 
-                $nama_loc = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : ($loc['id_alat'] ? "Indoor ({$loc['id_alat']})" : "Lokasi {$loc['id']}");
-                $code_alat = $loc['id_alat'] ? $loc['id_alat'] : "IND-" . str_pad($loc['id'], 3, '0', STR_PAD_LEFT);
-            ?>
-            <button type="button" class="btn-loc-select <?= ($index == 0) ? 'active' : '' ?>" 
-                    onclick="flyToLocation(<?= $loc['latitude'] ?>, <?= $loc['longitude'] ?>, '<?= htmlspecialchars($nama_loc, ENT_QUOTES) ?>', '<?= htmlspecialchars($code_alat, ENT_QUOTES) ?>', <?= $loc['id'] ?>, event)" 
-                    style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($index == 0) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($index == 0) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
-                    id="btn-loc-<?= $loc['id'] ?>">
-                <i class="fas fa-location-dot"></i> 
-                <span><?= htmlspecialchars($nama_loc) ?></span>
-                <span style="opacity: 0.85; font-size: 11px; background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 10px;">ID: <?= htmlspecialchars($code_alat) ?></span>
-            </button>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
 
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
@@ -923,8 +907,6 @@ function updateAllMarkers(locationsData) {
         map.fitBounds(group.getBounds().pad(0.1));
         hasFitBounds = true;
     }
-
-    filterLocationButtons();
 }
 
 // ================= FUNGSI AMBIL DATA LOKASI =================
@@ -1125,51 +1107,89 @@ updateDashboard();
 // 4. Jalankan update setiap 3 detik untuk sensor
 setInterval(updateDashboard, 3000);
 
-// ================= FUNGSI SEARCH LOKASI =================
-function filterLocationButtons() {
+// ================= FUNGSI SEARCH LOKASI DROPDOWN =================
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function filterLocationDropdown() {
     const input = document.getElementById('search-location-input');
-    if (!input) return;
-    const filter = input.value.toLowerCase().trim();
+    const resultsContainer = document.getElementById('search-location-results');
     const clearBtn = document.getElementById('clear-search-btn');
+    if (!input || !resultsContainer) return;
+
+    const filter = input.value.toLowerCase().trim();
     if (clearBtn) {
         clearBtn.style.display = filter.length > 0 ? 'inline-block' : 'none';
     }
 
-    const buttons = document.querySelectorAll('.btn-loc-select');
-    let visibleCount = 0;
+    if (filter.length === 0) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        return;
+    }
 
-    buttons.forEach(btn => {
-        const text = btn.innerText.toLowerCase();
-        if (text.includes(filter)) {
-            btn.style.display = 'inline-flex';
-            visibleCount++;
-        } else {
-            btn.style.display = 'none';
-        }
+    const locationsToSearch = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : (typeof initialLocations !== 'undefined' ? initialLocations : []);
+    const filtered = locationsToSearch.filter(loc => {
+        const nama = (loc.nama_lokasi || '').toLowerCase();
+        const idAlat = (loc.id_alat || '').toLowerCase();
+        return nama.includes(filter) || idAlat.includes(filter);
     });
 
-    let noResultMsg = document.getElementById('no-locations-found');
-    const container = document.querySelector('.location-buttons');
-    if (!noResultMsg && container) {
-        noResultMsg = document.createElement('div');
-        noResultMsg.id = 'no-locations-found';
-        noResultMsg.style.cssText = 'font-size: 13px; color: #777; padding: 10px; width: 100%; font-style: italic; display: none; text-align: center; background: rgba(0,0,0,0.03); border-radius: 8px; margin-top: 5px;';
-        noResultMsg.innerHTML = '<i class="fas fa-search-minus" style="color: #e85d04; margin-right: 6px;"></i> Tidak ada lokasi yang cocok dengan pencarian';
-        container.appendChild(noResultMsg);
+    resultsContainer.innerHTML = '';
+    resultsContainer.style.display = 'block';
+
+    if (filtered.length === 0) {
+        resultsContainer.innerHTML = '<div style="padding: 12px; font-size: 13px; color: #888; font-style: italic; text-align: center;"><i class="fas fa-info-circle"></i> Tidak ada lokasi yang cocok</div>';
+        return;
     }
-    if (noResultMsg) {
-        noResultMsg.style.display = (visibleCount === 0 && filter.length > 0) ? 'block' : 'none';
-    }
+
+    filtered.forEach(loc => {
+        const nama = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : (loc.id_alat ? `Indoor (${loc.id_alat})` : `Lokasi ${loc.id}`);
+        const idAlat = loc.id_alat || `IND-${loc.id}`;
+        const item = document.createElement('div');
+        item.style.cssText = 'padding: 10px 16px; border-bottom: 1px solid rgba(0,0,0,0.05); cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #1e3c72; transition: background 0.2s;';
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-building" style="color: #00b4db;"></i>
+                <strong>${escapeHtml(nama)}</strong>
+            </div>
+            <span style="font-size: 11px; background: rgba(0,180,219,0.1); color: #0083b0; padding: 2px 8px; border-radius: 10px; font-weight: 600;">ID: ${escapeHtml(idAlat)}</span>
+        `;
+        item.onmouseenter = function() { item.style.background = 'rgba(0,180,219,0.08)'; };
+        item.onmouseleave = function() { item.style.background = 'transparent'; };
+        item.onclick = function() {
+            selectSearchLocation(loc.latitude, loc.longitude, nama, idAlat, loc.id);
+        };
+        resultsContainer.appendChild(item);
+    });
+}
+
+function selectSearchLocation(lat, lng, nama, idAlat, locId) {
+    flyToLocation(lat, lng, nama, idAlat, locId);
+    const input = document.getElementById('search-location-input');
+    if (input) input.value = nama;
+    const resultsContainer = document.getElementById('search-location-results');
+    if (resultsContainer) resultsContainer.style.display = 'none';
 }
 
 function clearLocationSearch() {
     const input = document.getElementById('search-location-input');
     if (input) {
         input.value = '';
-        filterLocationButtons();
+        filterLocationDropdown();
         input.focus();
     }
 }
+
+document.addEventListener('click', function(e) {
+    const wrapper = document.querySelector('.search-location-wrapper');
+    const resultsContainer = document.getElementById('search-location-results');
+    if (wrapper && resultsContainer && !wrapper.contains(e.target)) {
+        resultsContainer.style.display = 'none';
+    }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('search-location-input');
@@ -1177,9 +1197,9 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const visibleBtns = Array.from(document.querySelectorAll('.btn-loc-select')).filter(btn => btn.style.display !== 'none');
-                if (visibleBtns.length > 0) {
-                    visibleBtns[0].click();
+                const firstItem = document.querySelector('#search-location-results > div');
+                if (firstItem) {
+                    firstItem.click();
                 }
             }
         });
