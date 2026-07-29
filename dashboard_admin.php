@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 // Mulai session untuk user (simulasi login)
 session_start();
 
@@ -1242,7 +1243,8 @@ function fetchDataFromDB() {
             updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 8. Update Grafik
-            dataChart.labels.push(data.waktu || new Date().toLocaleTimeString());
+            var chartTimeStr = (data.waktu && data.waktu !== '-') ? data.waktu : new Date().toLocaleTimeString('id-ID', { hour12: false });
+            dataChart.labels.push(chartTimeStr);
             dataChart.datasets[0].data.push(parseFloat(data.tegangan) || 0);
             dataChart.datasets[1].data.push(parseFloat(data.arus) || 0);
             dataChart.datasets[2].data.push(parseFloat(data.daya) || 0);

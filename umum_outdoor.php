@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 session_start();
 
 // Set tipe dashboard sebagai outdoor
@@ -1140,7 +1141,8 @@ function updateUI(data) {
     // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;
     
-    dataChart.labels.push(data.waktu);
+    var chartTimeStr = (data.waktu && data.waktu !== '-') ? data.waktu : new Date().toLocaleTimeString('id-ID', { hour12: false });
+    dataChart.labels.push(chartTimeStr);
     dataChart.datasets[0].data.push(parseFloat(data.daya));
     dataChart.datasets[1].data.push(parseFloat(data.suhu));
     dataChart.datasets[2].data.push(parseFloat(data.kelembapan));

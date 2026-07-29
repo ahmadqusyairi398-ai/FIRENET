@@ -1,4 +1,7 @@
 <?php
+// Set timezone default ke Asia/Makassar (WITA / UTC+8)
+date_default_timezone_set('Asia/Makassar');
+
 // Deteksi secara otomatis apakah sedang berjalan di Localhost atau di Domain/Hosting Live
 $http_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $is_localhost = ($http_host === 'localhost' || $http_host === '127.0.0.1');
