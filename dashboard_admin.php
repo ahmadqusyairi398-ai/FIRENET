@@ -1129,11 +1129,10 @@ function fetchDataFromDB() {
             }
 
             // 1. Update status header
-            var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
             document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
             document.getElementById("ip").innerHTML = data.ip || '-';
-            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
 
             // 2. Update sensor panel surya
             document.getElementById("tegangan").innerHTML = `${data.tegangan || 0} V`;

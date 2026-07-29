@@ -760,11 +760,10 @@ function fetchDataFromDB() {
     fetch('api_get_data.php?device=indoor')
     .then(response => response.json())
     .then(data => {
-        var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
         document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
         document.getElementById("ip").innerHTML = data.ip;
-        document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+        document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
         
         const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
         document.getElementById("api").innerHTML = apiValue;
