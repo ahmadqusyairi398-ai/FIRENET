@@ -46,7 +46,12 @@ $conn_indoor = null;
 try {
     $pdo_outdoor = new PDO("mysql:host=$host;dbname=$dbname_outdoor;charset=utf8mb4", $username, $password);
     $pdo_outdoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    @$pdo_outdoor->exec("SET time_zone = '+08:00'");
+    
     $conn_outdoor = mysqli_connect($host, $username, $password, $dbname_outdoor);
+    if ($conn_outdoor) {
+        @mysqli_query($conn_outdoor, "SET time_zone = '+08:00'");
+    }
 } catch(Exception $e) {
     // Koneksi outdoor dibiarkan null jika gagal, agar tidak mematikan program jika hanya mengakses indoor
 }
@@ -55,7 +60,12 @@ try {
 try {
     $pdo_indoor = new PDO("mysql:host=$host;dbname=$dbname_indoor;charset=utf8mb4", $username, $password);
     $pdo_indoor->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    @$pdo_indoor->exec("SET time_zone = '+08:00'");
+    
     $conn_indoor = mysqli_connect($host, $username, $password, $dbname_indoor);
+    if ($conn_indoor) {
+        @mysqli_query($conn_indoor, "SET time_zone = '+08:00'");
+    }
 } catch(Exception $e) {
     // Koneksi indoor dibiarkan null jika gagal
 }
