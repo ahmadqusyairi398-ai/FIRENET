@@ -22,6 +22,26 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 require_once 'koneksi.php';
 $conn = isset($conn_indoor) ? $conn_indoor : null;
 
+$db_locations = [];
+if ($conn) {
+    $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_monitoring'");
+    if ($checkTable && mysqli_num_rows($checkTable) > 0) {
+        $q_loc = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
+        if ($q_loc) {
+            while ($r = mysqli_fetch_assoc($q_loc)) {
+                $db_locations[] = [
+                    'id' => (int)$r['id'],
+                    'id_alat' => $r['id_alat'],
+                    'nama_lokasi' => $r['nama_lokasi'] ?? '',
+                    'latitude' => (float)$r['latitude'],
+                    'longitude' => (float)$r['longitude'],
+                    'last_update' => $r['last_update']
+                ];
+            }
+        }
+    }
+}
+
 $latest_sensor = [
     'waktu' => '-',
     'api' => 'Aman',
@@ -591,23 +611,57 @@ canvas {
     <!-- ========== 4. MAPS / LOKASI ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring <span style="font-size: 12px; color: #666; margin-left: auto;">Lokasi dari Database</span></h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring</h3>
+            <span style="font-size: 12px; background: rgba(0, 180, 219, 0.1); color: #0083b0; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                Total: <span id="total-locations"><?= count($db_locations); ?></span> Titik Lokasi
+            </span>
+        </div>
+
+        <?php if (!empty($db_locations)): ?>
+        <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+            <?php foreach ($db_locations as $index => $loc): 
+                $nama_loc = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : ($loc['id_alat'] ? "Indoor ({$loc['id_alat']})" : "Lokasi {$loc['id']}");
+                $code_alat = $loc['id_alat'] ? $loc['id_alat'] : "IND-" . str_pad($loc['id'], 3, '0', STR_PAD_LEFT);
+            ?>
+            <button type="button" class="btn-loc-select <?= ($index == 0) ? 'active' : '' ?>" 
+                    onclick="flyToLocation(<?= $loc['latitude'] ?>, <?= $loc['longitude'] ?>, '<?= htmlspecialchars($nama_loc, ENT_QUOTES) ?>', '<?= htmlspecialchars($code_alat, ENT_QUOTES) ?>', <?= $loc['id'] ?>, event)" 
+                    style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($index == 0) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($index == 0) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
+                    id="btn-loc-<?= $loc['id'] ?>">
+                <i class="fas fa-location-dot"></i> 
+                <span><?= htmlspecialchars($nama_loc) ?></span>
+                <span style="opacity: 0.85; font-size: 11px; background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 10px;">ID: <?= htmlspecialchars($code_alat) ?></span>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="map-container"><div id="map"></div></div>
         <div class="location-info">
             <div class="location-info-item">
-                <i class="fas fa-globe"></i>
-                <span class="label">Total Lokasi:</span>
-                <span class="value" id="total-locations">0</span>
+                <i class="fas fa-building"></i>
+                <span class="label">Nama Lokasi:</span>
+                <span class="value" id="location-name-val"><?= htmlspecialchars(!empty($db_locations[0]['nama_lokasi']) ? $db_locations[0]['nama_lokasi'] : 'Indoor Sensor') ?></span>
             </div>
             <div class="location-info-item">
-                <i class="fas fa-tree"></i>
+                <i class="fas fa-microchip"></i>
+                <span class="label">ID Alat:</span>
+                <span class="value" id="location-id-val" style="color: #e85d04; font-weight: 700;"><?= htmlspecialchars($db_locations[0]['id_alat'] ?? '001') ?></span>
+            </div>
+            <div class="location-info-item">
+                <i class="fas fa-globe"></i>
+                <span class="label">Koordinat:</span>
+                <span class="value" id="coordinates"><?= !empty($db_locations) ? number_format($db_locations[0]['latitude'], 6) . ', ' . number_format($db_locations[0]['longitude'], 6) : '-1.202490, 116.887080' ?></span>
+            </div>
+            <div class="location-info-item">
+                <i class="fas fa-layer-group"></i>
                 <span class="label">Zona:</span>
-                <span class="value" id="zone">Zona Monitoring</span>
+                <span class="value" id="zone">Zona Indoor (Gedung)</span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-flag-checkered"></i>
                 <span class="label">Status:</span>
-                <span class="value" id="location-status" style="color: #28a745;">Aman</span>
+                <span class="value" id="location-status" style="color: #28a745; font-weight: bold;">Aman</span>
             </div>
         </div>
     </div>
@@ -689,13 +743,48 @@ function initMap() {
     }).addTo(map);
 }
 
+var activeSelectedLocationId = null;
+var hasFitBounds = false;
+
+function flyToLocation(lat, lng, nama, idAlat, locId, event) {
+    if (locId) activeSelectedLocationId = locId;
+    map.flyTo([lat, lng], 17, { duration: 1.5 });
+    
+    const locNameElem = document.getElementById('location-name-val');
+    if (locNameElem) locNameElem.innerText = nama;
+    
+    const locIdElem = document.getElementById('location-id-val');
+    if (locIdElem) locIdElem.innerText = idAlat;
+
+    const coordElem = document.getElementById('coordinates');
+    if (coordElem) coordElem.innerHTML = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+
+    markers.forEach(m => {
+        const mLatLng = m.getLatLng();
+        if (Math.abs(mLatLng.lat - parseFloat(lat)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(lng)) < 0.0001) {
+            m.openPopup();
+        }
+    });
+
+    document.querySelectorAll('.btn-loc-select').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#333';
+        btn.classList.remove('active');
+    });
+    const activeBtn = (event && event.currentTarget) || (locId ? document.getElementById('btn-loc-' + locId) : null);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+        activeBtn.classList.add('active');
+    }
+}
+
 // ================= FUNGSI TAMBAH MARKER KE PETA =================
 function addMarkerToMap(location, isDanger) {
-    // Icon marker - AMAN (Hijau)
     var safeIcon = L.divIcon({
-        html: `<div style="background: linear-gradient(135deg, #28a745, #20c997); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 8px; color: white; font-weight: bold;">
-                <i class="fas fa-check-circle" style="font-size: 16px;"></i>
-                <span style="font-size: 8px; margin-top: 2px;">${location.id_alat || 'Sensor'}</span>
+        html: `<div style="background: linear-gradient(135deg, #00b4db, #0083b0); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 8px; color: white; font-weight: bold;">
+                <i class="fas fa-building" style="font-size: 14px;"></i>
+                <span style="font-size: 8px; margin-top: 1px;">${location.id_alat || 'Sensor'}</span>
               </div>`,
         iconSize: [40, 40],
         iconAnchor: [20, 20],
@@ -703,11 +792,10 @@ function addMarkerToMap(location, isDanger) {
         className: 'safe-marker'
     });
     
-    // Icon marker - BAHAYA (Merah)
     var dangerIcon = L.divIcon({
         html: `<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-direction: column; animation: blink 1s infinite;">
-                <i class="fas fa-exclamation-triangle" style="color: white; font-size: 16px;"></i>
-                <span style="font-size: 8px; margin-top: 2px; color: white; font-weight: bold;">${location.id_alat || 'Sensor'}</span>
+                <i class="fas fa-exclamation-triangle" style="color: white; font-size: 14px;"></i>
+                <span style="font-size: 8px; margin-top: 1px; color: white; font-weight: bold;">${location.id_alat || 'Sensor'}</span>
               </div>`,
         iconSize: [40, 40],
         iconAnchor: [20, 20],
@@ -715,13 +803,8 @@ function addMarkerToMap(location, isDanger) {
         className: 'danger-marker'
     });
     
-    // Pilih icon berdasarkan status
     var icon = isDanger ? dangerIcon : safeIcon;
-    var statusText = isDanger ? '⚠️ BAHAYA - Deteksi Kebakaran!' : '✅ Aman - Normal';
-    var statusColor = isDanger ? '#dc2626' : '#28a745';
-    var zoneText = isDanger ? 'Zona Merah (Peringatan Bahaya)' : 'Zona Indoor (Gedung)';
     
-    // Buat marker
     var marker = L.marker([location.latitude, location.longitude], { 
         icon: icon, 
         draggable: false 
@@ -732,21 +815,22 @@ function addMarkerToMap(location, isDanger) {
         ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
         : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
 
-    // Popup
     marker.bindPopup(`
         <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
             <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
             <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${location.id_alat || '-'}</strong></small>
-            <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${location.latitude}, ${location.longitude}</div>
+            <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${parseFloat(location.latitude).toFixed(6)}, ${parseFloat(location.longitude).toFixed(6)}</div>
             <div style="font-size: 11px; color: #777; margin-bottom: 6px;"><i class="fas fa-clock"></i> <b>Update:</b> ${location.last_update || '-'}</div>
             <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
         </div>
     `);
     
-    // Simpan marker ke array
+    marker.on('click', function() {
+        flyToLocation(location.latitude, location.longitude, namaLokasi, location.id_alat || `00${location.id}`, location.id);
+    });
+
     markers.push(marker);
     
-    // Circle zone
     var circleColor = isDanger ? '#dc2626' : '#e85d04';
     var circleOpacity = isDanger ? 0.3 : 0.15;
     
@@ -754,7 +838,7 @@ function addMarkerToMap(location, isDanger) {
         color: circleColor,
         fillColor: circleColor,
         fillOpacity: circleOpacity,
-        radius: 500
+        radius: 300
     }).addTo(map);
     
     dangerZones.push(zone);
@@ -764,7 +848,6 @@ function addMarkerToMap(location, isDanger) {
 
 // ================= FUNGSI UPDATE SEMUA MARKER =================
 function updateAllMarkers(locationsData) {
-    // Hapus semua marker dan zone yang ada
     markers.forEach(function(marker) {
         map.removeLayer(marker);
     });
@@ -780,23 +863,53 @@ function updateAllMarkers(locationsData) {
         return;
     }
     
-    // Tambahkan semua lokasi ke peta
-    locationsData.forEach(function(location) {
-        // Cek apakah lokasi dalam bahaya (default false)
+    locationsData.forEach(function(location, idx) {
         var isDanger = false;
-        
-        // Jika ada data sensor yang menunjukkan bahaya, bisa di-set true
-        // Untuk sekarang, semua dianggap aman
         addMarkerToMap(location, isDanger);
+
+        if (!activeSelectedLocationId && idx === 0) {
+            activeSelectedLocationId = location.id;
+        }
+
+        if (activeSelectedLocationId === location.id) {
+            const locNameElem = document.getElementById('location-name-val');
+            if (locNameElem) locNameElem.innerText = location.nama_lokasi || `Indoor (${location.id_alat})`;
+            const locIdElem = document.getElementById('location-id-val');
+            if (locIdElem) locIdElem.innerText = location.id_alat || `00${location.id}`;
+            const coordElem = document.getElementById('coordinates');
+            if (coordElem) coordElem.innerHTML = `${parseFloat(location.latitude).toFixed(6)}, ${parseFloat(location.longitude).toFixed(6)}`;
+        }
     });
     
-    // Update total lokasi
     document.getElementById('total-locations').innerHTML = locationsData.length;
     
-    // Fit map ke semua marker
-    if (markers.length > 0) {
+    if (activeSelectedLocationId) {
+        const selBtn = document.getElementById('btn-loc-' + activeSelectedLocationId);
+        if (selBtn) {
+            document.querySelectorAll('.btn-loc-select').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.classList.remove('active');
+            });
+            selBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+            selBtn.style.color = 'white';
+            selBtn.classList.add('active');
+        }
+        const selectedLoc = locationsData.find(l => l.id === activeSelectedLocationId);
+        if (selectedLoc) {
+            markers.forEach(m => {
+                const mLatLng = m.getLatLng();
+                if (Math.abs(mLatLng.lat - parseFloat(selectedLoc.latitude)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(selectedLoc.longitude)) < 0.0001) {
+                    m.openPopup();
+                }
+            });
+        }
+    }
+    
+    if (!hasFitBounds && markers.length > 0) {
         var group = L.featureGroup(markers);
         map.fitBounds(group.getBounds().pad(0.1));
+        hasFitBounds = true;
     }
 }
 

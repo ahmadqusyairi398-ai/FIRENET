@@ -438,7 +438,7 @@ canvas {
                 $code_alat = $loc['id_alat'] ? $loc['id_alat'] : "IND-" . str_pad($loc['id'], 3, '0', STR_PAD_LEFT);
             ?>
             <button type="button" class="btn-loc-select <?= ($index == 0) ? 'active' : '' ?>" 
-                    onclick="flyToLocation(<?= $loc['latitude'] ?>, <?= $loc['longitude'] ?>, '<?= htmlspecialchars($nama_loc, ENT_QUOTES) ?>', '<?= htmlspecialchars($code_alat, ENT_QUOTES) ?>', event)" 
+                    onclick="flyToLocation(<?= $loc['latitude'] ?>, <?= $loc['longitude'] ?>, '<?= htmlspecialchars($nama_loc, ENT_QUOTES) ?>', '<?= htmlspecialchars($code_alat, ENT_QUOTES) ?>', <?= $loc['id'] ?>, event)" 
                     style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= ($index == 0) ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= ($index == 0) ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
                     id="btn-loc-<?= $loc['id'] ?>">
                 <i class="fas fa-location-dot"></i> 
@@ -600,7 +600,11 @@ async function fetchLocationsFromDB() {
     return initialLocations;
 }
 
-function flyToLocation(lat, lng, nama, idAlat, event) {
+var activeSelectedLocationId = null;
+var hasFitBounds = false;
+
+function flyToLocation(lat, lng, nama, idAlat, locId, event) {
+    if (locId) activeSelectedLocationId = locId;
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
     const locNameElem = document.getElementById('location-name-val');
@@ -624,10 +628,11 @@ function flyToLocation(lat, lng, nama, idAlat, event) {
         btn.style.color = '#333';
         btn.classList.remove('active');
     });
-    if (event && event.currentTarget) {
-        event.currentTarget.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
-        event.currentTarget.style.color = 'white';
-        event.currentTarget.classList.add('active');
+    const activeBtn = (event && event.currentTarget) || (locId ? document.getElementById('btn-loc-' + locId) : null);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+        activeBtn.classList.add('active');
     }
 }
 
@@ -692,14 +697,7 @@ async function updateLocationStatus(isDanger) {
         `);
         
         marker.on('click', function() {
-            const locNameElem = document.getElementById('location-name-val');
-            if (locNameElem) locNameElem.innerText = namaLokasi;
-
-            const locIdElem = document.getElementById('location-id-val');
-            if (locIdElem) locIdElem.innerText = idAlat;
-            
-            const coordElem = document.getElementById('coordinates');
-            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            flyToLocation(lat, lng, namaLokasi, idAlat, loc.id);
         });
         
         const circleColor = isDanger ? '#dc2626' : '#e85d04';
@@ -714,29 +712,51 @@ async function updateLocationStatus(isDanger) {
         markers.push(marker);
         dangerZones.push(zone);
 
-        if (idx === 0) {
+        if (!activeSelectedLocationId && idx === 0) {
+            activeSelectedLocationId = loc.id;
+        }
+
+        if (activeSelectedLocationId === loc.id) {
             const locNameElem = document.getElementById('location-name-val');
-            if (locNameElem && (!locNameElem.innerText || locNameElem.innerText === '-')) {
-                locNameElem.innerText = namaLokasi;
-            }
+            if (locNameElem) locNameElem.innerText = namaLokasi;
             const locIdElem = document.getElementById('location-id-val');
-            if (locIdElem && (!locIdElem.innerText || locIdElem.innerText === '-')) {
-                locIdElem.innerText = idAlat;
-            }
+            if (locIdElem) locIdElem.innerText = idAlat;
             const coordElem = document.getElementById('coordinates');
-            if (coordElem && (!coordElem.innerHTML || coordElem.innerHTML === '-')) {
-                coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-            }
+            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     });
 
-    if (markers.length > 0) {
+    if (activeSelectedLocationId) {
+        const selBtn = document.getElementById('btn-loc-' + activeSelectedLocationId);
+        if (selBtn) {
+            document.querySelectorAll('.btn-loc-select').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.classList.remove('active');
+            });
+            selBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+            selBtn.style.color = 'white';
+            selBtn.classList.add('active');
+        }
+        const selectedLoc = locations.find(l => l.id === activeSelectedLocationId);
+        if (selectedLoc) {
+            markers.forEach(m => {
+                const mLatLng = m.getLatLng();
+                if (Math.abs(mLatLng.lat - parseFloat(selectedLoc.latitude)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(selectedLoc.longitude)) < 0.0001) {
+                    m.openPopup();
+                }
+            });
+        }
+    }
+
+    if (!hasFitBounds && markers.length > 0) {
         if (markers.length === 1) {
             map.setView(markers[0].getLatLng(), 16);
         } else {
             const group = L.featureGroup(markers);
             map.fitBounds(group.getBounds().pad(0.2));
         }
+        hasFitBounds = true;
     }
 }
 
