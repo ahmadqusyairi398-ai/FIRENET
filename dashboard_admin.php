@@ -1243,7 +1243,7 @@ function fetchDataFromDB() {
             updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 8. Update Grafik
-            var chartTimeStr = (data.waktu && data.waktu !== '-') ? data.waktu : new Date().toLocaleTimeString('id-ID', { hour12: false });
+            var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             dataChart.labels.push(chartTimeStr);
             dataChart.datasets[0].data.push(parseFloat(data.tegangan) || 0);
             dataChart.datasets[1].data.push(parseFloat(data.arus) || 0);

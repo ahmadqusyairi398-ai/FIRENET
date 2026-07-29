@@ -1141,7 +1141,7 @@ function updateUI(data) {
     // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;
     
-    var chartTimeStr = (data.waktu && data.waktu !== '-') ? data.waktu : new Date().toLocaleTimeString('id-ID', { hour12: false });
+    var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     dataChart.labels.push(chartTimeStr);
     dataChart.datasets[0].data.push(parseFloat(data.daya));
     dataChart.datasets[1].data.push(parseFloat(data.suhu));
