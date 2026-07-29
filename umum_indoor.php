@@ -52,10 +52,39 @@ if ($conn) {
         $q_latest = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
         if ($q_latest && mysqli_num_rows($q_latest) > 0) {
             $s = mysqli_fetch_assoc($q_latest);
+
+            $raw_asap = $s['asap'] ?? 'Normal';
+            if (is_numeric($raw_asap)) {
+                $f_asap = (float)$raw_asap;
+                if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) $asap_val = "Tinggi";
+                else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) $asap_val = "Sedang";
+                else $asap_val = "Normal";
+            } else {
+                $str_asap = trim((string)$raw_asap);
+                if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) $asap_val = "Tinggi";
+                else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) $asap_val = "Sedang";
+                else $asap_val = "Normal";
+            }
+
+            $co_raw = isset($s['co']) ? $s['co'] : 0;
+            $co_num = (float)$co_raw;
+            if (is_numeric($co_raw)) {
+                if ($co_num > 50) $co_status = "Tinggi";
+                else if ($co_num > 35) $co_status = "Sedang";
+                else $co_status = "Normal";
+            } else {
+                $str_co = trim((string)$co_raw);
+                if (strcasecmp($str_co, 'Tinggi') === 0 || strcasecmp($str_co, 'Bahaya') === 0) $co_status = "Tinggi";
+                else if (strcasecmp($str_co, 'Sedang') === 0 || strcasecmp($str_co, 'Waspada') === 0) $co_status = "Sedang";
+                else $co_status = "Normal";
+            }
+
             $latest_sensor = [
                 'waktu' => isset($s['timestamp']) ? date('H:i:s', strtotime($s['timestamp'])) : '-',
                 'api' => (isset($s['api']) && (float)$s['api'] > 0.5) ? "Terdeteksi Api" : "Aman",
-                'asap' => (isset($s['asap']) && (float)$s['asap'] > 0.5) ? "Tinggi" : "Normal",
+                'asap' => $asap_val,
+                'co' => is_numeric($co_raw) ? number_format((float)$co_raw, 1) : $co_raw,
+                'co_status' => $co_status,
                 'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "-",
                 'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
                 'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
@@ -292,6 +321,10 @@ body::before {
 .box b { display: block; font-size: 20px; margin-top: 5px; }
 .box.api-box { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); }
 .box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
+.box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
+.status-aman { color: #28a745; font-weight: bold; }
+.status-waspada { color: #f59e0b; font-weight: bold; }
+.status-bahaya { color: #dc3545; font-weight: bold; animation: blink 1s infinite; }
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.02); opacity: 0.9; box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); }
@@ -452,11 +485,33 @@ canvas {
                 <b id="api"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b>
                 <small id="api-threshold">Batas Alarm: <?= isset($batas_sensor['API']) ? $batas_sensor['API']['nilai_alarm'] : 1 ?></small>
             </div>
-            <div class="box asap-box" id="asap-box">
+            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
                 <i class="fas fa-smog"></i>
                 <div class="sensor-label">Sensor Asap</div>
-                <b id="asap"><?= $latest_sensor['asap'] === 'Tinggi' ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal' ?></b>
+                <b id="asap">
+                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
+                        <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
+                    <?php elseif ($latest_sensor['asap'] === 'Sedang'): ?>
+                        <i class="fas fa-exclamation-circle"></i> Sedang (Waspada)
+                    <?php else: ?>
+                        <i class="fas fa-check"></i> Normal
+                    <?php endif; ?>
+                </b>
                 <small id="asap-threshold">Batas Alarm: <?= isset($batas_sensor['ASAP']) ? $batas_sensor['ASAP']['nilai_alarm'] . '%' : '70%' ?></small>
+            </div>
+            <div class="box co-box <?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'pulse-animation' : '' ?>" id="co-box" style="<?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ((($latest_sensor['co_status'] ?? '') === 'Sedang') ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
+                <i class="fas fa-industry"></i>
+                <div class="sensor-label">Sensor Gas CO</div>
+                <b id="co">
+                    <?php if (($latest_sensor['co_status'] ?? '') === 'Tinggi'): ?>
+                        <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Tinggi / Berbahaya)
+                    <?php elseif (($latest_sensor['co_status'] ?? '') === 'Sedang'): ?>
+                        <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Sedang / Waspada)
+                    <?php else: ?>
+                        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Normal)
+                    <?php endif; ?>
+                </b>
+                <small id="co-threshold">Batas Alarm: <?= isset($batas_sensor['CO']) ? $batas_sensor['CO']['nilai_alarm'] . ' ppm' : '50 ppm' ?></small>
             </div>
             <div class="box" id="suhu-box">
                 <i class="fas fa-temperature-high"></i>
@@ -712,30 +767,81 @@ function fetchDataFromDB() {
         
         const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
         document.getElementById("api").innerHTML = apiValue;
-        const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-chart-line"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
-        document.getElementById("asap").innerHTML = asapValue;
-        document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-        document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-        document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
-        document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
-        
-        updateLocationStatus(data.isDanger);
-        
+
+        // Update status Asap
+        var asapElem = document.getElementById("asap");
+        var asapBox = document.getElementById("asap-box");
+        var asapVal = data.asap;
+        if (typeof asapVal === 'number' || (!isNaN(asapVal) && asapVal !== null && asapVal !== '')) {
+            var numAsap = parseFloat(asapVal);
+            if (!isNaN(numAsap)) {
+                if (numAsap > (numAsap > 1 ? 50 : 0.5)) asapVal = "Tinggi";
+                else if (numAsap > (numAsap > 1 ? 25 : 0.25)) asapVal = "Sedang";
+                else asapVal = "Normal";
+            }
+        }
+        if (asapVal === "Tinggi" || asapVal === "Bahaya") {
+            asapElem.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
+            asapElem.className = 'status-bahaya';
+            asapBox.classList.add('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+            asapElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+            asapElem.className = 'status-waspada';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+        } else {
+            asapElem.innerHTML = '<i class="fas fa-check"></i> Normal';
+            asapElem.className = 'status-aman';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+        }
+
+        // Update status Gas CO
+        var coElem = document.getElementById("co");
+        var coBox = document.getElementById("co-box");
+        if (coElem && coBox) {
+            var coRaw = data.co;
+            var coValue = parseFloat(coRaw) || 0;
+            var coStatus = "Normal";
+
+            if (typeof coRaw === 'string' && (coRaw === 'Tinggi' || coRaw === 'Bahaya')) {
+                coStatus = "Tinggi";
+            } else if (typeof coRaw === 'string' && (coRaw === 'Sedang' || coRaw === 'Waspada')) {
+                coStatus = "Sedang";
+            } else if (coValue > 50) {
+                coStatus = "Tinggi";
+            } else if (coValue > 35) {
+                coStatus = "Sedang";
+            } else {
+                coStatus = "Normal";
+            }
+
+            if (coStatus === "Tinggi") {
+                coElem.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Tinggi / Berbahaya)`;
+                coElem.className = 'status-bahaya';
+                coBox.classList.add('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else if (coStatus === "Sedang") {
+                coElem.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Sedang / Waspada)`;
+                coElem.className = 'status-waspada';
+                coBox.classList.remove('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+            } else {
+                coElem.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Normal)`;
+                coElem.className = 'status-aman';
+                coBox.classList.remove('pulse-animation');
+                coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
+            }
+        }
+
         const apiBox = document.getElementById('api-box');
-        const asapBox = document.getElementById('asap-box');
         if (data.api === "Terdeteksi Api") {
             apiBox.classList.add('pulse-animation');
             apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
         } else {
             apiBox.classList.remove('pulse-animation');
             apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-        }
-        if (data.asap === "Tinggi") {
-            asapBox.classList.add('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-        } else {
-            asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
         }
         
         dataChart.labels.push(data.waktu);
