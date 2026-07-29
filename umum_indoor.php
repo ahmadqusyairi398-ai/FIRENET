@@ -478,6 +478,12 @@ canvas {
         </div>
     </div>
 
+    <!-- CHART -->
+    <div class="card">
+        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <div class="chart-container"><canvas id="myChart"></canvas></div>
+    </div>
+
     <!-- LOKASI / MAP CARD (DIPERBAIKI: TERHUBUNG KE TABEL lokasi_monitoring DATABASE INDOOR) -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
@@ -544,12 +550,6 @@ canvas {
                 <span class="value" id="location-status" style="color: #28a745; font-weight: bold;">Aman</span>
             </div>
         </div>
-    </div>
-
-    <!-- CHART -->
-    <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
-        <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 </div>
 
