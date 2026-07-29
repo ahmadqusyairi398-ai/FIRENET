@@ -325,6 +325,10 @@ body::before {
 .status-aman { color: #28a745; font-weight: bold; }
 .status-waspada { color: #f59e0b; font-weight: bold; }
 .status-bahaya { color: #dc3545; font-weight: bold; animation: blink 1s infinite; }
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.02); opacity: 0.9; box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); }
@@ -499,20 +503,7 @@ canvas {
                 </b>
                 <small id="asap-threshold">Batas Alarm: <?= isset($batas_sensor['ASAP']) ? $batas_sensor['ASAP']['nilai_alarm'] . '%' : '70%' ?></small>
             </div>
-            <div class="box co-box <?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'pulse-animation' : '' ?>" id="co-box" style="<?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ((($latest_sensor['co_status'] ?? '') === 'Sedang') ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
-                <i class="fas fa-industry"></i>
-                <div class="sensor-label">Sensor Gas CO</div>
-                <b id="co">
-                    <?php if (($latest_sensor['co_status'] ?? '') === 'Tinggi'): ?>
-                        <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Tinggi / Berbahaya)
-                    <?php elseif (($latest_sensor['co_status'] ?? '') === 'Sedang'): ?>
-                        <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Sedang / Waspada)
-                    <?php else: ?>
-                        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($latest_sensor['co'] ?? 0) ?> ppm (Normal)
-                    <?php endif; ?>
-                </b>
-                <small id="co-threshold">Batas Alarm: <?= isset($batas_sensor['CO']) ? $batas_sensor['CO']['nilai_alarm'] . ' ppm' : '50 ppm' ?></small>
-            </div>
+
             <div class="box" id="suhu-box">
                 <i class="fas fa-temperature-high"></i>
                 <div class="sensor-label">Sensor Suhu</div>
@@ -620,6 +611,13 @@ function flyToLocation(lat, lng, nama, idAlat, event) {
 
     const coordElem = document.getElementById('coordinates');
     if (coordElem) coordElem.innerHTML = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
+
+    markers.forEach(m => {
+        const mLatLng = m.getLatLng();
+        if (Math.abs(mLatLng.lat - parseFloat(lat)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(lng)) < 0.0001) {
+            m.openPopup();
+        }
+    });
 
     document.querySelectorAll('.btn-loc-select').forEach(btn => {
         btn.style.background = 'white';
@@ -731,7 +729,19 @@ async function updateLocationStatus(isDanger) {
             }
         }
     });
+
+    if (markers.length > 0) {
+        if (markers.length === 1) {
+            map.setView(markers[0].getLatLng(), 16);
+        } else {
+            const group = L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.2));
+        }
+    }
 }
+
+// Render awal titik lokasi peta saat pertama kali dimuat
+updateLocationStatus(false);
 
 // ================= CHART =================
 const ctx = document.getElementById('myChart').getContext('2d');
@@ -844,6 +854,9 @@ function fetchDataFromDB() {
             apiBox.classList.remove('pulse-animation');
             apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
         }
+
+        var isDanger = (data.api === "Terdeteksi Api" || asapVal === "Tinggi" || asapVal === "Bahaya");
+        updateLocationStatus(isDanger);
         
         dataChart.labels.push(data.waktu);
         dataChart.datasets[0].data.push(parseFloat(data.suhu));
