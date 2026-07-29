@@ -919,7 +919,7 @@ function updateDataTable(data) {
     if (dataTable) {
         dataTable.clear();
         if (rows.length > 0) dataTable.rows.add(rows);
-        dataTable.draw();
+        dataTable.draw(false);
     }
 }
 
@@ -1041,6 +1041,51 @@ $(document).ready(function() {
         });
         console.log('Tidak ada data yang ditemukan di database.');
     }
+
+    // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database
+    function fetchTableDataRealtime() {
+        fetch('get_table_data.php?device=outdoor')
+            .then(response => response.json())
+            .then(data => {
+                if (!Array.isArray(data)) return;
+                
+                const startDate = document.getElementById('start_date').value;
+                const endDate = document.getElementById('end_date').value;
+                
+                let newData = data.map((item, index) => {
+                    let formattedDate = item.tanggal_waktu || '-';
+                    let dateOnly = formattedDate !== '-' ? formattedDate.split(' ')[0] : '';
+                    return {
+                        id: item.id,
+                        no: index + 1,
+                        tanggal_waktu: formattedDate,
+                        tanggal: dateOnly,
+                        asap: item.asap || '-',
+                        suhu: item.suhu,
+                        kelembapan: item.kelembapan,
+                        tegangan: item.tegangan,
+                        arus: item.arus,
+                        daya: item.daya,
+                        kecepatan_angin: item.kecepatan_angin,
+                        arah_angin: item.arah_angin,
+                        co: item.co
+                    };
+                });
+
+                sensorData = newData;
+                
+                if (startDate || endDate) {
+                    applyFilter();
+                } else {
+                    currentData = [...sensorData];
+                    updateDataTable(currentData);
+                }
+            })
+            .catch(err => console.error("Error updating table data:", err));
+    }
+
+    // Jalankan pembaruan tabel otomatis setiap 3 detik
+    setInterval(fetchTableDataRealtime, 3000);
 });
 </script>
 
