@@ -431,6 +431,17 @@ canvas {
             </span>
         </div>
 
+        <!-- SEARCH BAR LOKASI -->
+        <div style="margin-bottom: 12px; position: relative;">
+            <div style="display: flex; align-items: center; background: white; border: 1px solid rgba(0,0,0,0.15); border-radius: 25px; padding: 6px 14px; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s;">
+                <i class="fas fa-search" style="color: #0083b0; font-size: 14px;"></i>
+                <input type="text" id="search-location-input" placeholder="Cari nama lokasi / ID alat..." oninput="filterLocationButtons()" autocomplete="off" style="border: none; outline: none; background: transparent; width: 100%; font-size: 13px; color: #333; font-family: inherit;">
+                <button type="button" id="clear-search-btn" onclick="clearLocationSearch()" style="display: none; background: none; border: none; color: #999; cursor: pointer; font-size: 14px; padding: 0 4px;" title="Bersihkan pencarian">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
+        </div>
+
         <?php if (!empty($db_locations)): ?>
         <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
             <?php foreach ($db_locations as $index => $loc): 
@@ -758,6 +769,8 @@ async function updateLocationStatus(isDanger) {
         }
         hasFitBounds = true;
     }
+
+    filterLocationButtons();
 }
 
 // Render awal titik lokasi peta saat pertama kali dimuat
@@ -891,6 +904,67 @@ function fetchDataFromDB() {
     })
     .catch(error => console.error("Error fetching data:", error));
 }
+
+// ================= FUNGSI SEARCH LOKASI =================
+function filterLocationButtons() {
+    const input = document.getElementById('search-location-input');
+    if (!input) return;
+    const filter = input.value.toLowerCase().trim();
+    const clearBtn = document.getElementById('clear-search-btn');
+    if (clearBtn) {
+        clearBtn.style.display = filter.length > 0 ? 'inline-block' : 'none';
+    }
+
+    const buttons = document.querySelectorAll('.btn-loc-select');
+    let visibleCount = 0;
+
+    buttons.forEach(btn => {
+        const text = btn.innerText.toLowerCase();
+        if (text.includes(filter)) {
+            btn.style.display = 'inline-flex';
+            visibleCount++;
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+
+    let noResultMsg = document.getElementById('no-locations-found');
+    const container = document.querySelector('.location-buttons');
+    if (!noResultMsg && container) {
+        noResultMsg = document.createElement('div');
+        noResultMsg.id = 'no-locations-found';
+        noResultMsg.style.cssText = 'font-size: 13px; color: #777; padding: 10px; width: 100%; font-style: italic; display: none; text-align: center; background: rgba(0,0,0,0.03); border-radius: 8px; margin-top: 5px;';
+        noResultMsg.innerHTML = '<i class="fas fa-search-minus" style="color: #e85d04; margin-right: 6px;"></i> Tidak ada lokasi yang cocok dengan pencarian';
+        container.appendChild(noResultMsg);
+    }
+    if (noResultMsg) {
+        noResultMsg.style.display = (visibleCount === 0 && filter.length > 0) ? 'block' : 'none';
+    }
+}
+
+function clearLocationSearch() {
+    const input = document.getElementById('search-location-input');
+    if (input) {
+        input.value = '';
+        filterLocationButtons();
+        input.focus();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('search-location-input');
+    if (input) {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const visibleBtns = Array.from(document.querySelectorAll('.btn-loc-select')).filter(btn => btn.style.display !== 'none');
+                if (visibleBtns.length > 0) {
+                    visibleBtns[0].click();
+                }
+            }
+        });
+    }
+});
 
 // Panggil pertama kali, lalu ulangi setiap 2 detik
 fetchDataFromDB();
