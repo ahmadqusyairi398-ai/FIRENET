@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 // Mulai session untuk user (simulasi login)
 session_start();
 
