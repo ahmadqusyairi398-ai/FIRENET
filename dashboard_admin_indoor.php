@@ -854,6 +854,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 var markers = [];
 var dangerZones = [];
 var hasFitBounds = false;
+var activeSelectedLocationId = null;
 
 // Fungsi pembuat icon marker Leaflet untuk Indoor
 function createIndoorIcon(id_alat, isDanger) {
@@ -928,8 +929,6 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.classList.add('active');
     }
 }
-
-var currentLocationsData = [];
 
 var currentLocationsData = [];
 
