@@ -56,7 +56,9 @@ if ($result && mysqli_num_rows($result) > 0) {
         "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
         "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
         "isDanger"   => $isDanger,
-        "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0
+        "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
+        "co"         => isset($row['co']) ? $row['co'] : 0,
+        "status"     => "Online"
     ];
     
     echo json_encode($data);

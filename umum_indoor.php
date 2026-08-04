@@ -32,6 +32,14 @@ if ($conn) {
     }
 }
 
+// Inisialisasi variabel grafik chart
+$chart_labels = [];
+$chart_suhu = [];
+$chart_kelembapan = [];
+$chart_tegangan = [];
+$chart_arus = [];
+$chart_api = [];
+
 // Data Sensor & Status Node terbaru dari database indoor (tabel data_sensor)
 $latest_sensor = [
     'waktu' => '-',
@@ -93,6 +101,22 @@ if ($conn) {
                 'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
                 'status' => 'Online'
             ];
+        }
+    }
+
+    // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru)
+    $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
+    if ($q_chart && mysqli_num_rows($q_chart) > 0) {
+        while ($r = mysqli_fetch_assoc($q_chart)) {
+            $waktu_raw = $r['timestamp'] ?? ($r['tanggal_dan_waktu'] ?? 'now');
+            $waktu = date('H:i:s', strtotime($waktu_raw));
+            $chart_labels[] = $waktu;
+            $chart_suhu[] = (float)($r['suhu'] ?? 0);
+            $chart_kelembapan[] = (float)($r['kelembapan'] ?? 0);
+            $chart_tegangan[] = (float)($r['tegangan'] ?? 0);
+            $chart_arus[] = (float)($r['arus'] ?? 0);
+            $api_raw = (float)($r['api'] ?? 0);
+            $chart_api[] = ($api_raw > 0.5 || (isset($r['api']) && strtolower($r['api']) === 'terdeteksi api')) ? 1 : 0;
         }
     }
 }
@@ -480,7 +504,12 @@ canvas {
 
     <!-- CHART -->
     <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px;">
+            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+            <span style="font-size: 12px; background: rgba(40, 167, 69, 0.1); color: #28a745; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
+                <i class="fas fa-sync-alt fa-spin"></i> Live Real-Time (2s)
+            </span>
+        </div>
         <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
@@ -763,23 +792,60 @@ async function updateLocationStatus(isDanger) {
 // Render awal titik lokasi peta saat pertama kali dimuat
 updateLocationStatus(false);
 
-// ================= CHART =================
+// ================= CHART (REAL TIME INDOOR SENSOR) =================
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = {
-    labels: [],
+    labels: <?= json_encode($chart_labels); ?>,
     datasets: [
-        { label: 'Suhu (°C)', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kelembapan (%)', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Tegangan (V)', data: [], borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus (A)', data: [], borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu); ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan); ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Tegangan (V)', data: <?= json_encode($chart_tegangan); ?>, borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Arus (A)', data: <?= json_encode($chart_arus); ?>, borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Status Api', data: <?= json_encode($chart_api); ?>, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ]
 };
+
 const myChart = new Chart(ctx, {
     type: 'line',
     data: dataChart,
-    options: { responsive: true, maintainAspectRatio: true, animation: { duration: 500 },
-        plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
-        scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        animation: { duration: 500 },
+        plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        let value = context.raw;
+                        let unit = '';
+                        if (label.includes('Tegangan')) unit = ' V';
+                        else if (label.includes('Arus')) unit = ' A';
+                        else if (label.includes('Suhu')) unit = ' °C';
+                        else if (label.includes('Kelembapan')) unit = ' %';
+                        else if (label.includes('Status Api')) {
+                            let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
+                            return `${label}: ${status}`;
+                        }
+                        return `${label}: ${value}${unit}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                title: { display: true, text: 'Nilai Sensor' }
+            },
+            x: {
+                grid: { display: false },
+                title: { display: true, text: 'Waktu' }
+            }
+        }
     }
 });
 
@@ -787,17 +853,47 @@ const myChart = new Chart(ctx, {
 var batasSensorConfig = <?= json_encode($batas_sensor); ?>;
 
 function fetchDataFromDB() {
-    fetch('api_get_data.php?device=indoor')
+    fetch('get_sensor_data_indoor.php')
     .then(response => response.json())
     .then(data => {
-        var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
-        document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-        document.getElementById("ip").innerHTML = data.ip;
-        document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+        if (data.error) {
+            console.warn("Gagal mengambil data sensor indoor:", data.message);
+            return;
+        }
+
+        var nowClock = data.waktu || new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        var statusText = data.status || "Online";
+        var isOnline = statusText.toLowerCase().includes('online');
+
+        var statusElem = document.getElementById("status");
+        if (statusElem) {
+            statusElem.innerHTML = `<i class="fas fa-circle ${isOnline ? 'status-online' : ''}" style="${!isOnline ? 'color:#dc3545;' : ''}"></i> ${statusText}`;
+        }
+        var rssiElem = document.getElementById("rssi");
+        if (rssiElem) rssiElem.innerHTML = `${data.rssi || '-'} dBm`;
         
+        var ipElem = document.getElementById("ip");
+        if (ipElem) ipElem.innerHTML = data.ip || '-';
+
+        var waktuElem = document.getElementById("waktu");
+        if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+        
+        // Update Sensor Cards
+        var suhuElem = document.getElementById("suhu");
+        if (suhuElem && data.suhu !== undefined) suhuElem.innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+
+        var kelembapanElem = document.getElementById("kelembapan");
+        if (kelembapanElem && data.kelembapan !== undefined) kelembapanElem.innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
+
+        var teganganElem = document.getElementById("tegangan");
+        if (teganganElem && data.tegangan !== undefined) teganganElem.innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
+
+        var arusElem = document.getElementById("arus");
+        if (arusElem && data.arus !== undefined) arusElem.innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
+
         const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
-        document.getElementById("api").innerHTML = apiValue;
+        var apiElem = document.getElementById("api");
+        if (apiElem) apiElem.innerHTML = apiValue;
 
         // Update status Asap
         var asapElem = document.getElementById("asap");
@@ -811,21 +907,23 @@ function fetchDataFromDB() {
                 else asapVal = "Normal";
             }
         }
-        if (asapVal === "Tinggi" || asapVal === "Bahaya") {
-            asapElem.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
-            asapElem.className = 'status-bahaya';
-            asapBox.classList.add('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-        } else if (asapVal === "Sedang" || asapVal === "Waspada") {
-            asapElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
-            asapElem.className = 'status-waspada';
-            asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
-        } else {
-            asapElem.innerHTML = '<i class="fas fa-check"></i> Normal';
-            asapElem.className = 'status-aman';
-            asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+        if (asapElem && asapBox) {
+            if (asapVal === "Tinggi" || asapVal === "Bahaya") {
+                asapElem.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
+                asapElem.className = 'status-bahaya';
+                asapBox.classList.add('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+                asapElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+                asapElem.className = 'status-waspada';
+                asapBox.classList.remove('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+            } else {
+                asapElem.innerHTML = '<i class="fas fa-check"></i> Normal';
+                asapElem.className = 'status-aman';
+                asapBox.classList.remove('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+            }
         }
 
         // Update status Gas CO
@@ -867,29 +965,41 @@ function fetchDataFromDB() {
         }
 
         const apiBox = document.getElementById('api-box');
-        if (data.api === "Terdeteksi Api") {
-            apiBox.classList.add('pulse-animation');
-            apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-        } else {
-            apiBox.classList.remove('pulse-animation');
-            apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+        if (apiBox) {
+            if (data.api === "Terdeteksi Api") {
+                apiBox.classList.add('pulse-animation');
+                apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else {
+                apiBox.classList.remove('pulse-animation');
+                apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+            }
         }
 
         var isDanger = (data.api === "Terdeteksi Api" || asapVal === "Tinggi" || asapVal === "Bahaya");
-        updateLocationStatus(isDanger);
-        
-        dataChart.labels.push(data.waktu);
-        dataChart.datasets[0].data.push(parseFloat(data.suhu));
-        dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-        dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-        dataChart.datasets[3].data.push(parseFloat(data.arus));
-        if(dataChart.labels.length > 15) {
-            dataChart.labels.shift();
-            dataChart.datasets.forEach(ds => ds.data.shift());
+        if (typeof updateLocationStatus === 'function') {
+            updateLocationStatus(isDanger);
         }
-        myChart.update();
+        
+        // Update Chart Data Real Time
+        if (data.waktu) {
+            const lastLabel = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
+            if (lastLabel !== data.waktu) {
+                dataChart.labels.push(data.waktu);
+                dataChart.datasets[0].data.push(parseFloat(data.suhu) || 0);
+                dataChart.datasets[1].data.push(parseFloat(data.kelembapan) || 0);
+                dataChart.datasets[2].data.push(parseFloat(data.tegangan) || 0);
+                dataChart.datasets[3].data.push(parseFloat(data.arus) || 0);
+                dataChart.datasets[4].data.push(data.api === "Terdeteksi Api" || data.apiValue === 1 ? 1 : 0);
+                
+                if (dataChart.labels.length > 20) {
+                    dataChart.labels.shift();
+                    dataChart.datasets.forEach(ds => ds.data.shift());
+                }
+                myChart.update();
+            }
+        }
     })
-    .catch(error => console.error("Error fetching data:", error));
+    .catch(error => console.error("Error fetching indoor sensor data:", error));
 }
 
 // ================= FUNGSI SEARCH LOKASI DROPDOWN =================
