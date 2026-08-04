@@ -45,6 +45,36 @@ if ($conn) {
     }
 }
 
+// Fallback jika lokasi_monitoring kosong atau belum ada data
+if (empty($db_locations)) {
+    $db_locations = [
+        [
+            'id' => 1,
+            'id_alat' => 'IND-001',
+            'nama_lokasi' => 'Gedung Utama Poltekba (Indoor)',
+            'latitude' => -1.202490,
+            'longitude' => 116.887080,
+            'last_update' => date('Y-m-d H:i:s')
+        ],
+        [
+            'id' => 2,
+            'id_alat' => 'IND-002',
+            'nama_lokasi' => 'Ruang Server Gedung A',
+            'latitude' => -1.203100,
+            'longitude' => 116.887500,
+            'last_update' => date('Y-m-d H:i:s')
+        ],
+        [
+            'id' => 3,
+            'id_alat' => 'IND-003',
+            'nama_lokasi' => 'Lab Komputer Lt. 2',
+            'latitude' => -1.201800,
+            'longitude' => 116.886400,
+            'last_update' => date('Y-m-d H:i:s')
+        ]
+    ];
+}
+
 // 2. Query Data Sensor terbaru & 20 data riwayat untuk Grafik Real Time dari database indoor (tabel data_sensor)
 $latest_sensor = [
     'waktu' => '-',
