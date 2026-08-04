@@ -4,119 +4,118 @@ require_once 'koneksi.php'; // Hubungkan ke database
 
 $user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
 
-// ========== AMBIL DATA LOKASI DARI DATABASE ==========
-$locations_db = [];
-if ($pdo) {
-    try {
-        // Cek apakah tabel lokasi_alat ada
-        $stmt = $pdo->query("SHOW TABLES LIKE 'lokasi_alat'");
-        $tableExists = $stmt->rowCount() > 0;
-        
-        if ($tableExists) {
-            // Ambil data dari tabel lokasi_alat
-            $stmt = $pdo->query("SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
-            $locations_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            // Jika tabel belum ada, gunakan data default
-            $locations_db = [];
+// ========== AMBIL DATA LOKASI OUTDOOR & INDOOR DARI DATABASE ==========
+$locations_outdoor = [];
+$locations_indoor = [];
+
+// 1. Ambil data dari database Outdoor (tabel lokasi_alat / lokasi_monitoring)
+if (isset($conn_outdoor) && $conn_outdoor) {
+    $checkOutAlat = mysqli_query($conn_outdoor, "SHOW TABLES LIKE 'lokasi_alat'");
+    if ($checkOutAlat && mysqli_num_rows($checkOutAlat) > 0) {
+        $q_out = mysqli_query($conn_outdoor, "SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+        if ($q_out) {
+            while ($r = mysqli_fetch_assoc($q_out)) {
+                $locations_outdoor[] = [
+                    'id' => 'out_' . $r['id'],
+                    'id_alat' => !empty($r['id_alat']) ? $r['id_alat'] : ('OUT-' . sprintf("%03d", $r['id'])),
+                    'nama_lokasi' => !empty($r['nama_lokasi']) ? $r['nama_lokasi'] : 'Outdoor (' . $r['id'] . ')',
+                    'latitude' => (float)$r['latitude'],
+                    'longitude' => (float)$r['longitude'],
+                    'tipe' => 'outdoor'
+                ];
+            }
         }
-    } catch (PDOException $e) {
-        // Jika error, gunakan data default
-        $locations_db = [];
+    } else {
+        $checkOutMon = mysqli_query($conn_outdoor, "SHOW TABLES LIKE 'lokasi_monitoring'");
+        if ($checkOutMon && mysqli_num_rows($checkOutMon) > 0) {
+            $q_out = mysqli_query($conn_outdoor, "SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_monitoring ORDER BY id ASC");
+            if ($q_out) {
+                while ($r = mysqli_fetch_assoc($q_out)) {
+                    $locations_outdoor[] = [
+                        'id' => 'out_' . $r['id'],
+                        'id_alat' => !empty($r['id_alat']) ? $r['id_alat'] : ('OUT-' . sprintf("%03d", $r['id'])),
+                        'nama_lokasi' => !empty($r['nama_lokasi']) ? $r['nama_lokasi'] : 'Outdoor (' . $r['id'] . ')',
+                        'latitude' => (float)$r['latitude'],
+                        'longitude' => (float)$r['longitude'],
+                        'tipe' => 'outdoor'
+                    ];
+                }
+            }
+        }
+    }
+}
+
+// 2. Ambil data dari database Indoor (tabel lokasi_monitoring / lokasi_alat)
+if (isset($conn_indoor) && $conn_indoor) {
+    $checkInMon = mysqli_query($conn_indoor, "SHOW TABLES LIKE 'lokasi_monitoring'");
+    if ($checkInMon && mysqli_num_rows($checkInMon) > 0) {
+        $q_in = mysqli_query($conn_indoor, "SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_monitoring ORDER BY id ASC");
+        if ($q_in) {
+            while ($r = mysqli_fetch_assoc($q_in)) {
+                $locations_indoor[] = [
+                    'id' => 'in_' . $r['id'],
+                    'id_alat' => !empty($r['id_alat']) ? $r['id_alat'] : ('IND-' . sprintf("%03d", $r['id'])),
+                    'nama_lokasi' => !empty($r['nama_lokasi']) ? $r['nama_lokasi'] : 'Indoor (' . $r['id'] . ')',
+                    'latitude' => (float)$r['latitude'],
+                    'longitude' => (float)$r['longitude'],
+                    'tipe' => 'indoor'
+                ];
+            }
+        }
+    } else {
+        $checkInAlat = mysqli_query($conn_indoor, "SHOW TABLES LIKE 'lokasi_alat'");
+        if ($checkInAlat && mysqli_num_rows($checkInAlat) > 0) {
+            $q_in = mysqli_query($conn_indoor, "SELECT id, id_alat, nama_lokasi, latitude, longitude FROM lokasi_alat ORDER BY id ASC");
+            if ($q_in) {
+                while ($r = mysqli_fetch_assoc($q_in)) {
+                    $locations_indoor[] = [
+                        'id' => 'in_' . $r['id'],
+                        'id_alat' => !empty($r['id_alat']) ? $r['id_alat'] : ('IND-' . sprintf("%03d", $r['id'])),
+                        'nama_lokasi' => !empty($r['nama_lokasi']) ? $r['nama_lokasi'] : 'Indoor (' . $r['id'] . ')',
+                        'latitude' => (float)$r['latitude'],
+                        'longitude' => (float)$r['longitude'],
+                        'tipe' => 'indoor'
+                    ];
+                }
+            }
+        }
     }
 }
 
 // ========== DATA LOKASI DEFAULT (FALLBACK) ==========
-$default_locations = [
-    // ===== POLITEKNIK NEGERI BALIKPAPAN (3 titik) =====
-    [
-        "id" => 1,
-        "id_alat" => "OUT-001",
-        "nama_lokasi" => "Politeknik Negeri Balikpapan - Kampus Utama",
-        "latitude" => -1.201888,
-        "longitude" => 116.886997
-    ],
-    [
-        "id" => 2,
-        "id_alat" => "OUT-002",
-        "nama_lokasi" => "Gedung A - Kampus Utama",
-        "latitude" => -1.201700,
-        "longitude" => 116.886944
-    ],
-    [
-        "id" => 3,
-        "id_alat" => "OUT-003",
-        "nama_lokasi" => "Laboratorium Komputer - Kampus Utama",
-        "latitude" => -1.202000,
-        "longitude" => 116.886800
-    ],
-    
-    // ===== PENAJAM PASER UTARA (5 titik) =====
-    [
-        "id" => 4,
-        "id_alat" => "OUT-004",
-        "nama_lokasi" => "Kantor Bupati Penajam Paser Utara",
-        "latitude" => -1.309914,
-        "longitude" => 116.727563
-    ],
-    [
-        "id" => 5,
-        "id_alat" => "OUT-005",
-        "nama_lokasi" => "Pelabuhan Penajam",
-        "latitude" => -1.242074,
-        "longitude" => 116.776876
-    ],
-    [
-        "id" => 6,
-        "id_alat" => "OUT-006",
-        "nama_lokasi" => "RSUD Ratu Aji Putri Botung PPU",
-        "latitude" => -1.308893,
-        "longitude" => 116.734787
-    ],
-    [
-        "id" => 7,
-        "id_alat" => "OUT-007",
-        "nama_lokasi" => "Alun-Alun Penajam",
-        "latitude" => -1.309383,
-        "longitude" => 116.728334
-    ],
-    [
-        "id" => 8,
-        "id_alat" => "OUT-008",
-        "nama_lokasi" => "Kawasan Titik Nol IKN (Sepaku, PPU)",
-        "latitude" => -0.966113,
-        "longitude" => 116.702781
-    ],
-    
-    // ===== SAMARINDA (2 titik) =====
-    [
-        "id" => 9,
-        "id_alat" => "OUT-009",
-        "nama_lokasi" => "Kantor Gubernur Kaltim (Samarinda)",
-        "latitude" => -0.501196,
-        "longitude" => 117.139408
-    ],
-    [
-        "id" => 10,
-        "id_alat" => "OUT-010",
-        "nama_lokasi" => "Masjid Islamic Center Samarinda",
-        "latitude" => -0.502952,
-        "longitude" => 117.120259
-    ]
+$default_outdoor = [
+    [ "id" => "out_def_1", "id_alat" => "OUT-001", "nama_lokasi" => "Politeknik Negeri Balikpapan - Kampus Utama", "latitude" => -1.201888, "longitude" => 116.886997, "tipe" => "outdoor" ],
+    [ "id" => "out_def_2", "id_alat" => "OUT-002", "nama_lokasi" => "Gedung A - Kampus Utama", "latitude" => -1.201700, "longitude" => 116.886944, "tipe" => "outdoor" ],
+    [ "id" => "out_def_3", "id_alat" => "OUT-003", "nama_lokasi" => "Laboratorium Komputer - Kampus Utama", "latitude" => -1.202000, "longitude" => 116.886800, "tipe" => "outdoor" ],
+    [ "id" => "out_def_4", "id_alat" => "OUT-004", "nama_lokasi" => "Kantor Bupati Penajam Paser Utara", "latitude" => -1.309914, "longitude" => 116.727563, "tipe" => "outdoor" ],
+    [ "id" => "out_def_5", "id_alat" => "OUT-005", "nama_lokasi" => "Pelabuhan Penajam", "latitude" => -1.242074, "longitude" => 116.776876, "tipe" => "outdoor" ],
+    [ "id" => "out_def_6", "id_alat" => "OUT-006", "nama_lokasi" => "RSUD Ratu Aji Putri Botung PPU", "latitude" => -1.308893, "longitude" => 116.734787, "tipe" => "outdoor" ],
+    [ "id" => "out_def_7", "id_alat" => "OUT-007", "nama_lokasi" => "Alun-Alun Penajam", "latitude" => -1.309383, "longitude" => 116.728334, "tipe" => "outdoor" ],
+    [ "id" => "out_def_8", "id_alat" => "OUT-008", "nama_lokasi" => "Kawasan Titik Nol IKN (Sepaku, PPU)", "latitude" => -0.966113, "longitude" => 116.702781, "tipe" => "outdoor" ],
+    [ "id" => "out_def_9", "id_alat" => "OUT-009", "nama_lokasi" => "Kantor Gubernur Kaltim (Samarinda)", "latitude" => -0.501196, "longitude" => 117.139408, "tipe" => "outdoor" ],
+    [ "id" => "out_def_10", "id_alat" => "OUT-010", "nama_lokasi" => "Masjid Islamic Center Samarinda", "latitude" => -0.502952, "longitude" => 117.120259, "tipe" => "outdoor" ]
 ];
 
-// Gunakan data dari database jika ada, jika tidak gunakan default
-$locations = (count($locations_db) > 0) ? $locations_db : $default_locations;
+$default_indoor = [
+    [ "id" => "in_def_1", "id_alat" => "IND-001", "nama_lokasi" => "Monitoring Indoor Gedung Utama (Poltekba)", "latitude" => -1.202490, "longitude" => 116.887080, "tipe" => "indoor" ],
+    [ "id" => "in_def_2", "id_alat" => "IND-002", "nama_lokasi" => "Ruang Server & Kontrol Indoor", "latitude" => -1.202500, "longitude" => 116.887100, "tipe" => "indoor" ]
+];
 
-// Pastikan semua lokasi memiliki field yang dibutuhkan
-foreach ($locations as &$loc) {
-    if (!isset($loc['id_alat'])) {
-        $loc['id_alat'] = 'ALAT-' . str_pad($loc['id'], 3, '0', STR_PAD_LEFT);
+// Gunakan data dari database jika tersedia, jika kosong sertakan data default
+$final_outdoor = (count($locations_outdoor) > 0) ? $locations_outdoor : $default_outdoor;
+$final_indoor = (count($locations_indoor) > 0) ? $locations_indoor : $default_indoor;
+
+// Gabungkan kedua lokasi (Outdoor + Indoor)
+$locations = array_merge($final_outdoor, $final_indoor);
+
+// Validasi properti setiap titik lokasi
+foreach ($locations as $idx => &$loc) {
+    if (!isset($loc['id_alat']) || empty($loc['id_alat'])) {
+        $loc['id_alat'] = strtoupper($loc['tipe'] ?? 'ALAT') . '-' . sprintf("%03d", $idx + 1);
     }
-    if (!isset($loc['nama_lokasi'])) {
-        $loc['nama_lokasi'] = 'Lokasi ' . $loc['id'];
+    if (!isset($loc['nama_lokasi']) || empty($loc['nama_lokasi'])) {
+        $loc['nama_lokasi'] = 'Lokasi ' . ucfirst($loc['tipe'] ?? 'Sensor') . ' (' . $loc['id_alat'] . ')';
     }
-    // Pastikan latitude dan longitude adalah float
     $loc['latitude'] = (float)$loc['latitude'];
     $loc['longitude'] = (float)$loc['longitude'];
 }
@@ -963,6 +962,11 @@ body::before {
             <span class="value" id="locationName">-</span>
         </div>
         <div class="location-info-item">
+            <i class="fas fa-layer-group"></i>
+            <span class="label">Tipe:</span>
+            <span class="value" id="locationType">-</span>
+        </div>
+        <div class="location-info-item">
             <i class="fas fa-globe"></i>
             <span class="label">Koordinat:</span>
             <span class="value" id="coordValue">-</span>
@@ -1040,28 +1044,42 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 
 L.control.scale({ metric: true, imperial: false }).addTo(map);
 
-// Icon marker
-var fireIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #e85d04, #dc2f02); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-fire" style="color: white; font-size: 18px;"></i></div>',
+// Icon marker Outdoor (Merah / Oranye) & Indoor (Biru)
+var outdoorIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #e85d04, #dc2f02); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-tree" style="color: white; font-size: 16px;"></i></div>',
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20],
-    className: 'fire-marker'
+    className: 'outdoor-marker'
+});
+
+var indoorIcon = L.divIcon({
+    html: '<div style="background: linear-gradient(135deg, #00b4db, #0083b0); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-building" style="color: white; font-size: 16px;"></i></div>',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+    className: 'indoor-marker'
 });
 
 var markersMap = {};
 
-// ================= FUNGSI SELECT LOCATION (DIPERBAIKI) =================
+// ================= FUNGSI SELECT LOCATION =================
 function selectLocation(id, panTo) {
     if (panTo === undefined) panTo = true;
     var item = markersMap[id];
     if (!item) return;
     
     document.getElementById('locationName').innerText = item.data.nama_lokasi || 'Lokasi ' + id;
-    
-    // PERBAIKAN: Gunakan parseFloat() untuk memastikan koordinat adalah angka
     document.getElementById('coordValue').innerText = parseFloat(item.data.latitude).toFixed(6) + ', ' + parseFloat(item.data.longitude).toFixed(6);
     document.getElementById('alatId').innerText = item.data.id_alat || '-';
+    
+    var typeElem = document.getElementById('locationType');
+    if (typeElem) {
+        var isIndoor = (item.data.tipe === 'indoor' || (item.data.id_alat && item.data.id_alat.toLowerCase().includes('ind')));
+        typeElem.innerHTML = isIndoor 
+            ? '<span style="color: #00b4db; font-weight: bold;"><i class="fas fa-building"></i> Indoor</span>' 
+            : '<span style="color: #e85d04; font-weight: bold;"><i class="fas fa-tree"></i> Outdoor</span>';
+    }
     
     if (panTo) {
         map.flyTo([parseFloat(item.data.latitude), parseFloat(item.data.longitude)], 17, { animate: true, duration: 1.5 });
@@ -1079,26 +1097,33 @@ function renderMarkers() {
     markersMap = {};
 
     locations.forEach(function(loc) {
-        // Pastikan koordinat adalah angka dengan parseFloat
         var lat = parseFloat(loc.latitude);
         var lng = parseFloat(loc.longitude);
+        var isIndoor = (loc.tipe === 'indoor' || (loc.id_alat && loc.id_alat.toLowerCase().includes('ind')));
         
-        var marker = L.marker([lat, lng], { icon: fireIcon }).addTo(map);
+        var selectedIcon = isIndoor ? indoorIcon : outdoorIcon;
+        var badgeStyle = isIndoor ? 'background: rgba(0, 180, 219, 0.2); color: #00b4db;' : 'background: rgba(232, 93, 4, 0.2); color: #e85d04;';
+        var badgeLabel = isIndoor ? 'INDOOR' : 'OUTDOOR';
+        var circleColor = isIndoor ? '#00b4db' : '#e85d04';
+
+        var marker = L.marker([lat, lng], { icon: selectedIcon }).addTo(map);
         
         var circle = L.circle([lat, lng], {
-            color: '#e85d04',
-            fillColor: '#e85d04',
+            color: circleColor,
+            fillColor: circleColor,
             fillOpacity: 0.15,
-            radius: 500
+            radius: 400
         }).addTo(map);
         
         var popupContent = `
-            <div style="min-width: 200px; font-family: 'Poppins', sans-serif; text-align: center;">
-                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 18px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 600; font-size: 14px;">${loc.nama_lokasi || 'Lokasi ' + loc.id}</div>
-                <div style="font-size: 12px; color: #666; margin-top: 2px;">ID: ${loc.id_alat || '-'}</div>
-                <div style="font-size: 13px; background: #f0f0f0; padding: 5px; border-radius: 8px; margin-top: 5px;">
-                    ${lat.toFixed(6)}, ${lng.toFixed(6)}
+            <div style="min-width: 210px; font-family: 'Poppins', sans-serif; text-align: center;">
+                <div style="margin-bottom: 5px;">
+                    <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; ${badgeStyle}">${badgeLabel}</span>
+                </div>
+                <div style="font-weight: 600; font-size: 14px; color: #1e3c72;">${loc.nama_lokasi || 'Lokasi ' + loc.id}</div>
+                <div style="font-size: 12px; color: #666; margin-top: 2px;">ID Alat: <strong>${loc.id_alat || '-'}</strong></div>
+                <div style="font-size: 12px; background: #f0f4f8; padding: 6px; border-radius: 8px; margin-top: 6px; color: #333;">
+                    <i class="fas fa-map-marker-alt" style="color: ${circleColor};"></i> ${lat.toFixed(6)}, ${lng.toFixed(6)}
                 </div>
             </div>
         `;
@@ -1126,7 +1151,8 @@ function filterLocations() {
     var filtered = locations.filter(function(loc) {
         var nama = (loc.nama_lokasi || '').toLowerCase();
         var idAlat = (loc.id_alat || '').toLowerCase();
-        return nama.includes(filter) || idAlat.includes(filter);
+        var tipe = (loc.tipe || '').toLowerCase();
+        return nama.includes(filter) || idAlat.includes(filter) || tipe.includes(filter);
     });
     
     resultsContainer.innerHTML = '';
@@ -1144,12 +1170,20 @@ function filterLocations() {
     }
     
     filtered.forEach(function(loc) {
+        var isIndoor = (loc.tipe === 'indoor' || (loc.id_alat && loc.id_alat.toLowerCase().includes('ind')));
+        var iconClass = isIndoor ? 'fas fa-building' : 'fas fa-tree';
+        var iconColor = isIndoor ? '#00b4db' : '#e85d04';
+        var badgeText = isIndoor ? 'INDOOR' : 'OUTDOOR';
+        
         var div = document.createElement('div');
         div.className = 'search-result-item';
         div.innerHTML = `
-            <i class="fas fa-map-marker-alt"></i>
-            <div>
-                <span class="loc-name">${loc.nama_lokasi || 'Lokasi ' + loc.id}</span>
+            <i class="${iconClass}" style="color: ${iconColor}; font-size: 16px;"></i>
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="loc-name">${loc.nama_lokasi || 'Lokasi ' + loc.id}</span>
+                    <span style="font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: ${iconColor}22; color: ${iconColor};">${badgeText}</span>
+                </div>
                 <span class="loc-coords">${loc.id_alat || ''} - ${parseFloat(loc.latitude).toFixed(6)}, ${parseFloat(loc.longitude).toFixed(6)}</span>
             </div>
         `;
