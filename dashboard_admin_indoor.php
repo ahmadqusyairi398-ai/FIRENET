@@ -931,9 +931,11 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
 
 var currentLocationsData = [];
 
+var currentLocationsData = [];
+
 // Render & update seluruh titik lokasi di peta sesuai tabel lokasi_monitoring
-async function updateLocationStatus(isDanger) {
-    const locations = await fetchLocationsFromDB();
+function renderLocationMarkers(locations, isDanger) {
+    if (!locations || locations.length === 0) locations = initialLocations;
     currentLocationsData = locations;
     
     // Bersihkan marker & lingkaran zona lama
@@ -962,13 +964,6 @@ async function updateLocationStatus(isDanger) {
             statusElem.style.color = '#28a745';
         }
         if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
-    }
-
-    if (!locations || locations.length === 0) {
-        const icon = createIndoorIcon('001', isDanger);
-        const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
-        markers.push(m);
-        return;
     }
 
     locations.forEach((loc, idx) => {
@@ -1015,6 +1010,7 @@ async function updateLocationStatus(isDanger) {
         }
 
         if (activeSelectedLocationId === loc.id) {
+            marker.openPopup();
             const locNameElem = document.getElementById('location-name-val');
             if (locNameElem) locNameElem.innerText = namaLokasi;
             const locIdElem = document.getElementById('location-id-val');
@@ -1059,7 +1055,13 @@ async function updateLocationStatus(isDanger) {
     }
 }
 
-// Render awal titik lokasi peta langsung saat pertama kali halaman dimuat
+async function updateLocationStatus(isDanger) {
+    const locations = await fetchLocationsFromDB();
+    renderLocationMarkers(locations, isDanger);
+}
+
+// Render marker pertama kali secara langsung dari data PHP
+renderLocationMarkers(initialLocations, false);
 updateLocationStatus(false);
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================
