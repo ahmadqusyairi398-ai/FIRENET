@@ -611,6 +611,26 @@ canvas {
             </span>
         </div>
 
+        <?php if (!empty($db_locations)): ?>
+        <div class="location-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px;">
+            <?php foreach ($db_locations as $idx => $loc): 
+                $locId = $loc['id'] ?? ($idx + 1);
+                $idAlat = htmlspecialchars($loc['id_alat'] ?? "00{$locId}");
+                $namaLokasi = htmlspecialchars(!empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : "Indoor ({$idAlat})");
+                $isFirst = ($idx === 0);
+            ?>
+            <button type="button" class="btn-loc-select <?= $isFirst ? 'active' : '' ?>" 
+                    onclick="flyToLocation(<?= (float)$loc['latitude'] ?>, <?= (float)$loc['longitude'] ?>, '<?= addslashes($namaLokasi) ?>', '<?= addslashes($idAlat) ?>', <?= (int)$locId ?>, event)" 
+                    style="padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.15); background: <?= $isFirst ? 'linear-gradient(135deg, #00b4db, #0083b0)' : 'white' ?>; color: <?= $isFirst ? 'white' : '#333' ?>; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; gap: 6px;" 
+                    id="btn-loc-<?= (int)$locId ?>">
+                <i class="fas fa-building"></i> 
+                <span><?= $namaLokasi ?></span>
+                <span style="opacity: 0.85; font-size: 11px; background: rgba(0,0,0,0.08); padding: 2px 6px; border-radius: 10px;">ID: <?= $idAlat ?></span>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- SEARCH BAR LOKASI TANPA BUTTON -->
         <div class="search-location-wrapper" style="margin-bottom: 15px; position: relative;">
             <div style="display: flex; align-items: center; background: white; border: 1px solid rgba(0,0,0,0.15); border-radius: 25px; padding: 8px 16px; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); transition: all 0.3s;">
