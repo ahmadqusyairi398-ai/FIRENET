@@ -882,6 +882,7 @@ document.addEventListener('keydown', function(e) {
 var fixedLat = <?= $db_lat; ?>;
 var fixedLng = <?= $db_lng; ?>;
 var allLocations = <?= json_encode($all_locations); ?>;
+var currentSuhu = "<?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?>";
 
 // Variabel untuk melacak ID lokasi yang sedang aktif dilihat
 var activeSelectedLocationId = 1;
@@ -930,10 +931,12 @@ var dangerZone = null;
 if (allLocations.length > 0) {
     allLocations.forEach(function(loc) {
         var popupContent = `
-            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
+            <div style="min-width: 210px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
                 <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
                 <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${loc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${loc.id_alat}</div>
+                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">
+                    ID: ${loc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span>
+                </div>
                 <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
                     <i class="fas fa-globe"></i> ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
                 </div>
@@ -1020,7 +1023,7 @@ function updateLocationStatus(isDanger, lat, lng) {
             <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
                 <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 20px; margin-bottom: 5px;"></i>
                 <div style="font-weight: 700; font-size: 14px; color: #dc2626;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #dc2626; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} (BAHAYA!)</div>
+                <div style="font-size: 12px; color: #dc2626; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span> (BAHAYA!)</div>
                 <div style="font-size: 12px; background: rgba(220,38,38,0.1); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
                     <i class="fas fa-globe"></i> ${lat}, ${lng}
                 </div>
@@ -1047,7 +1050,7 @@ function updateLocationStatus(isDanger, lat, lng) {
             <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
                 <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
                 <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat}</div>
+                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span></div>
                 <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
                     <i class="fas fa-globe"></i> ${lat}, ${lng}
                 </div>
@@ -1227,8 +1230,8 @@ function fetchDataFromDB() {
 
             document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
-            var locSuhuElem = document.getElementById("location-suhu-val");
-            if (locSuhuElem) locSuhuElem.innerHTML = `${data.suhu || 0} °C`;
+            currentSuhu = `${data.suhu || 0} °C`;
+            document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
 
             // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
             if(data.lat && data.lng) {
