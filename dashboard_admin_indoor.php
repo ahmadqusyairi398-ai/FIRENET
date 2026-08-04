@@ -695,6 +695,11 @@ canvas {
                 <span class="value" id="coordinates"><?= !empty($db_locations) ? number_format($db_locations[0]['latitude'], 6) . ', ' . number_format($db_locations[0]['longitude'], 6) : '-1.202490, 116.887080' ?></span>
             </div>
             <div class="location-info-item">
+                <i class="fas fa-temperature-high"></i>
+                <span class="label">Suhu:</span>
+                <span class="value" id="location-suhu-val" style="color: #ff6b6b; font-weight: 700;"><?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?></span>
+            </div>
+            <div class="location-info-item">
                 <i class="fas fa-layer-group"></i>
                 <span class="label">Zona:</span>
                 <span class="value" id="zone">Zona Indoor (Gedung)</span>
@@ -806,6 +811,7 @@ document.addEventListener('keydown', function(e) {
 var defaultLat = -1.20249;
 var defaultLng = 116.88708;
 var initialLocations = <?= json_encode($db_locations); ?>;
+var currentSuhu = "<?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?>";
 
 var map = L.map('map').setView([defaultLat, defaultLng], 15);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -953,7 +959,7 @@ async function updateLocationStatus(isDanger) {
         marker.bindPopup(`
             <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
                 <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
-                <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${idAlat}</strong></small>
+                <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${idAlat}</strong> &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <strong class="loc-suhu-val">${currentSuhu}</strong></small>
                 <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
                 <div style="font-size: 11px; color: #777; margin-bottom: 6px;"><i class="fas fa-clock"></i> <b>Update:</b> ${loc.last_update || '-'}</div>
                 <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
@@ -1132,6 +1138,10 @@ async function updateDashboard() {
     document.getElementById("asap").innerHTML = asapValue;
     
     document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+    if (data.suhu !== undefined) {
+        currentSuhu = `${data.suhu} °C`;
+        document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+    }
     document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
     document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
     document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
