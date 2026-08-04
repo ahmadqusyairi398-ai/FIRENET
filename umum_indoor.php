@@ -401,6 +401,104 @@ canvas {
     border-radius: 10px;
     padding: 10px;
 }
+/* ========== MODAL HOME ========== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-box {
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    border-radius: 20px;
+    padding: 40px 35px 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal-icon-home {
+    font-size: 48px;
+    color: #0083b0;
+    background: rgba(0, 131, 176, 0.1);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.modal-box h2 {
+    color: #1e3c72;
+    font-size: 20px;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-modal {
+    padding: 12px 30px;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-cancel {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.btn-cancel:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
+
+.btn-home-confirm {
+    background: linear-gradient(135deg, #0083b0, #00b4db);
+    color: white;
+}
+
+.btn-home-confirm:hover {
+    background: linear-gradient(135deg, #007299, #0099b8);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 131, 176, 0.4);
+}
+
 @media (max-width: 768px) {
     .sidebar { width: 80px; padding: 20px 10px; }
     .sidebar h3 { font-size: 12px; }
@@ -424,7 +522,7 @@ canvas {
         <i class="fas fa-tachometer-alt"></i>
         <span>Dashboard Indoor</span>
     </a>
-    <a href="home.php" class="menu-btn logout">
+    <a href="javascript:void(0);" onclick="openHomeModal()" class="menu-btn logout">
         <i class="fas fa-home"></i>
         <span>Home</span>
     </a>
@@ -435,8 +533,7 @@ canvas {
     <div class="header">
         <h2><i class="fas fa-building"></i> Dashboard Monitoring Indoor</h2>
         <div class="header-right">
-            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
-            <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo </span></div>
+            <div class="user-info"><i class="fas fa-user-circle"></i><span>Halo <?= htmlspecialchars($user) ?></span></div>
         </div>
     </div>
 
@@ -1055,9 +1152,60 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ================= FUNGSI MODAL HOME =================
+function openHomeModal() {
+    var modal = document.getElementById('homeModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeHomeModal() {
+    var modal = document.getElementById('homeModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('homeModal');
+    if (modal && e.target === modal) {
+        closeHomeModal();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHomeModal();
+    }
+});
+
 // Panggil pertama kali, lalu ulangi setiap 2 detik
 fetchDataFromDB();
 setInterval(fetchDataFromDB, 2000);
 </script>
+
+<!-- ========== MODAL HOME ========== -->
+<div class="modal-overlay" id="homeModal">
+    <div class="modal-box">
+        <div class="modal-icon-home">
+            <i class="fas fa-home"></i>
+        </div>
+        
+        <h2>Apakah Anda yakin ingin kembali ke Halaman Utama?</h2>
+        
+        <div class="modal-buttons">
+            <button class="btn-modal btn-cancel" onclick="closeHomeModal()">
+                <i class="fas fa-times"></i> CANCEL
+            </button>
+            <a href="home.php" class="btn-modal btn-home-confirm">
+                <i class="fas fa-home"></i> YES
+            </a>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
