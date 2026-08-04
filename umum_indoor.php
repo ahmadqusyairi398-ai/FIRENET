@@ -756,8 +756,6 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
 
 var currentLocationsData = [];
 
-var currentLocationsData = [];
-
 async function updateLocationStatus(isDanger) {
     const locations = await fetchLocationsFromDB();
     currentLocationsData = locations;
@@ -769,7 +767,7 @@ async function updateLocationStatus(isDanger) {
     
     const totalElem = document.getElementById('total-locations');
     if (totalElem) {
-        totalElem.innerHTML = locationsData.length;
+        totalElem.innerHTML = locations.length;
     }
 
     const statusElem = document.getElementById('location-status');
@@ -789,14 +787,14 @@ async function updateLocationStatus(isDanger) {
         if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
     }
 
-    if (!locationsData || locationsData.length === 0) {
+    if (!locations || locations.length === 0) {
         const icon = createIndoorIcon('001', isDanger);
         const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
         markers.push(m);
         return;
     }
 
-    locationsData.forEach((loc, idx) => {
+    locations.forEach((loc, idx) => {
         const lat = parseFloat(loc.latitude);
         const lng = parseFloat(loc.longitude);
         const idAlat = loc.id_alat || `00${loc.id}`;
