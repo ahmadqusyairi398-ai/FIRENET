@@ -846,7 +846,6 @@ function renderLocationMarkers(locations, isDanger) {
         const statusBadge = isDanger 
             ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
             : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
-        
         marker.bindPopup(`
             <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
                 <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
@@ -880,48 +879,21 @@ function renderLocationMarkers(locations, isDanger) {
         if (activeSelectedLocationId === loc.id) {
             const locNameElem = document.getElementById('location-name-val');
             if (locNameElem) locNameElem.innerText = namaLokasi;
-            <div class="location-info-item">
-                <i class="fas fa-globe"></i>
-                <span class="label">Koordinat:</span>
-                <span class="value" id="coordinates"><?= !empty($db_locations) ? number_format($db_locations[0]['latitude'], 6) . ', ' . number_format($db_locations[0]['longitude'], 6) : '-1.202490, 116.887080' ?></span>
-            </div>
-            <div class="location-info-item">
-                <i class="fas fa-temperature-high"></i>
-                <span class="label">Suhu:</span>
-                <span class="value" id="location-suhu-val" style="color: #ff6b6b; font-weight: 700;"><?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?></span>
-            </div>
-            <div class="location-info-item">
-                <i class="fas fa-layer-group"></i>
-                <span class="label">Zona:</span>
-                <span class="value" id="zone">Zona Indoor (Gedung)</span>
-            </div>
-            <div class="location-info-item">
-                <i class="fas fa-flag-checkered"></i>
-                <span class="label">Status:</span>
-                <span class="value" id="location-status" style="color: #28a745; font-weight: bold;">Aman</span>
-            </div>
-        </div>
-    </div>
-</div>
+            const locIdElem = document.getElementById('location-id-val');
+            if (locIdElem) locIdElem.innerText = idAlat;
+            const coordElem = document.getElementById('coordinates');
+            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+    });
+}
 
-<script>
-// ================= PETA & LOKASI DINAMIS DARI DATABASE INDOOR (lokasi_monitoring) =================
-var defaultLat = <?= !empty($db_locations) ? (float)$db_locations[0]['latitude'] : -1.20249 ?>;
-var defaultLng = <?= !empty($db_locations) ? (float)$db_locations[0]['longitude'] : 116.88708 ?>;
-var initialLocations = <?= json_encode($db_locations); ?>;
+async function updateLocationStatus(isDanger) {
+    const locations = await fetchLocationsFromDB();
+    renderLocationMarkers(locations, isDanger);
+}
 
-var map = L.map('map').setView([defaultLat, defaultLng], 15);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19,
-    minZoom: 3
-}).addTo(map);
-
-L.control.scale({ metric: true, imperial: false }).addTo(map);
-
-var markers = [];
-var dangerZones = [];
+// Render marker pertama kali secara langsung dari data PHP
+renderLocationMarkers(initialLocations, false);
 
 function createIndoorIcon(id_alat, isDanger) {
     if (isDanger) {
@@ -996,7 +968,9 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.style.color = 'white';
         activeBtn.classList.add('active');
     }
-}var currentLocationsData = [];
+}
+
+var currentLocationsData = [];
 
 function renderLocationMarkers(locations, isDanger) {
     if (!locations || locations.length === 0) locations = initialLocations;
@@ -1090,16 +1064,6 @@ async function updateLocationStatus(isDanger) {
 
 // Render marker pertama kali secara langsung dari data PHP
 renderLocationMarkers(initialLocations, false);
-        } else {
-            const group = L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.2));
-        }
-        hasFitBounds = true;
-    }
-}
-
-// Render awal titik lokasi peta saat pertama kali dimuat
-updateLocationStatus(false);
 
 // ================= CHART (REAL TIME INDOOR SENSOR - API, ASAP, SUHU, KELEMBAPAN) =================
 const ctx = document.getElementById('myChart').getContext('2d');
@@ -1115,7 +1079,6 @@ let dataChart = {
 
 const myChart = new Chart(ctx, {
     type: 'line',
-    data: dataChart,
     options: {
         responsive: true,
         maintainAspectRatio: true,

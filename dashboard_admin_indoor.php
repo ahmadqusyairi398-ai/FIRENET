@@ -1023,21 +1023,6 @@ async function updateLocationStatus(isDanger) {
     renderLocationMarkers(locations, isDanger);
 }
 
-// Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false);
-
-    // Sesuaikan batas pandang peta (fit bounds) jika terdapat banyak lokasi
-    if (!hasFitBounds && markers.length > 0) {
-        if (markers.length === 1) {
-            map.setView(markers[0].getLatLng(), 16);
-        } else {
-            const group = L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.2));
-        }
-        hasFitBounds = true;
-    }
-}
-
 // Render awal titik lokasi peta langsung saat pertama kali halaman dimuat
 updateLocationStatus(false);
 

@@ -771,10 +771,10 @@ function initMap() {
         maxZoom: 19,
         minZoom: 3
     }).addTo(map);
-}
+}var activeSelectedLocationId = null;
+var hasFitBounds = false;
 
-var activeSelectedLocationId = null;
-var hasFitBounds = false;function flyToLocation(lat, lng, nama, idAlat, locId, event) {
+function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
@@ -793,20 +793,6 @@ var hasFitBounds = false;function flyToLocation(lat, lng, nama, idAlat, locId, 
             m.openPopup();
         }
     });
-
-    document.querySelectorAll('.btn-loc-select').forEach(btn => {
-        btn.style.background = 'white';
-        btn.style.color = '#333';
-        btn.classList.remove('active');
-    });
-    const activeBtn = (event && event.currentTarget) || (locId ? document.getElementById('btn-loc-' + locId) : null);
-    if (activeBtn) {
-        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
-        activeBtn.style.color = 'white';
-        activeBtn.classList.add('active');
-    }
-}
-    }
 }
 
 // ================= FUNGSI TAMBAH MARKER KE PETA =================
