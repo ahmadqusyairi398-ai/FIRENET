@@ -975,6 +975,108 @@ if (!sensorMarker) {
     dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
 }
 
+var latestRealSensorData = null;
+
+function getDummyDataForLocation(locId, realData) {
+    if (!realData) {
+        realData = { suhu: 30, kelembapan: 70, asap: 'Normal', api: 'Aman', angin: 3.2, co: 15, tegangan: 220, arus: 1.5, daya: 330, lat: fixedLat, lng: fixedLng };
+    }
+    
+    if (locId === 1 || locId === '1' || locId === 'out_1' || locId === 'out_def_1') {
+        return realData;
+    }
+
+    var numId = typeof locId === 'number' ? locId : (parseInt(String(locId).replace(/\D/g, '')) || 2);
+    var seconds = new Date().getSeconds();
+    
+    var noiseSuhu = parseFloat((Math.sin(seconds + numId) * 0.8).toFixed(1));
+    var noiseHumi = parseFloat((Math.cos(seconds + numId) * 1.5).toFixed(1));
+
+    var suhuVal = (25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1);
+    var humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4 + noiseHumi)));
+    var windVal = (2.0 + (numId % 4) * 0.9).toFixed(1);
+    var coVal = Math.round(12 + (numId % 6) * 4);
+
+    return {
+        suhu: suhuVal,
+        kelembapan: humiVal,
+        asap: (numId === 4 || numId === 7) ? "Tinggi" : "Normal",
+        api: (numId === 7) ? "Terdeteksi Api" : "Aman",
+        angin: windVal,
+        arah: (numId % 2 === 0) ? "Utara" : "Timur",
+        co: coVal,
+        tegangan: (219 + (numId % 3)).toFixed(1),
+        arus: (1.2 + (numId % 4) * 0.1).toFixed(2),
+        daya: (250 + (numId % 6) * 20).toFixed(1),
+        lat: realData.lat,
+        lng: realData.lng,
+        isDanger: (numId === 7)
+    };
+}
+
+function updateSensorDisplayCards(displayData) {
+    if (!displayData) return;
+    
+    var teg = document.getElementById("tegangan");
+    if (teg) teg.innerHTML = `${displayData.tegangan || 0} V <i class="fas fa-bolt"></i>`;
+    var arus = document.getElementById("arus");
+    if (arus) arus.innerHTML = `${displayData.arus || 0} A <i class="fas fa-charging-station"></i>`;
+    var daya = document.getElementById("daya");
+    if (daya) daya.innerHTML = `${displayData.daya || 0} W <i class="fas fa-plug"></i>`;
+
+    var arahIcon = {
+        'Utara': 'up', 'Selatan': 'down', 'Timur': 'right', 'Barat': 'left',
+        'Timur Laut': 'up-right', 'Barat Daya': 'down-left', 'Tenggara': 'down-right', 'Barat Laut': 'up-left'
+    };
+    var arahValue = displayData.arah || 'Timur';
+    var arahElem = document.getElementById("arah");
+    if (arahElem) arahElem.innerHTML = `<i class="fas fa-arrow-${arahIcon[arahValue] || 'right'}"></i> ${arahValue}`;
+    var anginElem = document.getElementById("kecepatan_angin");
+    if (anginElem) anginElem.innerHTML = `${displayData.angin || 0} m/s <i class="fas fa-wind"></i>`;
+
+    var asapElement = document.getElementById("asap");
+    var asapBox = document.getElementById('asap-box');
+    if (asapElement && asapBox) {
+        var asapVal = displayData.asap;
+        if (asapVal === "Tinggi" || asapVal === "Bahaya") {
+            asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
+            asapElement.className = 'status-bahaya';
+            asapBox.classList.add('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else {
+            asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
+            asapElement.className = 'status-aman';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+        }
+    }
+
+    var coElement = document.getElementById("co");
+    var coBox = document.getElementById('co-box');
+    if (coElement && coBox) {
+        var coValue = parseFloat(displayData.co) || 0;
+        if (coValue > 50 || displayData.co === "Tinggi") {
+            coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Tinggi / Berbahaya)`;
+            coElement.className = 'status-bahaya';
+            coBox.classList.add('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else {
+            coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Normal)`;
+            coElement.className = 'status-aman';
+            coBox.classList.remove('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
+        }
+    }
+
+    var suhuElem = document.getElementById("suhu");
+    if (suhuElem) suhuElem.innerHTML = `${displayData.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
+    var humiElem = document.getElementById("kelembapan");
+    if (humiElem) humiElem.innerHTML = `${displayData.kelembapan || 0} % <i class="fas fa-tint"></i>`;
+    
+    currentSuhu = `${displayData.suhu || 0} °C`;
+    document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+}
+
 // ================= FUNGSI FLY TO LOCATION =================
 function flyToLocation(lat, lng, id) {
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
@@ -998,6 +1100,11 @@ function flyToLocation(lat, lng, id) {
     if (activeBtn) {
         activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
         activeBtn.style.color = 'white';
+    }
+
+    // Update tampilan sensor sesuai lokasi yang sedang aktif (Real-time IoT jika ID 1, Dummy khusus jika ID > 1)
+    if (latestRealSensorData) {
+        updateSensorDisplayCards(getDummyDataForLocation(id, latestRealSensorData));
     }
 }
 
@@ -1136,6 +1243,9 @@ function fetchDataFromDB() {
                 return;
             }
 
+            latestRealSensorData = data;
+            var activeData = getDummyDataForLocation(activeSelectedLocationId, data);
+
             // 1. Update status header
             var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
@@ -1143,126 +1253,33 @@ function fetchDataFromDB() {
             document.getElementById("ip").innerHTML = data.ip || '-';
             document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
 
-            // 2. Update sensor panel surya
-            document.getElementById("tegangan").innerHTML = `${data.tegangan || 0} V`;
-            document.getElementById("arus").innerHTML = `${data.arus || 0} A`;
-            document.getElementById("daya").innerHTML = `${data.daya || 0} W`;
+            // 2. Update Sensor Cards (Real jika ID 1, Dummy jika ID lain)
+            updateSensorDisplayCards(activeData);
 
-            // 3. Update angin
-            var arahIcon = {
-                'Utara': 'up',
-                'Selatan': 'down',
-                'Timur': 'right',
-                'Barat': 'left',
-                'Timur Laut': 'up-right',
-                'Barat Daya': 'down-left',
-                'Tenggara': 'down-right',
-                'Barat Laut': 'up-left'
-            };
-            var arahValue = data.arah || 'Timur';
-            document.getElementById("arah").innerHTML = `<i class="fas fa-arrow-${arahIcon[arahValue] || 'right'}"></i> ${arahValue}`;
-            document.getElementById("kecepatan_angin").innerHTML = `${data.angin || 0} m/s <i class="fas fa-wind"></i>`;
-
-            // 4. Update status Asap
-            var asapElement = document.getElementById("asap");
-            var asapBox = document.getElementById('asap-box');
-            var asapVal = data.asap;
-            if (typeof asapVal === 'number' || (!isNaN(asapVal) && asapVal !== null && asapVal !== '')) {
-                var numAsap = parseFloat(asapVal);
-                if (!isNaN(numAsap)) {
-                    if (numAsap > (numAsap > 1 ? 50 : 0.5)) asapVal = "Tinggi";
-                    else if (numAsap > (numAsap > 1 ? 25 : 0.25)) asapVal = "Sedang";
-                    else asapVal = "Normal";
-                }
-            }
-            if (asapVal === "Tinggi" || asapVal === "Bahaya") {
-                asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
-                asapElement.className = 'status-bahaya';
-                asapBox.classList.add('pulse-animation');
-                asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-            } else if (asapVal === "Sedang" || asapVal === "Waspada") {
-                asapElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
-                asapElement.className = 'status-waspada';
-                asapBox.classList.remove('pulse-animation');
-                asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
-            } else {
-                asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
-                asapElement.className = 'status-aman';
-                asapBox.classList.remove('pulse-animation');
-                asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-            }
-
-            // 5. Update CO, Suhu, Kelembapan
-            var coElement = document.getElementById("co");
-            var coBox = document.getElementById('co-box');
-            var coRaw = data.co;
-            var coValue = parseFloat(coRaw) || 0;
-            var coStatus = "Normal";
-
-            if (typeof coRaw === 'string' && (coRaw === 'Tinggi' || coRaw === 'Bahaya')) {
-                coStatus = "Tinggi";
-            } else if (typeof coRaw === 'string' && (coRaw === 'Sedang' || coRaw === 'Waspada')) {
-                coStatus = "Sedang";
-            } else if (coValue > 50) {
-                coStatus = "Tinggi";
-            } else if (coValue > 35) {
-                coStatus = "Sedang";
-            } else {
-                coStatus = "Normal";
-            }
-
-            if (coStatus === "Tinggi") {
-                coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Tinggi / Berbahaya)`;
-                coElement.className = 'status-bahaya';
-                coBox.classList.add('pulse-animation');
-                coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-            } else if (coStatus === "Sedang") {
-                coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Sedang / Waspada)`;
-                coElement.className = 'status-waspada';
-                coBox.classList.remove('pulse-animation');
-                coBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
-            } else {
-                coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Normal)`;
-                coElement.className = 'status-aman';
-                coBox.classList.remove('pulse-animation');
-                coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
-            }
-
-            document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
-            document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
-            currentSuhu = `${data.suhu || 0} °C`;
-            document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
-
-            // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
+            // 3. Update Peta & Koordinat
             if(data.lat && data.lng) {
-                // Selalu update teks koordinat dan posisi marker/zone di background
-                document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
-                sensorMarker.setLatLng([data.lat, data.lng]);
-                dangerZone.setLatLng([data.lat, data.lng]);
-                
-                // PERBAIKAN: Hanya geser peta otomatis jika user sedang aktif melihat Lokasi Utama (ID 1)
-                // Jika user sedang melihat lokasi lain (ID 2, 3, dst), jangan dipaksa geser.
                 if (activeSelectedLocationId === 1) {
+                    document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
+                    sensorMarker.setLatLng([data.lat, data.lng]);
+                    dangerZone.setLatLng([data.lat, data.lng]);
                     map.panTo(new L.LatLng(data.lat, data.lng));
                 }
             }
 
-            // ================= 7. Deteksi Bahaya =================
-            var isDanger = (data.asap === "Tinggi" || coValue > 50);
-            
-            // Panggil updateLocationStatus dengan koordinat
+            // 4. Deteksi Bahaya
+            var isDanger = (activeData.asap === "Tinggi" || parseFloat(activeData.co) > 50 || activeData.isDanger);
             updateLocationStatus(isDanger, data.lat, data.lng);
 
-            // 8. Update Grafik
+            // 5. Update Grafik dengan data lokasi aktif
             var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             dataChart.labels.push(chartTimeStr);
-            dataChart.datasets[0].data.push(parseFloat(data.tegangan) || 0);
-            dataChart.datasets[1].data.push(parseFloat(data.arus) || 0);
-            dataChart.datasets[2].data.push(parseFloat(data.daya) || 0);
-            dataChart.datasets[3].data.push(parseFloat(data.suhu) || 0);
-            dataChart.datasets[4].data.push(parseFloat(data.kelembapan) || 0);
-            dataChart.datasets[5].data.push(parseFloat(data.angin) || 0);
-            dataChart.datasets[6].data.push(parseFloat(data.co) || 0);
+            dataChart.datasets[0].data.push(parseFloat(activeData.tegangan) || 0);
+            dataChart.datasets[1].data.push(parseFloat(activeData.arus) || 0);
+            dataChart.datasets[2].data.push(parseFloat(activeData.daya) || 0);
+            dataChart.datasets[3].data.push(parseFloat(activeData.suhu) || 0);
+            dataChart.datasets[4].data.push(parseFloat(activeData.kelembapan) || 0);
+            dataChart.datasets[5].data.push(parseFloat(activeData.angin) || 0);
+            dataChart.datasets[6].data.push(parseFloat(activeData.co) || 0);
 
             if(dataChart.labels.length > 20) {
                 dataChart.labels.shift();

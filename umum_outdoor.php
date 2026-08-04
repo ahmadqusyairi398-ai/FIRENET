@@ -899,6 +899,46 @@ if (allLocations.length > 0) {
 if (!sensorMarker) {
     sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
     dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
+}var latestRealSensorData = null;
+
+function getDummyDataForLocation(locId, realData) {
+    if (!realData) {
+        realData = { suhu: 30, kelembapan: 70, asap: 'Normal', api: 'Aman', angin: 3.2, co: 15, tegangan: 220, arus: 1.5, daya: 330, status: 'Online', rssi: -65, ip: '192.168.1.100', lat: fixedLat, lng: fixedLng };
+    }
+    
+    if (locId === 1 || locId === '1' || locId === 'out_1' || locId === 'out_def_1') {
+        return realData;
+    }
+
+    var numId = typeof locId === 'number' ? locId : (parseInt(String(locId).replace(/\D/g, '')) || 2);
+    var seconds = new Date().getSeconds();
+    
+    var noiseSuhu = parseFloat((Math.sin(seconds + numId) * 0.8).toFixed(1));
+    var noiseHumi = parseFloat((Math.cos(seconds + numId) * 1.5).toFixed(1));
+
+    var suhuVal = (25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1);
+    var humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4 + noiseHumi)));
+    var windVal = (2.0 + (numId % 4) * 0.9).toFixed(1);
+    var coVal = Math.round(12 + (numId % 6) * 4);
+
+    return {
+        status: realData.status || 'Online',
+        rssi: realData.rssi || -65,
+        ip: realData.ip || '192.168.1.100',
+        suhu: suhuVal,
+        kelembapan: humiVal,
+        asap: (numId === 4 || numId === 7) ? "Tinggi" : "Normal",
+        api: (numId === 7) ? "Terdeteksi Api" : "Aman",
+        angin: windVal,
+        arah: (numId % 2 === 0) ? "Utara" : "Timur",
+        co: coVal,
+        tegangan: (219 + (numId % 3)).toFixed(1),
+        arus: (1.2 + (numId % 4) * 0.1).toFixed(2),
+        daya: (250 + (numId % 6) * 20).toFixed(1),
+        lat: realData.lat,
+        lng: realData.lng,
+        isDanger: (numId === 7)
+    };
 }
 
 // ================= FUNGSI FLY TO LOCATION =================
@@ -925,68 +965,100 @@ function flyToLocation(lat, lng, id) {
         activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
         activeBtn.style.color = 'white';
     }
+
+    if (latestRealSensorData) {
+        updateUI(getDummyDataForLocation(id, latestRealSensorData));
+    }
 }
 
 // ================= FUNGSI UPDATE LOCATION STATUS =================
 function updateLocationStatus(isDanger, lat, lng) {
-    // Ambil data lokasi utama (ID 1) dari array allLocations untuk mendapatkan nama & ID alatnya
     var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
 
     if (isDanger) {
-        dangerZone.setStyle({ 
-            color: '#dc2626', 
-            fillColor: '#dc2626', 
-            fillOpacity: 0.3 
-        });
+        dangerZone.setStyle({ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.3 });
         document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
-        
         sensorMarker.setIcon(dangerIcon);
-        
-        // Format popup bahaya (Nama Tempat, ID, dan Koordinat)
-        sensorMarker.bindPopup(`
-            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
-                <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 20px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 700; font-size: 14px; color: #dc2626;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #dc2626; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span> (BAHAYA!)</div>
-                <div style="font-size: 12px; background: rgba(220,38,38,0.1); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
-                    <i class="fas fa-globe"></i> ${lat}, ${lng}
-                </div>
-            </div>
-        `);
-        
-        if (activeSelectedLocationId === 1) {
-            sensorMarker.openPopup();
-        }
     } else {
-        dangerZone.setStyle({ 
-            color: '#28a745', 
-            fillColor: '#28a745', 
-            fillOpacity: 0.1 
-        });
+        dangerZone.setStyle({ color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1 });
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Outdoor (Area Terbuka)';
-        
         sensorMarker.setIcon(safeIcon);
-        
-        // Format popup normal (aman)
-        sensorMarker.bindPopup(`
-            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
-                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span></div>
-                <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
-                    <i class="fas fa-globe"></i> ${lat}, ${lng}
-                </div>
-            </div>
-        `);
-        
-        if (activeSelectedLocationId === 1) {
-            sensorMarker.openPopup();
-        }
     }
+}
+
+// ================= FUNGSI UPDATE UI =================
+function updateUI(rawRealData) {
+    latestRealSensorData = rawRealData;
+    var data = getDummyDataForLocation(activeSelectedLocationId, rawRealData);
+
+    // Update status node di header
+    var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
+    document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
+    document.getElementById("ip").innerHTML = data.ip || '-';
+    document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+    
+    // Update Sensor Daya
+    document.getElementById("daya").innerHTML = `${data.daya} W`;
+    
+    // Update Suhu
+    document.getElementById("suhu").innerHTML = `${data.suhu} °C`;
+    
+    // Update Asap status
+    var asapElement = document.getElementById("asap");
+    var asapBox = document.getElementById('asap-box');
+    if (data.asap === "Tinggi") {
+        asapElement.innerHTML = '⚠️ Tinggi';
+        asapElement.className = 'status-bahaya';
+        asapBox.classList.add('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+    } else {
+        asapElement.innerHTML = '✅ Normal';
+        asapElement.className = 'status-aman';
+        asapBox.classList.remove('pulse-animation');
+        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+    }
+    
+    // Update Kelembapan & Suhu Lokasi
+    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
+    if (data.suhu !== undefined) {
+        currentSuhu = `${data.suhu} °C`;
+        document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+    }
+    
+    // Update Peta (Zona Merah / Hijau)
+    var isDanger = data.isDanger || data.asap === "Tinggi";
+    var lat = rawRealData.lat || fixedLat;
+    var lng = rawRealData.lng || fixedLng;
+    
+    sensorMarker.setLatLng([lat, lng]);
+    dangerZone.setLatLng([lat, lng]);
+    
+    if (activeSelectedLocationId === 1) {
+        document.getElementById('coordinates').innerHTML = `${lat}, ${lng}`;
+        map.panTo(new L.LatLng(lat, lng));
+    }
+    
+    updateLocationStatus(isDanger, lat, lng);
+    
+    // Update Chart Grafik
+    var asapValue = data.asap === "Tinggi" ? 1 : 0;
+    var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    dataChart.labels.push(chartTimeStr);
+    dataChart.datasets[0].data.push(parseFloat(data.daya));
+    dataChart.datasets[1].data.push(parseFloat(data.suhu));
+    dataChart.datasets[2].data.push(parseFloat(data.kelembapan));
+    dataChart.datasets[3].data.push(asapValue);
+    
+    if(dataChart.labels.length > 20) { 
+        dataChart.labels.shift(); 
+        dataChart.datasets.forEach(ds => ds.data.shift()); 
+    }
+    myChart.update();
 }
 
 // ================= CHART (4 SENSOR) =================
