@@ -765,6 +765,11 @@ canvas {
                 <span class="value" id="coordinates"><?= $db_lat ?>, <?= $db_lng ?></span>
             </div>
             <div class="location-info-item">
+                <i class="fas fa-temperature-high"></i>
+                <span class="label">Suhu:</span>
+                <span class="value" id="location-suhu-val" style="color: #ff6b6b; font-weight: 700;"><?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?></span>
+            </div>
+            <div class="location-info-item">
                 <i class="fas fa-tree"></i>
                 <span class="label">Zona:</span>
                 <span class="value" id="zone">Zona Monitoring</span>
@@ -1222,6 +1227,8 @@ function fetchDataFromDB() {
 
             document.getElementById("suhu").innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
             document.getElementById("kelembapan").innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
+            var locSuhuElem = document.getElementById("location-suhu-val");
+            if (locSuhuElem) locSuhuElem.innerHTML = `${data.suhu || 0} °C`;
 
             // ================= 6. Update Peta & Koordinat dari Database (DIPERBAIKI) =================
             if(data.lat && data.lng) {

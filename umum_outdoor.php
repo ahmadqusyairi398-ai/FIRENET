@@ -692,6 +692,11 @@ canvas {
                 <span class="value" id="coordinates"><?= $db_lat ?>, <?= $db_lng ?></span>
             </div>
             <div class="location-info-item">
+                <i class="fas fa-temperature-high"></i>
+                <span class="label">Suhu:</span>
+                <span class="value" id="location-suhu-val" style="color: #ff6b6b; font-weight: 700;"><?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?></span>
+            </div>
+            <div class="location-info-item">
                 <i class="fas fa-tree"></i>
                 <span class="label">Zona:</span>
                 <span class="value" id="zone">Zona Outdoor (Area Terbuka)</span>
@@ -1116,8 +1121,10 @@ function updateUI(data) {
         asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
     }
     
-    // Update Kelembapan
+    // Update Kelembapan & Suhu Lokasi
     document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
+    var locSuhuElem = document.getElementById("location-suhu-val");
+    if (locSuhuElem && data.suhu !== undefined) locSuhuElem.innerHTML = `${data.suhu} °C`;
     
     // Update Peta (Zona Merah / Hijau)
     var isDanger = data.isDanger || data.asap === "Tinggi";
