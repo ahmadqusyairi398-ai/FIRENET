@@ -931,21 +931,20 @@ function updateAllMarkers(locationsData) {
 }
 
 // ================= FUNGSI AMBIL DATA LOKASI =================
+var initialLocations = <?= json_encode($db_locations); ?>;
+
 async function fetchLocations() {
     try {
         const response = await fetch('get_locations.php');
         const result = await response.json();
         
-        if (result.error) {
-            console.error('Error:', result.message);
-            return [];
+        if (!result.error && Array.isArray(result.data) && result.data.length > 0) {
+            return result.data;
         }
-        
-        return result.data || [];
     } catch (error) {
         console.error('Fetch locations error:', error);
-        return [];
     }
+    return initialLocations;
 }
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================

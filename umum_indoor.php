@@ -877,6 +877,7 @@ function renderLocationMarkers(locations, isDanger) {
         }
 
         if (activeSelectedLocationId === loc.id) {
+            marker.openPopup();
             const locNameElem = document.getElementById('location-name-val');
             if (locNameElem) locNameElem.innerText = namaLokasi;
             const locIdElem = document.getElementById('location-id-val');
@@ -885,6 +886,16 @@ function renderLocationMarkers(locations, isDanger) {
             if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     });
+
+    if (!hasFitBounds && markers.length > 0) {
+        if (markers.length === 1) {
+            map.setView(markers[0].getLatLng(), 16);
+        } else {
+            const group = L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.2));
+        }
+        hasFitBounds = true;
+    }
 }
 
 async function updateLocationStatus(isDanger) {
@@ -894,6 +905,7 @@ async function updateLocationStatus(isDanger) {
 
 // Render marker pertama kali secara langsung dari data PHP
 renderLocationMarkers(initialLocations, false);
+updateLocationStatus(false);
 
 function createIndoorIcon(id_alat, isDanger) {
     if (isDanger) {
