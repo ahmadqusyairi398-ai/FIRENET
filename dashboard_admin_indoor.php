@@ -931,9 +931,9 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
 
 var currentLocationsData = [];
 
-// Render & update seluruh titik lokasi di peta
-function renderLocationMarkers(locations, isDanger) {
-    if (!locations || locations.length === 0) locations = initialLocations;
+// Render & update seluruh titik lokasi di peta sesuai tabel lokasi_monitoring
+async function updateLocationStatus(isDanger) {
+    const locations = await fetchLocationsFromDB();
     currentLocationsData = locations;
     
     // Bersihkan marker & lingkaran zona lama
@@ -962,6 +962,13 @@ function renderLocationMarkers(locations, isDanger) {
             statusElem.style.color = '#28a745';
         }
         if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
+    }
+
+    if (!locations || locations.length === 0) {
+        const icon = createIndoorIcon('001', isDanger);
+        const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
+        markers.push(m);
+        return;
     }
 
     locations.forEach((loc, idx) => {
@@ -1008,7 +1015,6 @@ function renderLocationMarkers(locations, isDanger) {
         }
 
         if (activeSelectedLocationId === loc.id) {
-            marker.openPopup();
             const locNameElem = document.getElementById('location-name-val');
             if (locNameElem) locNameElem.innerText = namaLokasi;
             const locIdElem = document.getElementById('location-id-val');
@@ -1018,6 +1024,30 @@ function renderLocationMarkers(locations, isDanger) {
         }
     });
 
+    if (activeSelectedLocationId) {
+        const selBtn = document.getElementById('btn-loc-' + activeSelectedLocationId);
+        if (selBtn) {
+            document.querySelectorAll('.btn-loc-select').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.classList.remove('active');
+            });
+            selBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+            selBtn.style.color = 'white';
+            selBtn.classList.add('active');
+        }
+        const selectedLoc = locations.find(l => l.id === activeSelectedLocationId);
+        if (selectedLoc) {
+            markers.forEach(m => {
+                const mLatLng = m.getLatLng();
+                if (Math.abs(mLatLng.lat - parseFloat(selectedLoc.latitude)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(selectedLoc.longitude)) < 0.0001) {
+                    m.openPopup();
+                }
+            });
+        }
+    }
+
+    // Sesuaikan batas pandang peta (fit bounds) jika terdapat banyak lokasi
     if (!hasFitBounds && markers.length > 0) {
         if (markers.length === 1) {
             map.setView(markers[0].getLatLng(), 16);
@@ -1029,13 +1059,7 @@ function renderLocationMarkers(locations, isDanger) {
     }
 }
 
-async function updateLocationStatus(isDanger) {
-    const locations = await fetchLocationsFromDB();
-    renderLocationMarkers(locations, isDanger);
-}
-
-// Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false);
+// Render awal titik lokasi peta langsung saat pertama kali halaman dimuat
 updateLocationStatus(false);
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================

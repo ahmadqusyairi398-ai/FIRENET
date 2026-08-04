@@ -771,10 +771,10 @@ function initMap() {
         maxZoom: 19,
         minZoom: 3
     }).addTo(map);
-}var activeSelectedLocationId = null;
-var hasFitBounds = false;
+}
 
-function flyToLocation(lat, lng, nama, idAlat, locId, event) {
+var activeSelectedLocationId = null;
+var hasFitBounds = false;function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
@@ -793,6 +793,20 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
             m.openPopup();
         }
     });
+
+    document.querySelectorAll('.btn-loc-select').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#333';
+        btn.classList.remove('active');
+    });
+    const activeBtn = (event && event.currentTarget) || (locId ? document.getElementById('btn-loc-' + locId) : null);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+        activeBtn.classList.add('active');
+    }
+}
+    }
 }
 
 // ================= FUNGSI TAMBAH MARKER KE PETA =================
@@ -931,20 +945,21 @@ function updateAllMarkers(locationsData) {
 }
 
 // ================= FUNGSI AMBIL DATA LOKASI =================
-var initialLocations = <?= json_encode($db_locations); ?>;
-
 async function fetchLocations() {
     try {
         const response = await fetch('get_locations.php');
         const result = await response.json();
         
-        if (!result.error && Array.isArray(result.data) && result.data.length > 0) {
-            return result.data;
+        if (result.error) {
+            console.error('Error:', result.message);
+            return [];
         }
+        
+        return result.data || [];
     } catch (error) {
         console.error('Fetch locations error:', error);
+        return [];
     }
-    return initialLocations;
 }
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================

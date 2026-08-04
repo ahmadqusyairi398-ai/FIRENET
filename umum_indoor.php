@@ -801,10 +801,12 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.style.color = 'white';
         activeBtn.classList.add('active');
     }
-}var currentLocationsData = [];
+}
 
-function renderLocationMarkers(locations, isDanger) {
-    if (!locations || locations.length === 0) locations = initialLocations;
+var currentLocationsData = [];
+
+async function updateLocationStatus(isDanger) {
+    const locations = await fetchLocationsFromDB();
     currentLocationsData = locations;
     
     markers.forEach(m => map.removeLayer(m));
@@ -834,6 +836,13 @@ function renderLocationMarkers(locations, isDanger) {
         if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
     }
 
+    if (!locations || locations.length === 0) {
+        const icon = createIndoorIcon('001', isDanger);
+        const m = L.marker([defaultLat, defaultLng], { icon: icon }).addTo(map);
+        markers.push(m);
+        return;
+    }
+
     locations.forEach((loc, idx) => {
         const lat = parseFloat(loc.latitude);
         const lng = parseFloat(loc.longitude);
@@ -846,6 +855,7 @@ function renderLocationMarkers(locations, isDanger) {
         const statusBadge = isDanger 
             ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
             : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
+        
         marker.bindPopup(`
             <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
                 <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
@@ -861,7 +871,7 @@ function renderLocationMarkers(locations, isDanger) {
         });
         
         const circleColor = isDanger ? '#dc2626' : '#e85d04';
-        const circleOpacity = isDanger ? 0.3 : 0.1;
+        const circleOpacity = isDanger ? 0.3 : 0.15;
         const zone = L.circle([lat, lng], {
             color: circleColor,
             fillColor: circleColor,
@@ -877,7 +887,6 @@ function renderLocationMarkers(locations, isDanger) {
         }
 
         if (activeSelectedLocationId === loc.id) {
-            marker.openPopup();
             const locNameElem = document.getElementById('location-name-val');
             if (locNameElem) locNameElem.innerText = namaLokasi;
             const locIdElem = document.getElementById('location-id-val');
@@ -886,6 +895,29 @@ function renderLocationMarkers(locations, isDanger) {
             if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
     });
+
+    if (activeSelectedLocationId) {
+        const selBtn = document.getElementById('btn-loc-' + activeSelectedLocationId);
+        if (selBtn) {
+            document.querySelectorAll('.btn-loc-select').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#333';
+                btn.classList.remove('active');
+            });
+            selBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+            selBtn.style.color = 'white';
+            selBtn.classList.add('active');
+        }
+        const selectedLoc = locations.find(l => l.id === activeSelectedLocationId);
+        if (selectedLoc) {
+            markers.forEach(m => {
+                const mLatLng = m.getLatLng();
+                if (Math.abs(mLatLng.lat - parseFloat(selectedLoc.latitude)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(selectedLoc.longitude)) < 0.0001) {
+                    m.openPopup();
+                }
+            });
+        }
+    }
 
     if (!hasFitBounds && markers.length > 0) {
         if (markers.length === 1) {
@@ -898,184 +930,8 @@ function renderLocationMarkers(locations, isDanger) {
     }
 }
 
-async function updateLocationStatus(isDanger) {
-    const locations = await fetchLocationsFromDB();
-    renderLocationMarkers(locations, isDanger);
-}
-
-// Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false);
+// Render awal titik lokasi peta saat pertama kali dimuat
 updateLocationStatus(false);
-
-function createIndoorIcon(id_alat, isDanger) {
-    if (isDanger) {
-        return L.divIcon({
-            html: `<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 42px; height: 42px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; flex-direction: column; animation: blink 1s infinite;">
-                    <i class="fas fa-exclamation-triangle" style="color: white; font-size: 14px;"></i>
-                    <span style="font-size: 8px; color: white; font-weight: bold; margin-top: 1px;">${id_alat || 'Indoor'}</span>
-                  </div>`,
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -21],
-            className: 'indoor-marker-danger'
-        });
-    } else {
-        return L.divIcon({
-            html: `<div style="background: linear-gradient(135deg, #00b4db, #0083b0); width: 42px; height: 42px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                    <i class="fas fa-building" style="color: white; font-size: 14px;"></i>
-                    <span style="font-size: 8px; color: white; font-weight: bold; margin-top: 1px;">${id_alat || 'Indoor'}</span>
-                  </div>`,
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
-            popupAnchor: [0, -21],
-            className: 'indoor-marker'
-        });
-    }
-}
-
-async function fetchLocationsFromDB() {
-    try {
-        const response = await fetch('get_locations.php');
-        const result = await response.json();
-        if (!result.error && Array.isArray(result.data) && result.data.length > 0) {
-            return result.data;
-        }
-    } catch (error) {
-        console.error('Gagal mengambil data lokasi dari database:', error);
-    }
-    return initialLocations;
-}
-
-var activeSelectedLocationId = null;
-var hasFitBounds = false;
-
-function flyToLocation(lat, lng, nama, idAlat, locId, event) {
-    if (locId) activeSelectedLocationId = locId;
-    map.flyTo([lat, lng], 17, { duration: 1.5 });
-    
-    const locNameElem = document.getElementById('location-name-val');
-    if (locNameElem) locNameElem.innerText = nama;
-    
-    const locIdElem = document.getElementById('location-id-val');
-    if (locIdElem) locIdElem.innerText = idAlat;
-
-    const coordElem = document.getElementById('coordinates');
-    if (coordElem) coordElem.innerHTML = `${parseFloat(lat).toFixed(6)}, ${parseFloat(lng).toFixed(6)}`;
-
-    markers.forEach(m => {
-        const mLatLng = m.getLatLng();
-        if (Math.abs(mLatLng.lat - parseFloat(lat)) < 0.0001 && Math.abs(mLatLng.lng - parseFloat(lng)) < 0.0001) {
-            m.openPopup();
-        }
-    });
-
-    document.querySelectorAll('.btn-loc-select').forEach(btn => {
-        btn.style.background = 'white';
-        btn.style.color = '#333';
-        btn.classList.remove('active');
-    });
-    const activeBtn = (event && event.currentTarget) || (locId ? document.getElementById('btn-loc-' + locId) : null);
-    if (activeBtn) {
-        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
-        activeBtn.style.color = 'white';
-        activeBtn.classList.add('active');
-    }
-}
-
-var currentLocationsData = [];
-
-function renderLocationMarkers(locations, isDanger) {
-    if (!locations || locations.length === 0) locations = initialLocations;
-    currentLocationsData = locations;
-    
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
-    dangerZones.forEach(z => map.removeLayer(z));
-    dangerZones = [];
-    
-    const totalElem = document.getElementById('total-locations');
-    if (totalElem) {
-        totalElem.innerHTML = locations.length;
-    }
-
-    const statusElem = document.getElementById('location-status');
-    const zoneElem = document.getElementById('zone');
-    
-    if (isDanger) {
-        if (statusElem) {
-            statusElem.innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
-            statusElem.style.color = '#dc2626';
-        }
-        if (zoneElem) zoneElem.innerHTML = 'Zona Merah (Peringatan Bahaya)';
-    } else {
-        if (statusElem) {
-            statusElem.innerHTML = 'Aman';
-            statusElem.style.color = '#28a745';
-        }
-        if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
-    }
-
-    locations.forEach((loc, idx) => {
-        const lat = parseFloat(loc.latitude);
-        const lng = parseFloat(loc.longitude);
-        const idAlat = loc.id_alat || `00${loc.id}`;
-        const namaLokasi = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : `Indoor (${idAlat})`;
-        
-        const icon = createIndoorIcon(idAlat, isDanger);
-        const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
-        
-        const statusBadge = isDanger 
-            ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
-            : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
-        
-        marker.bindPopup(`
-            <div style="font-family: 'Segoe UI', sans-serif; padding: 4px; min-width: 190px;">
-                <b style="color: #1e3c72; font-size: 14px; display: block; margin-bottom: 2px;"><i class="fas fa-building" style="color: #00b4db;"></i> ${namaLokasi}</b>
-                <small style="color: #666; display: block; margin-bottom: 6px;">ID Alat: <strong>${idAlat}</strong> &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <strong class="loc-suhu-val">${currentSuhu}</strong></small>
-                <div style="font-size: 12px; color: #444; margin-bottom: 4px;"><i class="fas fa-map-marker-alt" style="color: #dc2626;"></i> <b>Koordinat:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
-                <div style="font-size: 11px; color: #777; margin-bottom: 6px;"><i class="fas fa-clock"></i> <b>Update:</b> ${loc.last_update || '-'}</div>
-                <div style="font-size: 12px; margin-top: 6px;"><b>Status:</b> ${statusBadge}</div>
-            </div>
-        `);
-        
-        marker.on('click', function() {
-            flyToLocation(lat, lng, namaLokasi, idAlat, loc.id);
-        });
-        
-        const circleColor = isDanger ? '#dc2626' : '#e85d04';
-        const circleOpacity = isDanger ? 0.3 : 0.1;
-        const zone = L.circle([lat, lng], {
-            color: circleColor,
-            fillColor: circleColor,
-            fillOpacity: circleOpacity,
-            radius: 300
-        }).addTo(map);
-        
-        markers.push(marker);
-        dangerZones.push(zone);
-
-        if (!activeSelectedLocationId && idx === 0) {
-            activeSelectedLocationId = loc.id;
-        }
-
-        if (activeSelectedLocationId === loc.id) {
-            const locNameElem = document.getElementById('location-name-val');
-            if (locNameElem) locNameElem.innerText = namaLokasi;
-            const locIdElem = document.getElementById('location-id-val');
-            if (locIdElem) locIdElem.innerText = idAlat;
-            const coordElem = document.getElementById('coordinates');
-            if (coordElem) coordElem.innerHTML = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        }
-    });
-}
-
-async function updateLocationStatus(isDanger) {
-    const locations = await fetchLocationsFromDB();
-    renderLocationMarkers(locations, isDanger);
-}
-
-// Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false);
 
 // ================= CHART (REAL TIME INDOOR SENSOR - API, ASAP, SUHU, KELEMBAPAN) =================
 const ctx = document.getElementById('myChart').getContext('2d');
@@ -1091,6 +947,7 @@ let dataChart = {
 
 const myChart = new Chart(ctx, {
     type: 'line',
+    data: dataChart,
     options: {
         responsive: true,
         maintainAspectRatio: true,
