@@ -92,6 +92,7 @@ $chart_kelembapan = [];
 $chart_tegangan = [];
 $chart_arus = [];
 $chart_api = [];
+$chart_asap = [];
 
 if ($conn) {
     $checkSensorTable = mysqli_query($conn, "SHOW TABLES LIKE 'data_sensor'");
@@ -101,10 +102,21 @@ if ($conn) {
         if ($q_latest && mysqli_num_rows($q_latest) > 0) {
             $s = mysqli_fetch_assoc($q_latest);
             $apiVal = isset($s['api']) ? (float)$s['api'] : 0;
-            $asapVal = isset($s['asap']) ? (float)$s['asap'] : 0;
+            $raw_asap = isset($s['asap']) ? $s['asap'] : 0;
             
             $apiStatus = ($apiVal > 0.5 || (isset($s['api']) && strtolower($s['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
-            $asapStatus = ($asapVal > 0.5 || (isset($s['asap']) && strtolower($s['asap']) === 'tinggi')) ? "Tinggi" : "Normal";
+            
+            if (is_numeric($raw_asap)) {
+                $f_asap = (float)$raw_asap;
+                if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) $asapStatus = "Tinggi";
+                else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) $asapStatus = "Sedang";
+                else $asapStatus = "Normal";
+            } else {
+                $str_asap = trim((string)$raw_asap);
+                if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) $asapStatus = "Tinggi";
+                else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) $asapStatus = "Sedang";
+                else $asapStatus = "Normal";
+            }
             
             $waktu_raw = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? 'now');
             $waktu_str = date('H:i:s', strtotime($waktu_raw));
@@ -136,6 +148,17 @@ if ($conn) {
                 $chart_kelembapan[] = (float)($r['kelembapan'] ?? 0);
                 $chart_tegangan[] = (float)($r['tegangan'] ?? 0);
                 $chart_arus[] = (float)($r['arus'] ?? 0);
+                
+                $r_asap = $r['asap'] ?? 0;
+                if (is_numeric($r_asap)) {
+                    $chart_asap[] = (float)$r_asap;
+                } else {
+                    $str_asap = trim((string)$r_asap);
+                    if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) $chart_asap[] = 1;
+                    else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) $chart_asap[] = 0.5;
+                    else $chart_asap[] = 0;
+                }
+                
                 $api_raw = (float)($r['api'] ?? 0);
                 $chart_api[] = ($api_raw > 0.5 || (isset($r['api']) && strtolower($r['api']) === 'terdeteksi api')) ? 1 : 0;
             }
@@ -965,11 +988,12 @@ const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = {
     labels: <?= json_encode($chart_labels); ?>,
     datasets: [
+        { label: 'Sensor Api', data: <?= json_encode($chart_api); ?>, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Sensor Asap', data: <?= json_encode($chart_asap); ?>, borderColor: '#ffa502', backgroundColor: 'rgba(255,165,2,0.1)', borderWidth: 2, tension: 0.4, fill: true, borderDash: [5, 5] },
         { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu); ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan); ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Tegangan (V)', data: <?= json_encode($chart_tegangan); ?>, borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus (A)', data: <?= json_encode($chart_arus); ?>, borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Status Api', data: <?= json_encode($chart_api); ?>, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { label: 'Arus (A)', data: <?= json_encode($chart_arus); ?>, borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ]
 };
 
@@ -994,7 +1018,11 @@ const myChart = new Chart(ctx, {
                         else if (label.includes('Arus')) unit = ' A';
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
-                        else if (label.includes('Status Api')) {
+                        else if (label.includes('Sensor Asap')) {
+                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                            return `${label}: ${status}`;
+                        }
+                        else if (label.includes('Sensor Api')) {
                             let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
                             return `${label}: ${status}`;
                         }
@@ -1059,8 +1087,25 @@ async function updateDashboard() {
     const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
     document.getElementById("api-status").innerHTML = apiValue;
     
-    const asapValue = data.asap === "Tinggi" ? '<i class="fas fa-smog"></i> Tinggi (Berbahaya)' : '<i class="fas fa-check"></i> Normal';
-    document.getElementById("asap").innerHTML = asapValue;
+    const asapVal = data.asap;
+    const asapElem = document.getElementById("asap");
+    const asapBox = document.getElementById("asap-box");
+    
+    if (asapElem && asapBox) {
+        if (asapVal === "Tinggi" || asapVal === "Bahaya") {
+            asapElem.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
+            asapBox.classList.add('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+            asapElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+        } else {
+            asapElem.innerHTML = '<i class="fas fa-check"></i> Normal';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+        }
+    }
     
     document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
     if (data.suhu !== undefined) {
@@ -1072,34 +1117,25 @@ async function updateDashboard() {
     document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
     
     const apiBox = document.getElementById('api-box');
-    const asapBox = document.getElementById('asap-box');
-    
-    if (data.api === "Terdeteksi Api") {
-        apiBox.classList.add('pulse-animation');
-        apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else {
-        apiBox.classList.remove('pulse-animation');
-        apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-    }
-    
-    if (data.asap === "Tinggi") {
-        asapBox.classList.add('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else {
-        asapBox.classList.remove('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+    if (apiBox) {
+        if (data.api === "Terdeteksi Api") {
+            apiBox.classList.add('pulse-animation');
+            apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else {
+            apiBox.classList.remove('pulse-animation');
+            apiBox.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+        }
     }
     
     const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
     if (lastTime !== data.waktu) {
         dataChart.labels.push(data.waktu);
-        dataChart.datasets[0].data.push(parseFloat(data.suhu) || 0);
-        dataChart.datasets[1].data.push(parseFloat(data.kelembapan) || 0);
-        dataChart.datasets[2].data.push(parseFloat(data.tegangan) || 0);
-        dataChart.datasets[3].data.push(parseFloat(data.arus) || 0);
-        if (dataChart.datasets[4]) {
-            dataChart.datasets[4].data.push(data.apiValue || (data.api === "Terdeteksi Api" ? 1 : 0));
-        }
+        dataChart.datasets[0].data.push(data.apiValue !== undefined ? data.apiValue : (data.api === "Terdeteksi Api" ? 1 : 0));
+        dataChart.datasets[1].data.push(data.asap_value !== undefined ? parseFloat(data.asap_value) : (data.asap === "Tinggi" ? 1 : (data.asap === "Sedang" ? 0.5 : 0)));
+        dataChart.datasets[2].data.push(parseFloat(data.suhu) || 0);
+        dataChart.datasets[3].data.push(parseFloat(data.kelembapan) || 0);
+        dataChart.datasets[4].data.push(parseFloat(data.tegangan) || 0);
+        dataChart.datasets[5].data.push(parseFloat(data.arus) || 0);
         
         if (dataChart.labels.length > 20) { 
             dataChart.labels.shift(); 

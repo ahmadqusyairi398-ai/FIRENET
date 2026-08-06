@@ -29,11 +29,34 @@ if ($result && mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
     
     $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
-    $asapValue = isset($row['asap']) ? (float)$row['asap'] : 0;
+    $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
     
     // Penentuan status api & asap
     $apiStatus = ($apiValue > 0.5 || (isset($row['api']) && strtolower($row['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
-    $asapStatus = ($asapValue > 0.5 || (isset($row['asap']) && strtolower($row['asap']) === 'tinggi')) ? "Tinggi" : "Normal"; 
+    
+    if (is_numeric($rawAsap)) {
+        $fAsap = (float)$rawAsap;
+        if ($fAsap > ($fAsap > 1 ? 50 : 0.5)) {
+            $asapStatus = "Tinggi";
+        } else if ($fAsap > ($fAsap > 1 ? 25 : 0.25)) {
+            $asapStatus = "Sedang";
+        } else {
+            $asapStatus = "Normal";
+        }
+        $asapNum = $fAsap;
+    } else {
+        $strAsap = trim((string)$rawAsap);
+        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
+            $asapStatus = "Tinggi";
+            $asapNum = 1;
+        } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
+            $asapStatus = "Sedang";
+            $asapNum = 0.5;
+        } else {
+            $asapStatus = "Normal";
+            $asapNum = 0;
+        }
+    }
     
     $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi");
 
@@ -47,6 +70,7 @@ if ($result && mysqli_num_rows($result) > 0) {
         "waktu"      => $waktu_formatted,
         "api"        => $apiStatus,
         "asap"       => $asapStatus,
+        "asap_value" => $asapNum,
         "suhu"       => isset($row['suhu']) ? number_format((float)$row['suhu'], 1) : "0.0",
         "kelembapan" => isset($row['kelembapan']) ? number_format((float)$row['kelembapan'], 1) : "0.0",
         "tegangan"   => isset($row['tegangan']) ? number_format((float)$row['tegangan'], 1) : "0.0",
@@ -57,7 +81,6 @@ if ($result && mysqli_num_rows($result) > 0) {
         "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
         "isDanger"   => $isDanger,
         "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
-        "co"         => isset($row['co']) ? $row['co'] : 0,
         "status"     => "Online"
     ];
     
