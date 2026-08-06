@@ -1027,10 +1027,15 @@ function renderLocationMarkers(locations, isDanger) {
         const idAlat = loc.id_alat || `Alat-${loc.id}`;
         const namaLokasi = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : (loc.id_alat ? `Indoor (${loc.id_alat})` : `Lokasi ${loc.id}`);
         
-        const icon = createIndoorIcon(idAlat, isDanger);
+        // --- TAMBAHAN BARU: Cek apakah ini lokasi utama (LOK-002 / IND-002) atau bukan ---
+        const rawIdUpper = String(idAlat || '').toUpperCase();
+        const isLocDanger = (rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || loc.id === 2) ? isDanger : false;
+
+        // Ubah isDanger menjadi isLocDanger di bawah ini
+        const icon = createIndoorIcon(idAlat, isLocDanger);
         const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
         
-        const statusBadge = isDanger 
+        const statusBadge = isLocDanger 
             ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
             : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
         
@@ -1048,8 +1053,8 @@ function renderLocationMarkers(locations, isDanger) {
             flyToLocation(lat, lng, namaLokasi, idAlat, loc.id);
         });
         
-        const circleColor = isDanger ? '#dc2626' : '#e85d04';
-        const circleOpacity = isDanger ? 0.3 : 0.1;
+        const circleColor = isLocDanger ? '#dc2626' : '#e85d04';
+        const circleOpacity = isLocDanger ? 0.3 : 0.1;
         const zone = L.circle([lat, lng], {
             color: circleColor,
             fillColor: circleColor,

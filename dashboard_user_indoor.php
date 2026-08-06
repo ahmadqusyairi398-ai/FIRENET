@@ -888,7 +888,10 @@ function addMarkerToMap(location, isDanger) {
         className: 'danger-marker'
     });
     
-    var icon = isDanger ? dangerIcon : safeIcon;
+    const rawIdUpper = String(location.id_alat || '').toUpperCase();
+    const isLocDanger = (rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || location.id === 2) ? isDanger : false;
+
+    var icon = isLocDanger ? dangerIcon : safeIcon;
     
     var marker = L.marker([location.latitude, location.longitude], { 
         icon: icon, 
@@ -896,7 +899,7 @@ function addMarkerToMap(location, isDanger) {
     }).addTo(map);
     
     var namaLokasi = location.nama_lokasi && location.nama_lokasi.trim() !== '' ? location.nama_lokasi : (location.id_alat ? `Indoor (${location.id_alat})` : 'Lokasi Gedung');
-    var statusBadge = isDanger 
+    var statusBadge = isLocDanger 
         ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
         : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
 
@@ -916,8 +919,8 @@ function addMarkerToMap(location, isDanger) {
 
     markers.push(marker);
     
-    var circleColor = isDanger ? '#dc2626' : '#e85d04';
-    var circleOpacity = isDanger ? 0.3 : 0.15;
+    var circleColor = isLocDanger ? '#dc2626' : '#e85d04';
+    var circleOpacity = isLocDanger ? 0.3 : 0.15;
     
     var zone = L.circle([location.latitude, location.longitude], {
         color: circleColor,
