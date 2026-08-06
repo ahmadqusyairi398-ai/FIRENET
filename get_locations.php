@@ -83,14 +83,10 @@ if (!$result) {
 $locations = [];
 
 while ($row = mysqli_fetch_assoc($result)) {
-    $nama = trim($row['nama_lokasi'] ?? '');
-    if (empty($nama) || stripos($nama, 'unmul') !== false) {
-        $nama = 'Gedung Elektro Poltekba';
-    }
     $locations[] = [
         'id' => (int)$row['id'],
         'id_alat' => $row['id_alat'],
-        'nama_lokasi' => $nama,
+        'nama_lokasi' => $row['nama_lokasi'] ?? '',
         'latitude' => (float)$row['latitude'],
         'longitude' => (float)$row['longitude'],
         'last_update' => $row['last_update']

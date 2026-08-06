@@ -31,20 +31,13 @@ if ($conn) {
             @mysqli_query($conn, "ALTER TABLE lokasi_monitoring ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
         }
         
-        // Auto update nama lokasi lama / Unmul / Gedung Utama jika ada di database
-        @mysqli_query($conn, "UPDATE lokasi_monitoring SET nama_lokasi = 'Gedung Elektro Poltekba' WHERE nama_lokasi LIKE '%unmul%' OR nama_lokasi LIKE '%gedung utama%' OR nama_lokasi IS NULL OR nama_lokasi = ''");
-        
         $q_loc = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($q_loc) {
             while ($r = mysqli_fetch_assoc($q_loc)) {
-                $nama = trim($r['nama_lokasi'] ?? '');
-                if (empty($nama) || stripos($nama, 'unmul') !== false) {
-                    $nama = 'Gedung Elektro Poltekba';
-                }
                 $db_locations[] = [
                     'id' => (int)$r['id'],
                     'id_alat' => $r['id_alat'],
-                    'nama_lokasi' => $nama,
+                    'nama_lokasi' => $r['nama_lokasi'] ?? '',
                     'latitude' => (float)$r['latitude'],
                     'longitude' => (float)$r['longitude'],
                     'last_update' => $r['last_update']
@@ -80,6 +73,28 @@ if (empty($db_locations)) {
             'longitude' => 116.886400,
             'last_update' => date('Y-m-d H:i:s')
         ]
+    ];
+}
+
+// Tentukan lokasi awal yang difokuskan ke Gedung Elektro Poltekba saat pertama kali dibuka
+$primary_loc = null;
+foreach ($db_locations as $loc) {
+    if (!empty($loc['nama_lokasi']) && (stripos($loc['nama_lokasi'], 'elektro') !== false || stripos($loc['nama_lokasi'], 'poltekba') !== false)) {
+        $primary_loc = $loc;
+        break;
+    }
+}
+if (!$primary_loc && !empty($db_locations)) {
+    $primary_loc = $db_locations[0];
+}
+if (!$primary_loc) {
+    $primary_loc = [
+        'id' => 1,
+        'id_alat' => 'IND-001',
+        'nama_lokasi' => 'Gedung Elektro Poltekba',
+        'latitude' => -1.202490,
+        'longitude' => 116.887080,
+        'last_update' => date('Y-m-d H:i:s')
     ];
 }
 
@@ -700,17 +715,17 @@ canvas {
             <div class="location-info-item">
                 <i class="fas fa-building"></i>
                 <span class="label">Nama Lokasi:</span>
-                <span class="value" id="location-name-val"><?= htmlspecialchars(!empty($db_locations[0]['nama_lokasi']) ? $db_locations[0]['nama_lokasi'] : 'Indoor Sensor') ?></span>
+                <span class="value" id="location-name-val"><?= htmlspecialchars($primary_loc['nama_lokasi']) ?></span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-microchip"></i>
                 <span class="label">ID Alat:</span>
-                <span class="value" id="location-id-val" style="color: #e85d04; font-weight: 700;"><?= htmlspecialchars($db_locations[0]['id_alat'] ?? '001') ?></span>
+                <span class="value" id="location-id-val" style="color: #e85d04; font-weight: 700;"><?= htmlspecialchars($primary_loc['id_alat']) ?></span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-globe"></i>
                 <span class="label">Koordinat:</span>
-                <span class="value" id="coordinates"><?= !empty($db_locations) ? number_format($db_locations[0]['latitude'], 6) . ', ' . number_format($db_locations[0]['longitude'], 6) : '-1.202490, 116.887080' ?></span>
+                <span class="value" id="coordinates"><?= number_format($primary_loc['latitude'], 6) . ', ' . number_format($primary_loc['longitude'], 6) ?></span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-temperature-high"></i>
@@ -784,8 +799,8 @@ document.addEventListener('keydown', function(e) {
 var map;
 var markers = []; // Array untuk menyimpan semua marker
 var dangerZones = []; // Array untuk menyimpan semua circle zone
-var defaultLat = -1.20249;
-var defaultLng = 116.88708;
+var defaultLat = <?= (float)$primary_loc['latitude']; ?>;
+var defaultLng = <?= (float)$primary_loc['longitude']; ?>;
 var currentSuhu = "<?= htmlspecialchars($latest_sensor['suhu'] ?? '-') ?><?= (isset($latest_sensor['suhu']) && $latest_sensor['suhu'] !== '-') ? ' °C' : '' ?>";
 
 // ================= INISIALISASI PETA =================
@@ -797,8 +812,8 @@ function initMap() {
         dangerZones = [];
     }
     
-    // Inisialisasi peta dengan koordinat default
-    map = L.map('map').setView([defaultLat, defaultLng], 13);
+    // Inisialisasi peta dengan koordinat default Gedung Elektro Poltekba
+    map = L.map('map').setView([defaultLat, defaultLng], 16);
     
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -806,7 +821,8 @@ function initMap() {
         maxZoom: 19,
         minZoom: 3
     }).addTo(map);
-}var activeSelectedLocationId = null;
+}
+var activeSelectedLocationId = <?= (int)$primary_loc['id']; ?>;
 var hasFitBounds = false;
 
 function flyToLocation(lat, lng, nama, idAlat, locId, event) {
