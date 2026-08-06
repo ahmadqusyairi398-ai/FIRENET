@@ -137,9 +137,12 @@ if ($conn) {
                 else $co_status = "Normal";
             }
 
+            $str_api_umum = isset($s['api']) ? trim(strtolower((string)$s['api'])) : '';
+            $api_status_umum = ($str_api_umum === 'terdeteksi api' || $str_api_umum === 'dekat' || $str_api_umum === 'sedang' || $str_api_umum === 'tinggi' || (float)($s['api'] ?? 0) > 0.5) ? "Terdeteksi Api" : "Aman";
+
             $latest_sensor = [
                 'waktu' => date('H:i:s'),
-                'api' => (isset($s['api']) && (float)$s['api'] > 0.5) ? "Terdeteksi Api" : "Aman",
+                'api' => $api_status_umum,
                 'asap' => $asap_val,
                 'co' => is_numeric($co_raw) ? number_format((float)$co_raw, 1) : $co_raw,
                 'co_status' => $co_status,

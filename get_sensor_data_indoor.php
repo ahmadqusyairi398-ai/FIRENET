@@ -31,8 +31,12 @@ if ($result && mysqli_num_rows($result) > 0) {
     $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
     $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
     
-    // Penentuan status api & asap
-    $apiStatus = ($apiValue > 0.5 || (isset($row['api']) && strtolower($row['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
+    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+    if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiValue > 0.5) {
+        $apiStatus = "Terdeteksi Api";
+    } else {
+        $apiStatus = "Aman";
+    }
     
     if (is_numeric($rawAsap)) {
         $fAsap = (float)$rawAsap;

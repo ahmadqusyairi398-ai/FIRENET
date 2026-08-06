@@ -131,7 +131,12 @@ if ($conn) {
             $apiVal = isset($s['api']) ? (float)$s['api'] : 0;
             $raw_asap = isset($s['asap']) ? $s['asap'] : 0;
             
-            $apiStatus = ($apiVal > 0.5 || (isset($s['api']) && strtolower($s['api']) === 'terdeteksi api')) ? "Terdeteksi Api" : "Aman";
+            $str_api = isset($s['api']) ? trim(strtolower((string)$s['api'])) : '';
+            if ($str_api === 'terdeteksi api' || $str_api === 'dekat' || $str_api === 'sedang' || $str_api === 'tinggi' || $apiVal > 0.5) {
+                $apiStatus = "Terdeteksi Api";
+            } else {
+                $apiStatus = "Aman";
+            }
             
             if (is_numeric($raw_asap)) {
                 $f_asap = (float)$raw_asap;
