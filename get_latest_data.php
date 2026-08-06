@@ -1,17 +1,36 @@
 <?php
 header('Content-Type: application/json');
-include 'koneksi.php'; // Sesuaikan dengan file koneksi Anda
+require_once 'koneksi.php';
 
-// 1. Ambil data sensor terbaru
+// Pastikan MURNI menggunakan koneksi database OUTDOOR
+$conn = isset($conn_outdoor) && $conn_outdoor ? $conn_outdoor : null;
+
+if (!$conn) {
+    // Fallback manual murni ke database outdoor jika kredensial terpisah
+    $conn = @mysqli_connect("localhost", "ta_user", "rahasiaTA123!", "outdoor");
+    if (!$conn) {
+        $conn = @mysqli_connect("localhost", "root", "", "outdoor");
+    }
+}
+
+if (!$conn || mysqli_connect_errno()) {
+    echo json_encode([
+        "error" => true,
+        "message" => "Koneksi database outdoor gagal"
+    ]);
+    exit();
+}
+
+// Ambil data sensor terbaru murni dari database OUTDOOR
 $query_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
-$data_sensor = mysqli_fetch_assoc($query_sensor);
+$data_sensor = ($query_sensor && mysqli_num_rows($query_sensor) > 0) ? mysqli_fetch_assoc($query_sensor) : [];
 
-// 2. Ambil lokasi alat utama (id=1)
+// Ambil lokasi alat utama (id=1) dari database OUTDOOR (tabel lokasi_alat)
 $query_lokasi = mysqli_query($conn, "SELECT * FROM lokasi_alat WHERE id = 1 LIMIT 1");
 if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
     $query_lokasi = mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id ASC LIMIT 1");
 }
-$data_lokasi = mysqli_fetch_assoc($query_lokasi);
+$data_lokasi = ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) ? mysqli_fetch_assoc($query_lokasi) : [];
 
 // 3. Logika penentuan status Asap yang lebih aman
 $raw_asap = $data_sensor['asap'] ?? 0;

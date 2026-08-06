@@ -13,8 +13,14 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 // 1. Hubungkan ke database
 require_once 'koneksi.php';
 
-// Gunakan koneksi outdoor
-$conn = isset($conn_outdoor) ? $conn_outdoor : null;
+// Gunakan koneksi murni database outdoor
+$conn = isset($conn_outdoor) && $conn_outdoor ? $conn_outdoor : null;
+if (!$conn) {
+    $conn = @mysqli_connect("localhost", "ta_user", "rahasiaTA123!", "outdoor");
+    if (!$conn) {
+        $conn = @mysqli_connect("localhost", "root", "", "outdoor");
+    }
+}
 
 if ($conn) {
     $query_lokasi = mysqli_query($conn, "SELECT latitude, longitude FROM lokasi_alat WHERE id = 1 LIMIT 1");
