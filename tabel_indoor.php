@@ -835,7 +835,7 @@ let sensorData = sensorDataPHP.map((item, index) => {
         no: index + 1,
         tanggal_waktu: formattedDate,
         tanggal: dateOnly,
-        api: item.api !== null && item.api !== undefined ? parseFloat(item.api).toFixed(2) : '0',
+        api: item.api !== null && item.api !== undefined ? item.api : '0',
         asap: item.asap !== null && item.asap !== undefined ? parseFloat(item.asap).toFixed(2) : '0',
         suhu: item.suhu !== null && item.suhu !== undefined ? parseFloat(item.suhu).toFixed(1) : '0',
         kelembapan: item.kelembapan !== null && item.kelembapan !== undefined ? parseFloat(item.kelembapan).toFixed(1) : '0',
@@ -848,17 +848,17 @@ let sensorData = sensorDataPHP.map((item, index) => {
 let currentData = [...sensorData];
 let dataTable;
 
-// Fungsi untuk menentukan status berdasarkan nilai angka (float)
+// Fungsi untuk menentukan status berdasarkan nilai angka (float) / string
 function getStatusClass(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return 'status-bahaya';
-        if (num > 40) return 'status-waspada';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return 'status-bahaya';
         return 'status-aman';
     }
     if (type === 'asap') {
-        if (num > 750) return 'status-bahaya';
-        if (num > 350) return 'status-waspada';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return 'status-bahaya';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return 'status-waspada';
         return 'status-aman';
     }
     return '';
@@ -866,14 +866,14 @@ function getStatusClass(value, type) {
 
 function getStatusIcon(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return '<i class="fas fa-exclamation-triangle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     if (type === 'asap') {
-        if (num > 750) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (num > 350) return '<i class="fas fa-exclamation-circle"></i>';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return '<i class="fas fa-exclamation-triangle"></i>';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return '<i class="fas fa-exclamation-circle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     return '';
@@ -881,14 +881,14 @@ function getStatusIcon(value, type) {
 
 function getStatusText(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return 'Terdeteksi Api';
-        if (num > 40) return 'Potensi Api';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return 'Terdeteksi Api';
         return 'Aman';
     }
     if (type === 'asap') {
-        if (num > 750) return 'Tinggi';
-        if (num > 350) return 'Sedang';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return 'Tinggi';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return 'Sedang';
         return 'Normal';
     }
     return '';
