@@ -36,9 +36,9 @@ if ($result && mysqli_num_rows($result) > 0) {
     
     if (is_numeric($rawAsap)) {
         $fAsap = (float)$rawAsap;
-        if ($fAsap > ($fAsap > 1 ? 50 : 0.5)) {
+        if ($fAsap > ($fAsap > 1 ? 750 : 0.5)) {
             $asapStatus = "Tinggi";
-        } else if ($fAsap > ($fAsap > 1 ? 25 : 0.25)) {
+        } else if ($fAsap > ($fAsap > 1 ? 350 : 0.25)) {
             $asapStatus = "Sedang";
         } else {
             $asapStatus = "Normal";

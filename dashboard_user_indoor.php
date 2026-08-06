@@ -135,8 +135,8 @@ if ($conn) {
             
             if (is_numeric($raw_asap)) {
                 $f_asap = (float)$raw_asap;
-                if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) $asapStatus = "Tinggi";
-                else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) $asapStatus = "Sedang";
+                if ($f_asap > ($f_asap > 1 ? 750 : 0.5)) $asapStatus = "Tinggi";
+                else if ($f_asap > ($f_asap > 1 ? 350 : 0.25)) $asapStatus = "Sedang";
                 else $asapStatus = "Normal";
             } else {
                 $str_asap = trim((string)$raw_asap);
