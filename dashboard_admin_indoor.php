@@ -29,13 +29,25 @@ $db_locations = [];
 if ($conn) {
     $checkTable = mysqli_query($conn, "SHOW TABLES LIKE 'lokasi_monitoring'");
     if ($checkTable && mysqli_num_rows($checkTable) > 0) {
+        $checkNamaLokasiCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_monitoring LIKE 'nama_lokasi'");
+        if (!$checkNamaLokasiCol || mysqli_num_rows($checkNamaLokasiCol) == 0) {
+            @mysqli_query($conn, "ALTER TABLE lokasi_monitoring ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
+        }
+        
+        // Auto update nama lokasi lama / Unmul / Gedung Utama jika ada di database
+        @mysqli_query($conn, "UPDATE lokasi_monitoring SET nama_lokasi = 'Gedung Elektro Poltekba' WHERE nama_lokasi LIKE '%unmul%' OR nama_lokasi LIKE '%gedung utama%' OR nama_lokasi IS NULL OR nama_lokasi = ''");
+        
         $q_loc = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($q_loc) {
             while ($r = mysqli_fetch_assoc($q_loc)) {
+                $nama = trim($r['nama_lokasi'] ?? '');
+                if (empty($nama) || stripos($nama, 'unmul') !== false) {
+                    $nama = 'Gedung Elektro Poltekba';
+                }
                 $db_locations[] = [
                     'id' => (int)$r['id'],
                     'id_alat' => $r['id_alat'],
-                    'nama_lokasi' => $r['nama_lokasi'] ?? '',
+                    'nama_lokasi' => $nama,
                     'latitude' => (float)$r['latitude'],
                     'longitude' => (float)$r['longitude'],
                     'last_update' => $r['last_update']
@@ -51,7 +63,7 @@ if (empty($db_locations)) {
         [
             'id' => 1,
             'id_alat' => 'IND-001',
-            'nama_lokasi' => 'Gedung Utama Poltekba (Indoor)',
+            'nama_lokasi' => 'Gedung Elektro Poltekba',
             'latitude' => -1.202490,
             'longitude' => 116.887080,
             'last_update' => date('Y-m-d H:i:s')
@@ -59,7 +71,7 @@ if (empty($db_locations)) {
         [
             'id' => 2,
             'id_alat' => 'IND-002',
-            'nama_lokasi' => 'Ruang Server Gedung A',
+            'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba',
             'latitude' => -1.203100,
             'longitude' => 116.887500,
             'last_update' => date('Y-m-d H:i:s')
@@ -67,7 +79,7 @@ if (empty($db_locations)) {
         [
             'id' => 3,
             'id_alat' => 'IND-003',
-            'nama_lokasi' => 'Lab Komputer Lt. 2',
+            'nama_lokasi' => 'Lab Komputer Lt. 2 Gedung Elektro',
             'latitude' => -1.201800,
             'longitude' => 116.886400,
             'last_update' => date('Y-m-d H:i:s')

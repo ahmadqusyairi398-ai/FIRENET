@@ -68,8 +68,8 @@ function ensureLocationTable($conn) {
         
         // Insert default location (Sertakan id_alat & nama_lokasi)
         $defaultLocations = [
-            ['id_alat' => '001', 'nama_lokasi' => 'Gedung A - Ruang 101', 'latitude' => -1.20249, 'longitude' => 116.88708],
-            ['id_alat' => '002', 'nama_lokasi' => 'Gedung B - Ruang 202', 'latitude' => -1.20250, 'longitude' => 116.88710],
+            ['id_alat' => 'IND-001', 'nama_lokasi' => 'Gedung Elektro Poltekba', 'latitude' => -1.20249, 'longitude' => 116.88708],
+            ['id_alat' => 'IND-002', 'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba', 'latitude' => -1.20250, 'longitude' => 116.88710],
         ];
         
         foreach ($defaultLocations as $loc) {
