@@ -810,6 +810,7 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.style.color = 'white';
         activeBtn.classList.add('active');
     }
+    fetchDataFromDB();
 }
 
 var currentLocationsData = [];
@@ -1000,26 +1001,67 @@ const myChart = new Chart(ctx, {
     }
 });
 
-// ================= DATA DARI DATABASE (FETCH API) =================
+// ================= FUNGSI GENERATE DATA DUMMY (SIMULASI) =================
+function generateDummyData() {
+    const now = new Date();
+    const jam = String(now.getHours()).padStart(2, '0');
+    const menit = String(now.getMinutes()).padStart(2, '0');
+    const detik = String(now.getSeconds()).padStart(2, '0');
+
+    return {
+        waktu: `${jam}:${menit}:${detik}`,
+        api: "Aman",
+        asap: "Normal",
+        asap_value: 0,
+        suhu: (24 + Math.random() * 3).toFixed(1),
+        kelembapan: (50 + Math.random() * 10).toFixed(1),
+        tegangan: (218 + Math.random() * 4).toFixed(1),
+        arus: (0.10 + Math.random() * 0.15).toFixed(3),
+        rssi: -50 - Math.floor(Math.random() * 20),
+        ip: "192.168.1." + Math.floor(100 + Math.random() * 50),
+        isDanger: false,
+        apiValue: 0
+    };
+}
+
+async function fetchSensorData() {
+    try {
+        const response = await fetch('get_sensor_data_indoor.php');
+        const data = await response.json();
+        if (data.error) return null;
+        return data;
+    } catch (error) {
+        return null;
+    }
+}
+
 var batasSensorConfig = <?= json_encode($batas_sensor); ?>;
 
-function fetchDataFromDB() {
-    fetch('get_sensor_data_indoor.php')
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.warn("Gagal mengambil data sensor indoor:", data.message);
-            return;
-        }
+async function fetchDataFromDB() {
+    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
+    const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
+    const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
+    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || lokasiAktif.id === 2);
 
-        var nowClock = data.waktu || new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        var statusText = data.status || "Online";
-        var isOnline = statusText.toLowerCase().includes('online');
+    let data;
+    if (isLive) {
+        data = await fetchSensorData();
+    } else {
+        data = generateDummyData();
+    }
 
-        var statusElem = document.getElementById("status");
-        if (statusElem) {
-            statusElem.innerHTML = `<i class="fas fa-circle ${isOnline ? 'status-online' : ''}" style="${!isOnline ? 'color:#dc3545;' : ''}"></i> ${statusText}`;
+    if (!data) return;
+
+    var nowClock = data.waktu || new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    var statusElem = document.getElementById("status");
+    if (statusElem) {
+        if (isLive) {
+            statusElem.innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+        } else {
+            statusElem.innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
         }
+    }
         var rssiElem = document.getElementById("rssi");
         if (rssiElem) rssiElem.innerHTML = `${data.rssi || '-'} dBm`;
         
@@ -1113,8 +1155,6 @@ function fetchDataFromDB() {
                 myChart.update();
             }
         }
-    })
-    .catch(error => console.error("Error fetching indoor sensor data:", error));
 }
 
 // ================= FUNGSI SEARCH LOKASI DROPDOWN =================

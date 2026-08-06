@@ -983,6 +983,7 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.style.color = 'white';
         activeBtn.classList.add('active');
     }
+    updateDashboard();
 }
 
 var currentLocationsData = [];
@@ -1180,6 +1181,30 @@ const myChart = new Chart(ctx, {
     } 
 });
 
+// ================= FUNGSI GENERATE DATA DUMMY (SIMULASI) =================
+// Fungsi ini hanya dipanggil saat titik lokasi SELAIN LOK-002 diklik
+function generateDummyData() {
+    const now = new Date();
+    const jam = String(now.getHours()).padStart(2, '0');
+    const menit = String(now.getMinutes()).padStart(2, '0');
+    const detik = String(now.getSeconds()).padStart(2, '0');
+
+    return {
+        waktu: `${jam}:${menit}:${detik}`,
+        api: "Aman",             // Selalu aman agar tidak bikin panik
+        asap: "Normal",
+        asap_value: 0,
+        suhu: (24 + Math.random() * 3).toFixed(1), // Acak 24.0 - 27.0 °C
+        kelembapan: (50 + Math.random() * 10).toFixed(1), // Acak 50.0 - 60.0 %
+        tegangan: (218 + Math.random() * 4).toFixed(1), // Acak 218.0 - 222.0 V
+        arus: (0.10 + Math.random() * 0.15).toFixed(3), // Acak 0.100 - 0.250 A (3 desimal)
+        rssi: -50 - Math.floor(Math.random() * 20),
+        ip: "192.168.1." + Math.floor(100 + Math.random() * 50),
+        isDanger: false,
+        apiValue: 0
+    };
+}
+
 // ================= AMBIL DATA DARI DATABASE MENGGUNAKAN AJAX =================
 async function fetchSensorData() {
     try {
@@ -1198,10 +1223,25 @@ async function fetchSensorData() {
     }
 }
 
-// ================= UPDATE DASHBOARD DENGAN DATA DARI DATABASE =================
+// ================= UPDATE DASHBOARD (LIVE LOK-002 vs DUMMY) =================
 async function updateDashboard() {
-    const data = await fetchSensorData();
-    
+    // 1. Cari tahu titik lokasi mana yang saat ini sedang aktif (sedang diklik di peta)
+    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
+    const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
+
+    // 2. Tentukan apakah ini LOK-002 (Live) atau bukan
+    const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
+    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || lokasiAktif.id === 2);
+
+    let data;
+    if (isLive) {
+        // Jika yang diklik adalah LOK-002, JANGAN gunakan dummy! Ambil dari Database.
+        data = await fetchSensorData();
+    } else {
+        // Jika yang diklik adalah lokasi lain (LOK-001, LOK-003, dll), hasilkan DUMMY.
+        data = generateDummyData();
+    }
+
     if (!data) {
         document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
         document.getElementById("rssi").innerHTML = '-';
@@ -1210,8 +1250,13 @@ async function updateDashboard() {
         updateLocationStatus(false);
         return;
     }
-    
-    document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Online`;
+
+    // 3. Ubah Label Status Header agar terlihat perbedaannya
+    if (isLive) {
+        document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+    } else {
+        document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
+    }
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
