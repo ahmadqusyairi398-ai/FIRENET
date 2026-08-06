@@ -155,7 +155,7 @@ if ($conn) {
                 'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "-",
                 'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
                 'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
-                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "-",
+                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 3) : "-",
                 'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
                 'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
                 'status' => 'Online',
