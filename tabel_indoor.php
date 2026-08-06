@@ -857,8 +857,8 @@ function getStatusClass(value, type) {
         return 'status-aman';
     }
     if (type === 'asap') {
-        if (num > 70) return 'status-bahaya';
-        if (num > 40) return 'status-waspada';
+        if (num > 750) return 'status-bahaya';
+        if (num > 350) return 'status-waspada';
         return 'status-aman';
     }
     return '';
@@ -872,8 +872,8 @@ function getStatusIcon(value, type) {
         return '<i class="fas fa-check-circle"></i>';
     }
     if (type === 'asap') {
-        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
+        if (num > 750) return '<i class="fas fa-exclamation-triangle"></i>';
+        if (num > 350) return '<i class="fas fa-exclamation-circle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     return '';
@@ -887,8 +887,8 @@ function getStatusText(value, type) {
         return 'Aman';
     }
     if (type === 'asap') {
-        if (num > 70) return 'Tinggi';
-        if (num > 40) return 'Sedang';
+        if (num > 750) return 'Tinggi';
+        if (num > 350) return 'Sedang';
         return 'Normal';
     }
     return '';
