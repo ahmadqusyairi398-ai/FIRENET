@@ -5,18 +5,12 @@ require_once 'koneksi.php';
 
 $device = isset($_GET['device']) ? strtolower($_GET['device']) : 'outdoor';
 if ($device === 'indoor') {
-    $conn = isset($conn_indoor) && $conn_indoor ? $conn_indoor : null;
-    if (!$conn) {
-        $conn = @mysqli_connect($host, $username, $password, $dbname_indoor);
-    }
+    $conn = isset($conn_indoor) ? $conn_indoor : null;
 } else {
-    $conn = isset($conn_outdoor) && $conn_outdoor ? $conn_outdoor : null;
-    if (!$conn) {
-        $conn = @mysqli_connect($host, $username, $password, $dbname_outdoor);
-    }
+    $conn = isset($conn_outdoor) ? $conn_outdoor : null;
 }
 
-if (!$conn || mysqli_connect_errno()) {
+if (!$conn) {
     echo json_encode([]);
     exit();
 }

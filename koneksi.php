@@ -70,9 +70,9 @@ try {
     // Koneksi indoor dibiarkan null jika gagal
 }
 
-// Set default koneksi utama ke OUTDOOR
-$pdo = $pdo_outdoor;
-$conn = $conn_outdoor;
+// Untuk kompatibilitas file lama, set default ke outdoor jika tersedia, jika tidak ke indoor
+$pdo = $pdo_outdoor ? $pdo_outdoor : $pdo_indoor;
+$conn = $conn_outdoor ? $conn_outdoor : $conn_indoor;
 
 // Cek jika kedua koneksi gagal sama sekali
 if (!$pdo_outdoor && !$pdo_indoor) {

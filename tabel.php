@@ -16,13 +16,9 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 // Koneksi ke database
 require_once 'koneksi.php';
 
-// ========== PASTIKAN KONEKSI MENGGUNAKAN PDO OUTDOOR MURNI ==========
-$pdo = isset($pdo_outdoor) && $pdo_outdoor ? $pdo_outdoor : null;
-if (!$pdo) {
-    try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname_outdoor;charset=utf8mb4", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    } catch (Exception $e) {}
+// ========== PASTIKAN KONEKSI MENGGUNAKAN PDO OUTDOOR ==========
+if (!isset($pdo) && isset($pdo_outdoor)) {
+    $pdo = $pdo_outdoor;
 }
 
 // ========== CEK KONEKSI DATABASE ==========
