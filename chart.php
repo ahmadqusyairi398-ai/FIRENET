@@ -1156,7 +1156,7 @@ function generateDummyChartData(locId) {
     const result = [];
 
     for (let i = 20; i >= 0; i--) {
-        const t = new Date(now.getTime() - i * 60000);
+        const t = new Date(now.getTime() - i * 15000);
         const tStr = t.getFullYear() + '-' +
                      String(t.getMonth() + 1).padStart(2, '0') + '-' +
                      String(t.getDate()).padStart(2, '0') + ' ' +
@@ -1164,17 +1164,31 @@ function generateDummyChartData(locId) {
                      String(t.getMinutes()).padStart(2, '0') + ':' +
                      String(t.getSeconds()).padStart(2, '0');
 
-        const sec = i;
-        const noiseSuhu = parseFloat((Math.sin(sec + numId) * 0.8).toFixed(1));
+        const stepIndex = Math.floor(t.getTime() / 15000);
+        const conditionStep = (stepIndex + numId) % 3;
 
-        const suhuVal = parseFloat((25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1));
-        const humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4)));
+        let suhuVal, humiVal, asapVal, coVal;
+        if (conditionStep === 0) { // Aman
+            suhuVal = parseFloat((26.0 + (numId % 3)).toFixed(1));
+            humiVal = 68;
+            asapVal = 10;
+            coVal = 15;
+        } else if (conditionStep === 1) { // Waspada
+            suhuVal = parseFloat((42.0 + (numId % 3)).toFixed(1));
+            humiVal = 48;
+            asapVal = 45;
+            coVal = 42;
+        } else { // Bahaya
+            suhuVal = parseFloat((65.0 + (numId % 3)).toFixed(1));
+            humiVal = 28;
+            asapVal = 85;
+            coVal = 85;
+        }
+
         const windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
-        const coVal = Math.round(12 + (numId % 6) * 4);
         const tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
         const arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
         const dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
-        const asapVal = (numId === 4 || numId === 7) ? 80 : 10;
 
         result.push({
             waktu: tStr,

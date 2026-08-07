@@ -1155,7 +1155,7 @@ $(document).ready(function() {
         const rows = [];
 
         for (let i = 0; i < 20; i++) {
-            const t = new Date(now.getTime() - i * 60000);
+            const t = new Date(now.getTime() - i * 15000);
             const dateStr = t.getFullYear() + '-' +
                             String(t.getMonth() + 1).padStart(2, '0') + '-' +
                             String(t.getDate()).padStart(2, '0');
@@ -1164,15 +1164,31 @@ $(document).ready(function() {
                             String(t.getSeconds()).padStart(2, '0');
             const fullStr = dateStr + ' ' + timeStr;
 
-            const noiseSuhu = parseFloat((Math.sin(i + numId) * 0.8).toFixed(1));
-            const suhuVal = (25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1);
-            const humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4))).toFixed(1);
+            const stepIndex = Math.floor(t.getTime() / 15000);
+            const conditionStep = (stepIndex + numId) % 3;
+
+            let suhuVal, humiVal, asapVal, coVal;
+            if (conditionStep === 0) { // Aman
+                suhuVal = (26.0 + (numId % 3)).toFixed(1);
+                humiVal = '68.0';
+                asapVal = 'Normal';
+                coVal = '15.0';
+            } else if (conditionStep === 1) { // Waspada
+                suhuVal = (42.0 + (numId % 3)).toFixed(1);
+                humiVal = '48.0';
+                asapVal = 'Sedang';
+                coVal = '42.0';
+            } else { // Bahaya
+                suhuVal = (65.0 + (numId % 3)).toFixed(1);
+                humiVal = '28.0';
+                asapVal = 'Tinggi';
+                coVal = '85.0';
+            }
+
             const windVal = (2.0 + (numId % 4) * 0.9).toFixed(1);
-            const coVal = Math.round(12 + (numId % 6) * 4).toFixed(1);
             const tegVal = (219 + (numId % 3)).toFixed(1);
             const arusVal = (1.2 + (numId % 4) * 0.1).toFixed(2);
             const dayaVal = (250 + (numId % 6) * 20).toFixed(1);
-            const asapVal = (numId === 4 || numId === 7) ? 'Tinggi' : 'Normal';
 
             rows.push({
                 id: i + 1,

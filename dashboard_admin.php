@@ -1099,21 +1099,46 @@ function getDummyDataForLocation(locId, realData) {
     }
 
     var numId = typeof locId === 'number' ? locId : (parseInt(String(locId).replace(/\D/g, '')) || 2);
-    var seconds = new Date().getSeconds();
     
-    var noiseSuhu = parseFloat((Math.sin(seconds + numId) * 0.8).toFixed(1));
-    var noiseHumi = parseFloat((Math.cos(seconds + numId) * 1.5).toFixed(1));
+    // Siklus kondisi setiap 15 detik: 0 = Aman, 1 = Waspada, 2 = Bahaya
+    var stepIndex = Math.floor(Date.now() / 15000);
+    var conditionStep = (stepIndex + numId) % 3;
+    
+    var seconds = new Date().getSeconds();
+    var noiseSuhu = parseFloat((Math.sin(seconds) * 0.5).toFixed(1));
+    
+    var suhuVal, humiVal, asapVal, coVal, isDanger;
 
-    var suhuVal = (25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1);
-    var humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4 + noiseHumi)));
+    if (conditionStep === 0) {
+        // Kondisi AMAN
+        suhuVal = (26.0 + (numId % 3) + noiseSuhu).toFixed(1);
+        humiVal = Math.round(68 + (numId % 4));
+        asapVal = "Normal";
+        coVal = Math.round(15 + (numId % 5));
+        isDanger = false;
+    } else if (conditionStep === 1) {
+        // Kondisi WASPADA
+        suhuVal = (42.0 + (numId % 3) + noiseSuhu).toFixed(1);
+        humiVal = Math.round(48 - (numId % 3));
+        asapVal = "Sedang";
+        coVal = Math.round(42 + (numId % 5));
+        isDanger = false;
+    } else {
+        // Kondisi BAHAYA
+        suhuVal = (65.0 + (numId % 3) + noiseSuhu).toFixed(1);
+        humiVal = Math.round(28 - (numId % 3));
+        asapVal = "Tinggi";
+        coVal = Math.round(85 + (numId % 10));
+        isDanger = true;
+    }
+
     var windVal = (2.0 + (numId % 4) * 0.9).toFixed(1);
-    var coVal = Math.round(12 + (numId % 6) * 4);
 
     return {
         suhu: suhuVal,
         kelembapan: humiVal,
-        asap: (numId === 4 || numId === 7) ? "Tinggi" : "Normal",
-        api: (numId === 7) ? "Terdeteksi Api" : "Aman",
+        asap: asapVal,
+        api: isDanger ? "Terdeteksi Api" : "Aman",
         angin: windVal,
         arah: (numId % 2 === 0) ? "Utara" : "Timur",
         co: coVal,
@@ -1122,7 +1147,8 @@ function getDummyDataForLocation(locId, realData) {
         daya: (250 + (numId % 6) * 20).toFixed(1),
         lat: realData.lat,
         lng: realData.lng,
-        isDanger: (numId === 7)
+        isDanger: isDanger,
+        is_dummy: 1
     };
 }
 
@@ -1355,18 +1381,29 @@ function switchLocationChartData(id) {
         var now = new Date();
 
         for (var i = 10; i >= 0; i--) {
-            var t = new Date(now.getTime() - i * 3000);
+            var t = new Date(now.getTime() - i * 15000); // 15 detik per siklus
             var tStr = t.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             labels.push(tStr);
 
-            var sec = t.getSeconds();
-            var noiseSuhu = parseFloat((Math.sin(sec + numId + i) * 0.8).toFixed(1));
-            var noiseHumi = parseFloat((Math.cos(sec + numId + i) * 1.5).toFixed(1));
+            var stepIndex = Math.floor(t.getTime() / 15000);
+            var conditionStep = (stepIndex + numId) % 3;
 
-            var suhuVal = parseFloat((25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1));
-            var humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4 + noiseHumi)));
+            var suhuVal, humiVal, coVal;
+            if (conditionStep === 0) { // Aman
+                suhuVal = parseFloat((26.0 + (numId % 3)).toFixed(1));
+                humiVal = 68;
+                coVal = 15;
+            } else if (conditionStep === 1) { // Waspada
+                suhuVal = parseFloat((42.0 + (numId % 3)).toFixed(1));
+                humiVal = 48;
+                coVal = 42;
+            } else { // Bahaya
+                suhuVal = parseFloat((65.0 + (numId % 3)).toFixed(1));
+                humiVal = 28;
+                coVal = 85;
+            }
+
             var windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
-            var coVal = Math.round(12 + (numId % 6) * 4);
             var tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
             var arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
             var dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
