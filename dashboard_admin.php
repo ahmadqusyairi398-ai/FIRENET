@@ -1207,7 +1207,13 @@ function updateSensorDisplayCards(displayData) {
 
 // ================= FUNGSI FLY TO LOCATION =================
 function flyToLocation(lat, lng, id) {
+    var prevId = activeSelectedLocationId;
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
+
+    if (prevId !== id) {
+        switchLocationChartData(id);
+    }
+
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
@@ -1299,6 +1305,17 @@ function updateLocationStatus(isDanger, lat, lng) {
 }
 
 // ================= CHART =================
+const initialRealChartData = {
+    labels: <?= json_encode($chart_labels) ?>,
+    tegangan: <?= json_encode($chart_tegangan) ?>,
+    arus: <?= json_encode($chart_arus) ?>,
+    daya: <?= json_encode($chart_daya) ?>,
+    suhu: <?= json_encode($chart_suhu) ?>,
+    kelembapan: <?= json_encode($chart_kelembapan) ?>,
+    angin: <?= json_encode($chart_angin) ?>,
+    co: <?= json_encode($chart_co) ?>
+};
+
 const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = { 
     labels: <?= json_encode($chart_labels) ?>, 
@@ -1312,6 +1329,64 @@ let dataChart = {
         { label: 'CO (ppm)', data: <?= json_encode($chart_co) ?>, borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ] 
 };
+
+function switchLocationChartData(id) {
+    if (typeof dataChart === 'undefined' || typeof myChart === 'undefined') return;
+
+    if (id === 1 || id === '1' || id === 'out_1' || id === 'out_def_1') {
+        // Reset grafik ke Data Real Time asli
+        dataChart.labels = [...initialRealChartData.labels];
+        dataChart.datasets[0].data = [...initialRealChartData.tegangan];
+        dataChart.datasets[1].data = [...initialRealChartData.arus];
+        dataChart.datasets[2].data = [...initialRealChartData.daya];
+        dataChart.datasets[3].data = [...initialRealChartData.suhu];
+        dataChart.datasets[4].data = [...initialRealChartData.kelembapan];
+        dataChart.datasets[5].data = [...initialRealChartData.angin];
+        dataChart.datasets[6].data = [...initialRealChartData.co];
+    } else {
+        // Generasi tren riwayat dummy khusus lokasi yang dipilih
+        var numId = typeof id === 'number' ? id : (parseInt(String(id).replace(/\D/g, '')) || 2);
+        var labels = [];
+        var tegArr = [], arusArr = [], dayaArr = [], suhuArr = [], humiArr = [], anginArr = [], coArr = [];
+        var now = new Date();
+
+        for (var i = 10; i >= 0; i--) {
+            var t = new Date(now.getTime() - i * 3000);
+            var tStr = t.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            labels.push(tStr);
+
+            var sec = t.getSeconds();
+            var noiseSuhu = parseFloat((Math.sin(sec + numId + i) * 0.8).toFixed(1));
+            var noiseHumi = parseFloat((Math.cos(sec + numId + i) * 1.5).toFixed(1));
+
+            var suhuVal = parseFloat((25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1));
+            var humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4 + noiseHumi)));
+            var windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
+            var coVal = Math.round(12 + (numId % 6) * 4);
+            var tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
+            var arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
+            var dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+
+            tegArr.push(tegVal);
+            arusArr.push(arusVal);
+            dayaArr.push(dayaVal);
+            suhuArr.push(suhuVal);
+            humiArr.push(humiVal);
+            anginArr.push(windVal);
+            coArr.push(coVal);
+        }
+
+        dataChart.labels = labels;
+        dataChart.datasets[0].data = tegArr;
+        dataChart.datasets[1].data = arusArr;
+        dataChart.datasets[2].data = dayaArr;
+        dataChart.datasets[3].data = suhuArr;
+        dataChart.datasets[4].data = humiArr;
+        dataChart.datasets[5].data = anginArr;
+        dataChart.datasets[6].data = coArr;
+    }
+    myChart.update();
+}
 
 const myChart = new Chart(ctx, { 
     type: 'line', 
