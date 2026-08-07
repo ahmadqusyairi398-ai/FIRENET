@@ -652,6 +652,57 @@ canvas {
     .modal-buttons { flex-direction: column; }
     .btn-modal { justify-content: center; }
 }
+
+/* ========== BANNER PERINGATAN H-1 AUTO-CLEAN ========== */
+.auto-clean-banner {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: white;
+    border-radius: 12px;
+    padding: 16px 22px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(217, 119, 6, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    animation: fadeInDown 0.5s ease;
+}
+.banner-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.banner-warning-icon {
+    font-size: 28px;
+    color: #fef08a;
+    animation: pulseWarning 1.5s infinite;
+}
+@keyframes pulseWarning {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+}
+.btn-banner-export {
+    background: #ffffff;
+    color: #b45309;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.btn-banner-export:hover {
+    background: #fef3c7;
+    color: #92400e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
 </style>
 </head>
 <body>
@@ -724,6 +775,26 @@ canvas {
                 <i class="fas fa-user-shield"></i>
                 <span><?= htmlspecialchars($user) ?><span class="admin-tag">Admin</span></span>
             </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ========== BANNER PERINGATAN H-1 PENGHAPUSAN OTOMATIS ========== -->
+    <!-- ============================================================ -->
+    <div id="auto-clean-warning-banner" class="auto-clean-banner" style="display: none;">
+        <div class="banner-left">
+            <i class="fas fa-exclamation-triangle banner-warning-icon"></i>
+            <div>
+                <strong style="font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">⚠️ PERHATIAN: PENGHAPUSAN OTOMATIS BESOK!</strong>
+                <p id="auto-clean-warning-msg" style="margin: 3px 0 0 0; font-size: 13px; opacity: 0.95; line-height: 1.4;">
+                    Ada data sensor alat utama yang usianya hampir mencapai batas 30 hari dan akan dihapus otomatis besok malam. Silakan klik tombol di bawah ini jika Anda perlu mengamankan rekap bulanan.
+                </p>
+            </div>
+        </div>
+        <div class="banner-right">
+            <a href="export_backup.php?device=outdoor" class="btn-banner-export">
+                <i class="fas fa-file-excel"></i> Export Data Bulan Lalu ke Excel
+            </a>
         </div>
     </div>
 
@@ -1593,6 +1664,34 @@ try {
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
+
+// ================= FUNGSI AUTO-CLEAN & PERINGATAN H-1 =================
+function checkAutoCleanAndWarning() {
+    fetch('api_auto_clean.php?device=outdoor')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                if (data.dummy_deleted > 0 || data.real_deleted > 0) {
+                    console.log(`Auto-Clean Executed: ${data.dummy_deleted} dummy records deleted (>3 days), ${data.real_deleted} real records deleted (>30 days).`);
+                }
+                var banner = document.getElementById('auto-clean-warning-banner');
+                if (banner) {
+                    if (data.has_warning) {
+                        banner.style.display = 'flex';
+                        var msg = document.getElementById('auto-clean-warning-msg');
+                        if (msg) {
+                            msg.innerHTML = `Ada <b>${data.warning_count}</b> data sensor alat utama yang usianya hampir mencapai batas 30 hari dan akan dihapus otomatis besok malam. Silakan klik tombol di bawah ini jika Anda perlu mengamankan rekap bulanannya.`;
+                        }
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                }
+            }
+        })
+        .catch(err => console.error("Error checking auto-clean:", err));
+}
+
+checkAutoCleanAndWarning();
 </script>
 </body>
 </html>
