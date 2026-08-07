@@ -317,12 +317,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($batas_min >= $batas_max) {
             $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
         } else {
-            $stmt_cek = mysqli_prepare($conn, "SELECT * FROM batas_sensor WHERE id = ?");
-            mysqli_stmt_bind_param($stmt_cek, "i", $sensor_id);
-            mysqli_stmt_execute($stmt_cek);
-            $result = mysqli_stmt_get_result($stmt_cek);
-            $sensor = mysqli_fetch_assoc($result);
-            mysqli_stmt_close($stmt_cek);
+            $check_query = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = " . intval($sensor_id));
+            $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
 
             if ($sensor) {
                 if ($new_value >= $batas_min && $new_value <= $batas_max) {
@@ -463,12 +459,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['delete_user'])) {
         $user_id = intval($_POST['user_id']);
         
-        $stmt_cek = mysqli_prepare($conn, "SELECT username FROM pengguna WHERE id = ?");
-        mysqli_stmt_bind_param($stmt_cek, "i", $user_id);
-        mysqli_stmt_execute($stmt_cek);
-        $result = mysqli_stmt_get_result($stmt_cek);
-        $user_data = mysqli_fetch_assoc($result);
-        mysqli_stmt_close($stmt_cek);
+        $check_query = mysqli_query($conn, "SELECT username FROM pengguna WHERE id = " . intval($user_id));
+        $user_data = $check_query ? mysqli_fetch_assoc($check_query) : null;
         
         if ($user_data && $user_data['username'] == 'admin') {
             $error_message = "Tidak dapat menghapus akun admin utama!";

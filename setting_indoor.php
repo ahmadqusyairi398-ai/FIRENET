@@ -148,16 +148,9 @@ function deleteLocation($conn, $id) {
 
 function getLocationById($conn, $id) {
     if (!$conn) return null;
-    $stmt = mysqli_prepare($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring WHERE id = ?");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "i", $id);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        $location = mysqli_fetch_assoc($result);
-        mysqli_stmt_close($stmt);
-        return $location;
-    }
-    return null;
+    $id = intval($id);
+    $query = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring WHERE id = $id");
+    return ($query && mysqli_num_rows($query) > 0) ? mysqli_fetch_assoc($query) : null;
 }
 
 // ========== CEK DAN DIAGNOSA STRUKTUR DATABASE ==========
