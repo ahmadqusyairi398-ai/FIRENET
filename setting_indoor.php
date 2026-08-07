@@ -257,6 +257,12 @@ try {
         mysqli_query($conn, "ALTER TABLE login ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
 
+    // 4. Cek dan tambahkan kolom last_update di tabel batas_sensor jika belum ada
+    $checkLastUpdate = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'last_update'");
+    if (!$checkLastUpdate || mysqli_num_rows($checkLastUpdate) == 0) {
+        mysqli_query($conn, "ALTER TABLE batas_sensor ADD COLUMN last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    }
+
 } catch (Throwable $e) {
     // Log error secara internal agar tidak menghasilkan HTTP 500 ke user
     error_log("Database initialization error: " . $e->getMessage());

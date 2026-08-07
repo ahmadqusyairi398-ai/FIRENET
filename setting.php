@@ -177,6 +177,12 @@ try {
         mysqli_query($conn, "ALTER TABLE batas_sensor DROP COLUMN device");
     }
 
+    // 5. Cek dan tambah kolom last_update di batas_sensor jika belum ada
+    $checkLastUpdate = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'last_update'");
+    if (!$checkLastUpdate || mysqli_num_rows($checkLastUpdate) == 0) {
+        mysqli_query($conn, "ALTER TABLE batas_sensor ADD COLUMN last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    }
+
 } catch (Throwable $e) {
     error_log("Database initialization error (outdoor): " . $e->getMessage());
 }
@@ -261,7 +267,16 @@ function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max)
     $nilai_alarm = floatval($nilai_alarm);
     $batas_min = floatval($batas_min);
     $batas_max = floatval($batas_max);
-    return mysqli_query($conn, "UPDATE batas_sensor SET nilai_alarm = $nilai_alarm, batas_min = $batas_min, batas_max = $batas_max, last_update = NOW() WHERE id = $id");
+
+    // Cek ketersediaan kolom last_update
+    $checkLastUpdate = mysqli_query($conn, "SHOW COLUMNS FROM batas_sensor LIKE 'last_update'");
+    if ($checkLastUpdate && mysqli_num_rows($checkLastUpdate) > 0) {
+        $sql = "UPDATE batas_sensor SET nilai_alarm = $nilai_alarm, batas_min = $batas_min, batas_max = $batas_max, last_update = NOW() WHERE id = $id";
+    } else {
+        @mysqli_query($conn, "ALTER TABLE batas_sensor ADD COLUMN last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        $sql = "UPDATE batas_sensor SET nilai_alarm = $nilai_alarm, batas_min = $batas_min, batas_max = $batas_max WHERE id = $id";
+    }
+    return mysqli_query($conn, $sql);
 }
 
 $success_message = $error_message = '';
