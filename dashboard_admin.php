@@ -1559,6 +1559,9 @@ function fetchDataFromDB() {
             }
 
             latestRealSensorData = data;
+            if (data.interval_detik && parseInt(data.interval_detik) >= 3) {
+                currentMainDeviceIntervalMs = parseInt(data.interval_detik) * 1000;
+            }
             var activeData = getDummyDataForLocation(activeSelectedLocationId, data);
 
             // Jika lokasi simulasi/dummy sedang aktif, simpan data dummy ke database MySQL
@@ -1634,12 +1637,13 @@ function fetchDataFromDB() {
 // Mode Alat Utama (Real-Time IoT): interval 30 detik
 // Mode Lokasi Simulasi (Dummy): interval 15 detik
 var autoUpdateTimer = null;
+var currentMainDeviceIntervalMs = 30000;
 
 function scheduleNextUpdate() {
     if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
 
     var isMainDevice = (activeSelectedLocationId === 1 || activeSelectedLocationId === '1' || activeSelectedLocationId === 'out_1' || activeSelectedLocationId === 'out_def_1');
-    var intervalMs = isMainDevice ? 30000 : 15000;
+    var intervalMs = isMainDevice ? currentMainDeviceIntervalMs : 15000;
 
     autoUpdateTimer = setTimeout(function() {
         fetchDataFromDB();

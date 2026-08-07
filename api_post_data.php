@@ -74,10 +74,21 @@ try {
 
     $insertedId = $targetPdo->lastInsertId();
 
+    // Ambil setting interval_detik alat terbaru dari database
+    $intervalDetik = 30;
+    try {
+        $qLoc = $targetPdo->query("SELECT interval_detik FROM lokasi_alat ORDER BY id ASC LIMIT 1");
+        if ($qLoc && $rowLoc = $qLoc->fetch(PDO::FETCH_ASSOC)) {
+            $intervalDetik = intval($rowLoc['interval_detik'] ?? 30);
+            if ($intervalDetik < 3) $intervalDetik = 3;
+        }
+    } catch(Throwable $eLoc) {}
+
     echo json_encode([
         'status' => 'success',
-        'message' => 'Data sensor dummy berhasil disimpan ke database.',
+        'message' => 'Data sensor berhasil disimpan ke database.',
         'id' => $insertedId,
+        'interval_detik' => $intervalDetik,
         'timestamp' => $waktu
     ]);
 } catch (Throwable $e) {

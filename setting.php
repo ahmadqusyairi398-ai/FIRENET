@@ -163,11 +163,14 @@ try {
         mysqli_stmt_bind_param($stmt, "ssdd", $defaultAlat, $defaultNama, $defaultLat, $defaultLng);
         mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
-    } else {
-        // Pastikan kolom nama_lokasi ada jika tabel sudah terlanjur dibuat sebelumnya
+        // Pastikan kolom nama_lokasi & interval_detik ada jika tabel sudah terlanjur dibuat
         $checkNamaLokasiCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_alat LIKE 'nama_lokasi'");
         if (!$checkNamaLokasiCol || mysqli_num_rows($checkNamaLokasiCol) == 0) {
             mysqli_query($conn, "ALTER TABLE lokasi_alat ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
+        }
+        $checkIntervalCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_alat LIKE 'interval_detik'");
+        if (!$checkIntervalCol || mysqli_num_rows($checkIntervalCol) == 0) {
+            mysqli_query($conn, "ALTER TABLE lokasi_alat ADD COLUMN interval_detik INT DEFAULT 30");
         }
     }
 
@@ -201,6 +204,7 @@ function getLocations($conn) {
                 'nama_lokasi' => $row['nama_lokasi'] ?? '',
                 'latitude' => (float)$row['latitude'],
                 'longitude' => (float)$row['longitude'],
+                'interval_detik' => (int)($row['interval_detik'] ?? 30),
                 'created_at' => $row['created_at'],
                 'updated_at' => $row['updated_at']
             ];
@@ -340,6 +344,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 } else {
                     $error_message = "Sensor tidak ditemukan!";
                 }
+            }
+        }
+
+        // UPDATE INTERVAL PENGIRIMAN DATA ALAT
+        if (isset($_POST['update_device_interval'])) {
+            $loc_id = intval($_POST['interval_location_id']);
+            $new_interval = intval($_POST['interval_detik']);
+            if ($new_interval < 3) $new_interval = 3;
+
+            $checkIntervalCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_alat LIKE 'interval_detik'");
+            if (!$checkIntervalCol || mysqli_num_rows($checkIntervalCol) == 0) {
+                @mysqli_query($conn, "ALTER TABLE lokasi_alat ADD COLUMN interval_detik INT DEFAULT 30");
+            }
+
+            $sql = "UPDATE lokasi_alat SET interval_detik = $new_interval WHERE id = $loc_id";
+            if (mysqli_query($conn, $sql)) {
+                $success_message = "Interval pengiriman data alat berhasil diubah menjadi $new_interval detik!";
+            } else {
+                $error_message = "Gagal mengubah interval: " . mysqli_error($conn);
             }
         }
 
@@ -1176,6 +1199,31 @@ $totalUsers = count($users);
 
         <!-- TAB 2: Setting Lokasi Alat - MENGGUNAKAN DATABASE -->
         <div id="tab2" class="tab-content">
+            <!-- Form Pengaturan Kecepatan / Interval Pengiriman Data Alat -->
+            <div class="card" style="margin-bottom: 22px; border-left: 4px solid #00b4db;">
+                <h3 style="color: #0083b0;"><i class="fas fa-stopwatch"></i> Kecepatan Pengiriman Data Alat Outdoor (Interval)</h3>
+                <p style="margin-bottom:15px; color:#666; font-size:13.5px; line-height: 1.5;">
+                    Atur interval pengiriman data dari alat IoT / LoRa ke database. Nilai ini akan otomatis dikirimkan ke mikrokontroler (ESP32/Arduino) setiap kali mengirim data.
+                </p>
+                <form method="POST" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 220px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px; color: #333;">Pilih Alat / Lokasi</label>
+                        <select name="interval_location_id" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #ccc; font-weight: 600;">
+                            <?php foreach ($locations as $loc): ?>
+                                <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['nama_lokasi']) ?> (<?= htmlspecialchars($loc['id_alat']) ?>) - Kecepatan: <?= (int)($loc['interval_detik'] ?? 30) ?> Detik</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px; color: #333;">Interval Pengiriman (Detik)</label>
+                        <input type="number" name="interval_detik" value="<?= (int)($locations[0]['interval_detik'] ?? 30) ?>" min="3" max="3600" required class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid #ccc; font-weight: 600;">
+                    </div>
+                    <button type="submit" name="update_device_interval" class="btn-primary" style="padding: 10px 22px; font-weight: 700; border-radius: 8px;">
+                        <i class="fas fa-save"></i> Simpan Interval Alat
+                    </button>
+                </form>
+            </div>
+
             <div class="card">
                 <h3><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur nama, ID, dan koordinat lokasi monitoring alat.</p>
@@ -1192,6 +1240,7 @@ $totalUsers = count($users);
                                 <th>NAMA LOKASI</th>
                                 <th>LATITUDE</th>
                                 <th>LONGITUDE</th>
+                                <th>INTERVAL</th>
                                 <th>WAKTU UPDATE</th>
                                 <th>AKSI</th>
                             </tr>
@@ -1205,6 +1254,7 @@ $totalUsers = count($users);
                                         <td><?= htmlspecialchars($loc['nama_lokasi'] ?? '-') ?></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
+                                        <td><span class="badge" style="background: rgba(0,180,219,0.15); color: #0083b0; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;"><i class="fas fa-clock"></i> <?= (int)($loc['interval_detik'] ?? 30) ?>s</span></td>
                                         <td><?= isset($loc['updated_at']) ? $loc['updated_at'] : date('Y-m-d H:i:s') ?></td>
                                         <td class="action-buttons">
                                             <?php 

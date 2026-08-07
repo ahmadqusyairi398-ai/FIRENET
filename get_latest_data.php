@@ -67,28 +67,30 @@ if ($is_online && $data_sensor) {
         'rssi'       => $data_sensor['rssi'] ?? 0,
         'ip'         => $data_sensor['ip_address'] ?? '127.0.0.1',
         'status'     => 'Online',
-        'lat'        => $data_lokasi['latitude'] ?? -1.20249,
-        'lng'        => $data_lokasi['longitude'] ?? 116.88708,
-        'is_dummy'   => (int)($data_sensor['is_dummy'] ?? 0)
+        'lat'            => $data_lokasi['latitude'] ?? -1.20249,
+        'lng'            => $data_lokasi['longitude'] ?? 116.88708,
+        'is_dummy'       => (int)($data_sensor['is_dummy'] ?? 0),
+        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30)
     ];
 } else {
     $response = [
-        'waktu'      => date('H:i:s'),
-        'tegangan'   => 0,
-        'arus'       => 0,
-        'daya'       => 0,
-        'arah'       => 'Utara',
-        'angin'      => 0,
-        'asap'       => 'Normal',
-        'suhu'       => 0,
-        'kelembapan' => 0,
-        'co'         => 0,
-        'rssi'       => '-',
-        'ip'         => '-',
-        'status'     => 'Offline',
-        'lat'        => $data_lokasi['latitude'] ?? -1.20249,
-        'lng'        => $data_lokasi['longitude'] ?? 116.88708,
-        'is_dummy'   => (int)($data_sensor['is_dummy'] ?? 0)
+        'waktu'          => date('H:i:s'),
+        'tegangan'       => 0,
+        'arus'           => 0,
+        'daya'           => 0,
+        'arah'           => 'Utara',
+        'angin'          => 0,
+        'asap'           => 'Normal',
+        'suhu'           => 0,
+        'kelembapan'     => 0,
+        'co'             => 0,
+        'rssi'           => '-',
+        'ip'             => '-',
+        'status'         => 'Offline',
+        'lat'            => $data_lokasi['latitude'] ?? -1.20249,
+        'lng'            => $data_lokasi['longitude'] ?? 116.88708,
+        'is_dummy'       => (int)($data_sensor['is_dummy'] ?? 0),
+        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30)
     ];
 }
 
