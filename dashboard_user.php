@@ -55,27 +55,43 @@ $latest_sensor = [
 ];
 
 if ($conn) {
-    $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    if (!$q_sensor || mysqli_num_rows($q_sensor) == 0) {
+        $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
+    }
     if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
         $s = mysqli_fetch_assoc($q_sensor);
-        $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
-        $co_val = isset($s['co']) ? (float)$s['co'] : 0;
         
-        $latest_sensor = [
-            'waktu' => date('H:i:s', strtotime($s['timestamp'])),
-            'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
-            'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
-            'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
-            'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
-            'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
-            'asap' => $asap_val,
-            'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
-            'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
-            'co' => $co_val,
-            'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
-            'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-            'status' => 'Online'
-        ];
+        // Cek selisih waktu data terakhir
+        $time_str = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? ($s['created_at'] ?? null));
+        $is_online = false;
+        if ($time_str) {
+            $last_time = strtotime($time_str);
+            if ($last_time > 0 && (time() - $last_time) <= 15) {
+                $is_online = true;
+            }
+        }
+
+        if ($is_online) {
+            $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
+            $co_val = isset($s['co']) ? (float)$s['co'] : 0;
+            
+            $latest_sensor = [
+                'waktu' => date('H:i:s', strtotime($time_str)),
+                'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
+                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
+                'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
+                'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
+                'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
+                'asap' => $asap_val,
+                'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
+                'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
+                'co' => $co_val,
+                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+                'status' => 'Online'
+            ];
+        }
     }
 }
 

@@ -28,65 +28,92 @@ $result = mysqli_query($conn, $sql);
 if ($result && mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
     
-    $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
-    $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
-    
-    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
-    if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiValue > 0.5) {
-        $apiStatus = "Terdeteksi Api";
-    } else {
-        $apiStatus = "Aman";
-    }
-    
-    if (is_numeric($rawAsap)) {
-        $fAsap = (float)$rawAsap;
-        if ($fAsap > ($fAsap > 1 ? 750 : 0.5)) {
-            $asapStatus = "Tinggi";
-        } else if ($fAsap > ($fAsap > 1 ? 350 : 0.25)) {
-            $asapStatus = "Sedang";
-        } else {
-            $asapStatus = "Normal";
-        }
-        $asapNum = $fAsap;
-    } else {
-        $strAsap = trim((string)$rawAsap);
-        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
-            $asapStatus = "Tinggi";
-            $asapNum = 1;
-        } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
-            $asapStatus = "Sedang";
-            $asapNum = 0.5;
-        } else {
-            $asapStatus = "Normal";
-            $asapNum = 0;
+    // Cek selisih waktu data terakhir
+    $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
+    $timeout_seconds = 15;
+    $is_online = false;
+    if ($waktu_raw) {
+        $last_time = strtotime($waktu_raw);
+        if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+            $is_online = true;
         }
     }
     
-    $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi");
+    if ($is_online) {
+        $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
+        $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
+        
+        $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+        if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiValue > 0.5) {
+            $apiStatus = "Terdeteksi Api";
+        } else {
+            $apiStatus = "Aman";
+        }
+        
+        if (is_numeric($rawAsap)) {
+            $fAsap = (float)$rawAsap;
+            if ($fAsap > ($fAsap > 1 ? 750 : 0.5)) {
+                $asapStatus = "Tinggi";
+            } else if ($fAsap > ($fAsap > 1 ? 350 : 0.25)) {
+                $asapStatus = "Sedang";
+            } else {
+                $asapStatus = "Normal";
+            }
+            $asapNum = $fAsap;
+        } else {
+            $strAsap = trim((string)$rawAsap);
+            if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
+                $asapStatus = "Tinggi";
+                $asapNum = 1;
+            } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
+                $asapStatus = "Sedang";
+                $asapNum = 0.5;
+            } else {
+                $asapStatus = "Normal";
+                $asapNum = 0;
+            }
+        }
+        
+        $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi");
 
-    // Format waktu dari timestamp / tanggal_dan_waktu
-    $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? 'now');
-    $waktu_formatted = date('H:i:s', strtotime($waktu_raw));
-    
-    // Susun data JSON untuk response
-    $data = [
-        "error"      => false,
-        "waktu"      => $waktu_formatted,
-        "api"        => $apiStatus,
-        "asap"       => $asapStatus,
-        "asap_value" => $asapNum,
-        "suhu"       => isset($row['suhu']) ? number_format((float)$row['suhu'], 1) : "0.0",
-        "kelembapan" => isset($row['kelembapan']) ? number_format((float)$row['kelembapan'], 1) : "0.0",
-        "tegangan"   => isset($row['tegangan']) ? number_format((float)$row['tegangan'], 1) : "0.0",
-        "arus"       => isset($row['arus']) ? number_format((float)$row['arus'], 2) : "0.00",
-        "rssi"       => $row['rssi'] ?? '-',
-        "ip"         => !empty($row['ip_address']) ? $row['ip_address'] : '-',
-        "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
-        "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
-        "isDanger"   => $isDanger,
-        "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
-        "status"     => "Online"
-    ];
+        $data = [
+            "error"      => false,
+            "waktu"      => date('H:i:s', strtotime($waktu_raw)),
+            "api"        => $apiStatus,
+            "asap"       => $asapStatus,
+            "asap_value" => $asapNum,
+            "suhu"       => isset($row['suhu']) ? number_format((float)$row['suhu'], 1) : "0.0",
+            "kelembapan" => isset($row['kelembapan']) ? number_format((float)$row['kelembapan'], 1) : "0.0",
+            "tegangan"   => isset($row['tegangan']) ? number_format((float)$row['tegangan'], 1) : "0.0",
+            "arus"       => isset($row['arus']) ? number_format((float)$row['arus'], 2) : "0.00",
+            "rssi"       => $row['rssi'] ?? '-',
+            "ip"         => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+            "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
+            "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
+            "isDanger"   => $isDanger,
+            "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
+            "status"     => "Online"
+        ];
+    } else {
+        $data = [
+            "error"      => false,
+            "waktu"      => date('H:i:s'),
+            "api"        => "Aman",
+            "asap"       => "Normal",
+            "asap_value" => 0,
+            "suhu"       => "0.0",
+            "kelembapan" => "0.0",
+            "tegangan"   => "0.0",
+            "arus"       => "0.00",
+            "rssi"       => '-',
+            "ip"         => '-',
+            "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
+            "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
+            "isDanger"   => false,
+            "apiValue"   => 0,
+            "status"     => "Offline"
+        ];
+    }
     
     echo json_encode($data);
 } else {
