@@ -1,0 +1,87 @@
+<?php
+date_default_timezone_set('Asia/Makassar');
+session_start();
+require_once 'koneksi.php';
+header('Content-Type: application/json');
+
+$device = $_POST['device'] ?? $_GET['device'] ?? 'outdoor';
+
+/** @var PDO $pdo_indoor */
+/** @var PDO $pdo_outdoor */
+
+$targetPdo = ($device === 'indoor') ? $pdo_indoor : $pdo_outdoor;
+
+if (!$targetPdo) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Koneksi database tidak tersedia.']);
+    exit;
+}
+
+try {
+    // 1. Cek & pastikan kolom is_dummy ada di tabel data_sensor
+    $colCheck = $targetPdo->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
+    if (!$colCheck || $colCheck->rowCount() == 0) {
+        @$targetPdo->exec("ALTER TABLE data_sensor ADD COLUMN is_dummy INT DEFAULT 0");
+    }
+
+    // 2. Ambil parameter masukan (support JSON payload, POST, atau GET)
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true);
+    if (!is_array($input) || empty($input)) {
+        $input = $_POST;
+    }
+    if (empty($input)) {
+        $input = $_GET;
+    }
+
+    $asap = $input['asap'] ?? 'Normal';
+    $suhu = floatval($input['suhu'] ?? 0);
+    $kelembapan = floatval($input['kelembapan'] ?? 0);
+    $tegangan = floatval($input['tegangan'] ?? 0);
+    $arus = floatval($input['arus'] ?? 0);
+    $daya = floatval($input['daya'] ?? 0);
+    $kecepatan_angin = floatval($input['angin'] ?? ($input['kecepatan_angin'] ?? 0));
+    $arah_angin = $input['arah'] ?? ($input['arah_angin'] ?? 'Utara');
+    $co = floatval($input['co'] ?? 0);
+    $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 1;
+    $waktu = date('Y-m-d H:i:s');
+
+    // 3. Tentukan nama kolom tanggal/waktu yang tersedia di tabel
+    $dateCol = 'tanggal_dan_waktu';
+    $colCheckWaktu = $targetPdo->query("SHOW COLUMNS FROM data_sensor LIKE 'timestamp'");
+    if ($colCheckWaktu && $colCheckWaktu->rowCount() > 0) {
+        $dateCol = 'timestamp';
+    }
+
+    // 4. Simpan data sensor dummy ke database MySQL
+    $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, is_dummy) 
+            VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :is_dummy)";
+    
+    $stmt = $targetPdo->prepare($sql);
+    $stmt->execute([
+        ':waktu' => $waktu,
+        ':asap' => $asap,
+        ':suhu' => $suhu,
+        ':kelembapan' => $kelembapan,
+        ':tegangan' => $tegangan,
+        ':arus' => $arus,
+        ':daya' => $daya,
+        ':kecepatan_angin' => $kecepatan_angin,
+        ':arah_angin' => $arah_angin,
+        ':co' => $co,
+        ':is_dummy' => $is_dummy
+    ]);
+
+    $insertedId = $targetPdo->lastInsertId();
+
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'Data sensor dummy berhasil disimpan ke database.',
+        'id' => $insertedId,
+        'timestamp' => $waktu
+    ]);
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+}
+?>

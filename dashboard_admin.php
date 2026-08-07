@@ -1490,6 +1490,27 @@ function fetchDataFromDB() {
             latestRealSensorData = data;
             var activeData = getDummyDataForLocation(activeSelectedLocationId, data);
 
+            // Jika lokasi simulasi/dummy sedang aktif, simpan data dummy ke database MySQL
+            if (activeSelectedLocationId !== 1 && activeSelectedLocationId !== '1') {
+                fetch('api_post_data.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device: 'outdoor',
+                        asap: activeData.asap,
+                        suhu: activeData.suhu,
+                        kelembapan: activeData.kelembapan,
+                        tegangan: activeData.tegangan,
+                        arus: activeData.arus,
+                        daya: activeData.daya,
+                        angin: activeData.angin,
+                        arah: activeData.arah,
+                        co: activeData.co,
+                        is_dummy: 1
+                    })
+                }).catch(err => console.error("Gagal menyimpan data dummy ke DB:", err));
+            }
+
             // 1. Update status header
             var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
