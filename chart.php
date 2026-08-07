@@ -16,6 +16,28 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 require_once 'koneksi.php';
 $rows = [];
 
+// Ambil lokasi alat dari database outdoor
+$all_locations = [];
+if (isset($conn_outdoor) && $conn_outdoor) {
+    $q_loc = @mysqli_query($conn_outdoor, "SELECT id, nama_lokasi, id_alat FROM lokasi_alat ORDER BY id ASC");
+    if ($q_loc && mysqli_num_rows($q_loc) > 0) {
+        while ($row = mysqli_fetch_assoc($q_loc)) {
+            $all_locations[] = $row;
+        }
+    }
+}
+if (empty($all_locations)) {
+    $all_locations = [
+        ['id' => 1, 'nama_lokasi' => 'Politeknik Negeri Balikpapan', 'id_alat' => 'OUT-001'],
+        ['id' => 2, 'nama_lokasi' => 'Area Hutan Sektor A', 'id_alat' => 'OUT-002'],
+        ['id' => 3, 'nama_lokasi' => 'Area Hutan Sektor B', 'id_alat' => 'OUT-003'],
+        ['id' => 4, 'nama_lokasi' => 'Bukit Rawan Kebakaran', 'id_alat' => 'OUT-004'],
+        ['id' => 5, 'nama_lokasi' => 'Pos Pantau Karhutla 1', 'id_alat' => 'OUT-005'],
+        ['id' => 6, 'nama_lokasi' => 'Kawasan Hutan Lindung', 'id_alat' => 'OUT-006'],
+        ['id' => 7, 'nama_lokasi' => 'Zona Merah Perkebunan', 'id_alat' => 'OUT-007']
+    ];
+}
+
 try {
     $colQuery = $pdo->query("SHOW COLUMNS FROM data_sensor");
     while ($col = $colQuery->fetch(PDO::FETCH_ASSOC)) {
@@ -580,6 +602,42 @@ canvas {
         justify-content: center;
     }
 }
+/* ========== DATA TYPE BADGE & LOCATION SELECT ========== */
+.data-type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.realtime-badge {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.dummy-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.location-select {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3c72;
+    background: white;
+    cursor: pointer;
+    margin-right: 10px;
+}
 </style>
 </head>
 <body>
@@ -628,8 +686,16 @@ canvas {
         </div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <div class="filter-form">
+            <label><i class="fas fa-map-marker-alt"></i> Lokasi:</label>
+            <select id="locationSelect" class="location-select" onchange="changeChartLocation(this.value)">
+                <?php foreach ($all_locations as $loc): ?>
+                    <option value="<?= $loc['id'] ?>">
+                        <?= htmlspecialchars($loc['nama_lokasi']) ?> (<?= (int)$loc['id'] === 1 ? 'Real-Time IoT' : 'Dummy' ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
             <label>Dari:</label>
             <input type="date" id="dateFrom">
             <label>Sampai:</label>
@@ -637,6 +703,11 @@ canvas {
             <button id="btnFilter" onclick="filterData()">
                 <i class="fas fa-search"></i> Tampilkan
             </button>
+        </div>
+        <div>
+            <span id="data-type-tag" class="data-type-badge realtime-badge">
+                <i class="fas fa-satellite-dish"></i> Data Real Time
+            </span>
         </div>
     </div>
 
@@ -1047,8 +1118,79 @@ function filterData() {
     createChart(labels, filteredData);
 }
 
+let realDataOriginal = [];
+let activeLocationId = 1;
+
+function changeChartLocation(locId) {
+    activeLocationId = parseInt(locId) || 1;
+    const isDummy = (activeLocationId !== 1);
+    
+    // Update Badge
+    const tag = document.getElementById('data-type-tag');
+    if (tag) {
+        if (isDummy) {
+            tag.className = 'data-type-badge dummy-badge';
+            tag.innerHTML = '<i class="fas fa-flask"></i> Data Dummy';
+        } else {
+            tag.className = 'data-type-badge realtime-badge';
+            tag.innerHTML = '<i class="fas fa-satellite-dish"></i> Data Real Time';
+        }
+    }
+
+    if (activeLocationId === 1) {
+        fullData = [...realDataOriginal];
+    } else {
+        fullData = generateDummyChartData(activeLocationId);
+    }
+    filteredData = [...fullData];
+    const labels = filteredData.map(d => d.waktu);
+    createChart(labels, filteredData);
+}
+
+function generateDummyChartData(locId) {
+    const numId = typeof locId === 'number' ? locId : 2;
+    const now = new Date();
+    const result = [];
+
+    for (let i = 20; i >= 0; i--) {
+        const t = new Date(now.getTime() - i * 60000);
+        const tStr = t.getFullYear() + '-' +
+                     String(t.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(t.getDate()).padStart(2, '0') + ' ' +
+                     String(t.getHours()).padStart(2, '0') + ':' +
+                     String(t.getMinutes()).padStart(2, '0') + ':' +
+                     String(t.getSeconds()).padStart(2, '0');
+
+        const sec = i;
+        const noiseSuhu = parseFloat((Math.sin(sec + numId) * 0.8).toFixed(1));
+
+        const suhuVal = parseFloat((25.5 + (numId % 5) * 1.5 + noiseSuhu).toFixed(1));
+        const humiVal = Math.min(95, Math.max(35, Math.round(62 + (numId % 4) * 4)));
+        const windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
+        const coVal = Math.round(12 + (numId % 6) * 4);
+        const tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
+        const arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
+        const dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+        const asapVal = (numId === 4 || numId === 7) ? 80 : 10;
+
+        result.push({
+            waktu: tStr,
+            asap: asapVal,
+            suhu: suhuVal,
+            kelembapan: humiVal,
+            tegangan: tegVal,
+            arus: arusVal,
+            daya: dayaVal,
+            kecepatan_angin: windVal,
+            arah_angin: (numId % 2 === 0) ? 'Utara' : 'Timur',
+            co: coVal
+        });
+    }
+    return result;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    fullData = rawData.map(row => ({
+    realDataOriginal = rawData.map(row => ({
         waktu: row.waktu || '',
         asap: typeof row.asap === 'number' ? row.asap : 0,
         suhu: typeof row.suhu === 'number' ? row.suhu : 0,
@@ -1061,6 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         co: typeof row.co === 'number' ? row.co : 0
     }));
     
+    fullData = [...realDataOriginal];
     if (fullData.length === 0) {
         createChart([], []);
         console.warn('Tidak ada data sensor di database. Grafik akan kosong.');

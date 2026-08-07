@@ -40,6 +40,8 @@ if ($q) {
         $str_api = trim(strtolower((string)$raw_api));
         $api_val = ($str_api === 'terdeteksi api' || $str_api === 'dekat' || $str_api === 'sedang' || $str_api === 'bahaya' || $str_api === 'tinggi' || (float)$raw_api > 0.5) ? 'Terdeteksi Api' : 'Aman';
 
+        $co_raw = $r['co'] ?? 0;
+
         $rows[] = [
             'id' => $r['id'],
             'tanggal_waktu' => $waktu_formatted,
@@ -55,7 +57,8 @@ if ($q) {
             'co' => is_numeric($co_raw) ? number_format((float)$co_raw, 1) : $co_raw,
             'api' => $api_val,
             'api_raw' => $r['api'] ?? 0,
-            'rssi' => $r['rssi'] ?? '-'
+            'rssi' => $r['rssi'] ?? '-',
+            'is_dummy' => (int)($r['is_dummy'] ?? 0)
         ];
     }
 }
