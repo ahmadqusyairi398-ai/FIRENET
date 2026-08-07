@@ -12,6 +12,9 @@
 
     $device = isset($_GET['device']) ? $_GET['device'] : 'outdoor';
 
+    /** @var PDO $pdo_indoor */
+    /** @var PDO $pdo_outdoor */
+
     try {
         if ($device === 'indoor') {
             $stmt = $pdo_indoor->prepare("DELETE FROM data_sensor WHERE is_dummy = 1");
