@@ -114,7 +114,8 @@ if ($conn) {
                 'co_status' => $co_status,
                 'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
                 'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-                'status' => 'Online'
+                'status' => 'Online',
+                'is_dummy' => (int)($s['is_dummy'] ?? 0)
             ];
         }
     }
@@ -405,6 +406,32 @@ body::before {
 }
 .btn-delete-dummy:hover { background: rgba(220, 53, 69, 0.3); transform: translateY(-2px); }
 
+/* ========== DATA TYPE BADGE (REALTIME VS DUMMY) ========== */
+.data-type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.realtime-badge {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.dummy-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 .card {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
@@ -679,6 +706,13 @@ canvas {
                     <span>IP:</span>
                     <span class="value" id="ip"><?= htmlspecialchars($latest_sensor['ip']) ?></span>
                 </div>
+                <div class="status-item-header">
+                    <i class="fas fa-database"></i>
+                    <span>Data:</span>
+                    <span id="header-data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
+                        <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
+                    </span>
+                </div>
             </div>
         </div>
         
@@ -697,7 +731,13 @@ canvas {
     <!-- ========== 2. DATA SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-solar-panel"></i> Data Sensor <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
+        <h3>
+            <i class="fas fa-solar-panel"></i> Data Sensor 
+            <span id="data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
+                <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
+            </span>
+            <span id="waktu" style="font-size:12px; color:#666; margin-left: auto;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span>
+        </h3>
         <div class="grid">
             <!-- Solar Panel Sensors -->
             <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?> V</b><small>V DC</small></div>
@@ -752,7 +792,12 @@ canvas {
     <!-- ========== 3. GRAFIK REAL TIME SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <h3>
+            <i class="fas fa-chart-line"></i> Grafik Sensor 
+            <span id="chart-data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
+                <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
+            </span>
+        </h3>
         <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
@@ -1142,6 +1187,22 @@ function updateSensorDisplayCards(displayData) {
     
     currentSuhu = `${displayData.suhu || 0} °C`;
     document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+
+    // Update Status Badge Data Real Time / Data Dummy
+    var isDummy = (displayData.is_dummy == 1 || (typeof activeSelectedLocationId !== 'undefined' && activeSelectedLocationId !== 1 && activeSelectedLocationId !== '1' && activeSelectedLocationId !== 'out_1' && activeSelectedLocationId !== 'out_def_1'));
+
+    ['data-type-tag', 'chart-data-type-tag', 'header-data-type-tag'].forEach(function(tagId) {
+        var tagElem = document.getElementById(tagId);
+        if (tagElem) {
+            if (isDummy) {
+                tagElem.className = "data-type-badge dummy-badge";
+                tagElem.innerHTML = '<i class="fas fa-flask"></i> Data Dummy';
+            } else {
+                tagElem.className = "data-type-badge realtime-badge";
+                tagElem.innerHTML = '<i class="fas fa-satellite-dish"></i> Data Real Time';
+            }
+        }
+    });
 }
 
 // ================= FUNGSI FLY TO LOCATION =================

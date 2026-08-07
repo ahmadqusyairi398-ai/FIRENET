@@ -68,7 +68,8 @@ if ($is_online && $data_sensor) {
         'ip'         => $data_sensor['ip_address'] ?? '127.0.0.1',
         'status'     => 'Online',
         'lat'        => $data_lokasi['latitude'] ?? -1.20249,
-        'lng'        => $data_lokasi['longitude'] ?? 116.88708
+        'lng'        => $data_lokasi['longitude'] ?? 116.88708,
+        'is_dummy'   => (int)($data_sensor['is_dummy'] ?? 0)
     ];
 } else {
     $response = [
@@ -86,7 +87,8 @@ if ($is_online && $data_sensor) {
         'ip'         => '-',
         'status'     => 'Offline',
         'lat'        => $data_lokasi['latitude'] ?? -1.20249,
-        'lng'        => $data_lokasi['longitude'] ?? 116.88708
+        'lng'        => $data_lokasi['longitude'] ?? 116.88708,
+        'is_dummy'   => (int)($data_sensor['is_dummy'] ?? 0)
     ];
 }
 
