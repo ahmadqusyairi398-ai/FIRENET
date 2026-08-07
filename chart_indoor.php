@@ -58,10 +58,20 @@ try {
     }
 
     $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
-    if ($dateColumn) $query .= " ORDER BY $dateColumn ASC";
+
+    // Ambil 50 data terbaru dari database (DESC LIMIT 50)
+    if ($dateColumn) {
+        $query .= " ORDER BY $dateColumn DESC LIMIT 50";
+    } else {
+        $query .= " ORDER BY id DESC LIMIT 50";
+    }
+
     $stmt = $pdo_indoor->prepare($query);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Balik urutan datanya agar kembali maju (kronologis) dari kiri ke kanan di chart
+    $rows = array_reverse($rows);
 } catch(Exception $e) {
     // Jika tabel tidak ada, buat tabel baru sesuai struktur indoor.sql
     $create = "CREATE TABLE IF NOT EXISTS data_sensor (
