@@ -1115,6 +1115,18 @@ $(document).ready(function() {
     }
 
     let activeTableLocationId = 1;
+    let tableUpdateTimer = null;
+
+    function scheduleNextTableUpdate() {
+        if (tableUpdateTimer) clearTimeout(tableUpdateTimer);
+        var isMainDevice = (activeTableLocationId === 1);
+        var intervalMs = isMainDevice ? 30000 : 15000;
+
+        tableUpdateTimer = setTimeout(function() {
+            fetchTableDataRealtime();
+            scheduleNextTableUpdate();
+        }, intervalMs);
+    }
 
     window.changeTableLocation = function(locId) {
         activeTableLocationId = parseInt(locId) || 1;
@@ -1131,6 +1143,7 @@ $(document).ready(function() {
             }
         }
         fetchTableDataRealtime();
+        scheduleNextTableUpdate();
     };
 
     function generateDummyTableRows(locId) {
@@ -1233,8 +1246,8 @@ $(document).ready(function() {
             .catch(err => console.error("Error updating table data:", err));
     }
 
-    // Jalankan pembaruan tabel otomatis setiap 3 detik
-    setInterval(fetchTableDataRealtime, 3000);
+    // Jalankan pembaruan tabel otomatis (30s Alat Utama, 15s Dummy)
+    scheduleNextTableUpdate();
 });
 </script>
 

@@ -1071,8 +1071,18 @@ $(document).ready(function() {
             .catch(err => console.error("Error updating indoor table data:", err));
     }
 
-    // Jalankan pembaruan tabel indoor otomatis setiap 3 detik
-    setInterval(fetchTableDataRealtime, 3000);
+    let indoorTableTimer = null;
+    function scheduleNextIndoorTableUpdate() {
+        if (indoorTableTimer) clearTimeout(indoorTableTimer);
+        const intervalMs = 30000;
+        indoorTableTimer = setTimeout(function() {
+            fetchTableDataRealtime();
+            scheduleNextIndoorTableUpdate();
+        }, intervalMs);
+    }
+
+    // Jalankan pembaruan tabel indoor otomatis (30s Alat Utama, 15s Dummy)
+    scheduleNextIndoorTableUpdate();
 });
 </script>
 

@@ -1212,6 +1212,7 @@ function flyToLocation(lat, lng, id) {
 
     if (prevId !== id) {
         switchLocationChartData(id);
+        scheduleNextUpdate();
     }
 
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
@@ -1497,10 +1498,25 @@ function fetchDataFromDB() {
         });
 }
 
-// ================= JALANKAN FUNGSI =================
-// Jalankan penarikan data dari DB setiap 3 detik
-setInterval(fetchDataFromDB, 3000);
+// ================= JALANKAN FUNGSI (INTERVAL INTERAKTIF) =================
+// Mode Alat Utama (Real-Time IoT): interval 30 detik
+// Mode Lokasi Simulasi (Dummy): interval 15 detik
+var autoUpdateTimer = null;
+
+function scheduleNextUpdate() {
+    if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+
+    var isMainDevice = (activeSelectedLocationId === 1 || activeSelectedLocationId === '1' || activeSelectedLocationId === 'out_1' || activeSelectedLocationId === 'out_def_1');
+    var intervalMs = isMainDevice ? 30000 : 15000;
+
+    autoUpdateTimer = setTimeout(function() {
+        fetchDataFromDB();
+        scheduleNextUpdate();
+    }, intervalMs);
+}
+
 fetchDataFromDB(); // Jalankan pertama kali saat load
+scheduleNextUpdate(); // Jalankan penjadwalan otomatis
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;

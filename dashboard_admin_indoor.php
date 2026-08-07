@@ -1005,6 +1005,7 @@ async function fetchLocationsFromDB() {
 
 function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
+    scheduleNextIndoorUpdate();
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
     const locNameElem = document.getElementById('location-name-val');
@@ -1479,9 +1480,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Jalankan update pertama kali dan setiap 3 detik
+let indoorUpdateTimer = null;
+function scheduleNextIndoorUpdate() {
+    if (indoorUpdateTimer) clearTimeout(indoorUpdateTimer);
+    const locationsList = (typeof currentLocationsData !== 'undefined' && currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
+    const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
+    const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
+    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || lokasiAktif.id === 2);
+
+    const intervalMs = isLive ? 30000 : 15000;
+    indoorUpdateTimer = setTimeout(async function() {
+        await updateDashboard();
+        scheduleNextIndoorUpdate();
+    }, intervalMs);
+}
+
+// Jalankan update pertama kali dan jalankan penjadwalan otomatis
 updateDashboard();
-setInterval(updateDashboard, 3000);
+scheduleNextIndoorUpdate();
 </script>
 </body>
 </html>
