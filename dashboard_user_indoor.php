@@ -714,10 +714,8 @@ canvas {
     <!-- ========== 3. GRAFIK REAL TIME SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h5 id="chart-status-title" class="mb-3" style="font-size: 1.1rem; font-weight: 600; color: #1e3c72; margin-bottom: 15px;">
-            Grafik Sensor <span class="badge bg-success">Live (Real-Time)</span>
-        </h5>
-        <div class="chart-container"><canvas id="myChart" height="100"></canvas></div>
+        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
     <!-- ============================================================ -->
@@ -861,19 +859,6 @@ var hasFitBounds = false;
 
 function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
-    currentLokasiId = locId || activeSelectedLocationId;
-
-    const locationsList = (typeof currentLocationsData !== 'undefined' && currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
-    const selectedLoc = locationsList.find(l => l.id === currentLokasiId);
-    if (selectedLoc) {
-        const rawIdUpper = String(selectedLoc.id_alat || idAlat || '').toUpperCase();
-        const isLive = (rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || selectedLoc.id === 2);
-        currentIsDummy = (selectedLoc.is_dummy !== undefined) ? (selectedLoc.is_dummy == 1 ? 1 : 0) : (isLive ? 0 : 1);
-        currentNamaLokasi = selectedLoc.nama_lokasi || nama;
-    } else {
-        currentNamaLokasi = nama;
-    }
-
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
     const locNameElem = document.getElementById('location-name-val');
@@ -903,7 +888,6 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
         activeBtn.style.color = 'white';
         activeBtn.classList.add('active');
     }
-    fetchChartData(currentLokasiId, currentIsDummy, currentNamaLokasi);
     updateDashboard();
 }
 
@@ -936,16 +920,12 @@ function addMarkerToMap(location, isDanger) {
 
     var icon = isLocDanger ? dangerIcon : safeIcon;
     
-    const isDummyLoc = (location.is_dummy !== undefined) ? (location.is_dummy == 1 ? 1 : 0) : (isLocDanger || rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || location.id === 2 ? 0 : 1);
-
     var marker = L.marker([location.latitude, location.longitude], { 
         icon: icon, 
-        draggable: false,
-        lokasi_id: location.id,
-        is_dummy: isDummyLoc,
-        nama: namaLokasi
+        draggable: false 
     }).addTo(map);
     
+    var namaLokasi = location.nama_lokasi && location.nama_lokasi.trim() !== '' ? location.nama_lokasi : (location.id_alat ? `Indoor (${location.id_alat})` : 'Lokasi Gedung');
     var statusBadge = isLocDanger 
         ? '<span style="color: white; background: #dc2626; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-exclamation-triangle"></i> BAHAYA</span>' 
         : '<span style="color: white; background: #28a745; font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;"><i class="fas fa-check-circle"></i> Aman</span>';
@@ -961,12 +941,7 @@ function addMarkerToMap(location, isDanger) {
     `);
     
     marker.on('click', function() {
-        currentLokasiId = this.options.lokasi_id;
-        currentIsDummy = this.options.is_dummy;
-        currentNamaLokasi = this.options.nama;
-
         flyToLocation(location.latitude, location.longitude, namaLokasi, location.id_alat || `00${location.id}`, location.id);
-        fetchChartData(currentLokasiId, currentIsDummy, currentNamaLokasi);
     });
 
     markers.push(marker);
@@ -1073,95 +1048,67 @@ async function fetchLocations() {
 }
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================
-// 1. Variabel Global Indikator & Grafik Real Time (Live vs Dummy)
-let myChart; // Menyimpan instance chart
-let currentLokasiId = <?= (int)($primary_loc['id'] ?? 1); ?>; // Default ID Alat Asli
-let currentIsDummy = <?= (isset($primary_loc['id_alat']) && (strtoupper($primary_loc['id_alat']) === 'LOK-002' || strtoupper($primary_loc['id_alat']) === 'IND-002' || $primary_loc['id'] == 2)) ? 0 : 1; ?>; // 0 = Asli (Live), 1 = Dummy
-let currentNamaLokasi = <?= json_encode($primary_loc['nama_lokasi'] ?? "Alat Utama"); ?>;
+// ================= CHART (Terhubung ke Database indoor -> data_sensor) =================
+const ctx = document.getElementById('myChart').getContext('2d');
+let dataChart = {
+    labels: <?= json_encode($chart_labels); ?>,
+    datasets: [
+        { label: 'Sensor Api', data: <?= json_encode($chart_api); ?>, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Sensor Asap', data: <?= json_encode($chart_asap); ?>, borderColor: '#ffa502', backgroundColor: 'rgba(255,165,2,0.1)', borderWidth: 2, tension: 0.4, fill: true, borderDash: [5, 5] },
+        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu); ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan); ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Tegangan (V)', data: <?= json_encode($chart_tegangan); ?>, borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
+        { label: 'Arus (A)', data: <?= json_encode($chart_arus); ?>, borderColor: '#a8e6cf', backgroundColor: 'rgba(168,230,207,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+    ]
+};
 
-// 3. Fungsi Fetch Data via AJAX
-function fetchChartData(id_lokasi, is_dummy, nama_lokasi) {
-    if (id_lokasi !== undefined) currentLokasiId = id_lokasi;
-    if (is_dummy !== undefined) currentIsDummy = is_dummy;
-    if (nama_lokasi !== undefined && nama_lokasi !== "") currentNamaLokasi = nama_lokasi;
-
-    // ---- UBAH INDIKATOR JUDUL ----
-    let titleElement = document.getElementById('chart-status-title');
-    if (titleElement) {
-        if (currentIsDummy == 1 || currentIsDummy == "1") {
-            titleElement.innerHTML = `Grafik Sensor: ${escapeHtml(currentNamaLokasi)} <span class="badge bg-warning text-dark">Data Dummy</span>`;
-        } else {
-            titleElement.innerHTML = `Grafik Sensor: ${escapeHtml(currentNamaLokasi)} <span class="badge bg-success">Live (Real-Time)</span>`;
-        }
-    }
-
-    // ---- AMBIL DATA DARI API ----
-    if (window.jQuery) {
-        $.ajax({
-            url: 'api_chart_indoor.php',
-            type: 'GET',
-            data: { id_lokasi: currentLokasiId, is_dummy: currentIsDummy },
-            dataType: 'json',
-            success: function(response) {
-                if (response && response.waktu && response.suhu) {
-                    renderChart(response.waktu, response.suhu, currentIsDummy);
+const myChart = new Chart(ctx, {
+    type: 'line',
+    data: dataChart,
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        animation: { duration: 500 },
+        plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        let value = context.raw;
+                        let unit = '';
+                        if (label.includes('Tegangan')) unit = ' V';
+                        else if (label.includes('Arus')) unit = ' A';
+                        else if (label.includes('Suhu')) unit = ' °C';
+                        else if (label.includes('Kelembapan')) unit = ' %';
+                        else if (label.includes('Sensor Asap')) {
+                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                            return `${label}: ${status}`;
+                        }
+                        else if (label.includes('Sensor Api')) {
+                            let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
+                            return `${label}: ${status}`;
+                        }
+                        return `${label}: ${value}${unit}`;
+                    }
                 }
             }
-        });
-    } else {
-        fetch(`api_chart_indoor.php?id_lokasi=${encodeURIComponent(currentLokasiId)}&is_dummy=${encodeURIComponent(currentIsDummy)}`)
-            .then(res => res.json())
-            .then(response => {
-                if (response && response.waktu && response.suhu) {
-                    renderChart(response.waktu, response.suhu, currentIsDummy);
-                }
-            })
-            .catch(err => console.error('Gagal mengambil data chart:', err));
-    }
-}
-
-// 4. Fungsi Render / Gambar Ulang Chart
-function renderChart(labelWaktu, dataSuhu, is_dummy) {
-    // POINT 3: HANCURKAN CHART LAMA JIKA ADA (Agar data tidak tercampur)
-    if (myChart) {
-        myChart.destroy();
-    }
-
-    // Ubah garis menjadi putus-putus dan warna oranye jika itu data Dummy
-    let dashStyle = (is_dummy == 1 || is_dummy == "1") ? [5, 5] : [];
-    let lineColor = (is_dummy == 1 || is_dummy == "1") ? 'rgba(255, 165, 0, 1)' : 'rgba(255, 99, 132, 1)';
-    let fillColor = (is_dummy == 1 || is_dummy == "1") ? 'rgba(255, 165, 0, 0.1)' : 'rgba(255, 99, 132, 0.1)';
-
-    const ctx = document.getElementById('myChart').getContext('2d');
-    myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labelWaktu,
-            datasets: [{
-                label: 'Suhu (°C)',
-                data: dataSuhu,
-                borderColor: lineColor,
-                backgroundColor: fillColor,
-                borderDash: dashStyle, // Garis putus-putus aktif jika dummy
-                tension: 0.4,
-                fill: true
-            }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            animation: false // Matikan animasi agar transisi mulus saat auto-refresh
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                title: { display: true, text: 'Nilai Sensor' }
+            },
+            x: {
+                grid: { display: false },
+                title: { display: true, text: 'Waktu' }
+            }
         }
-    });
-}
-
-// 5. Auto Refresh Grafik Setiap 2 Detik (Opsional)
-setInterval(function() {
-    fetchChartData(currentLokasiId, currentIsDummy, currentNamaLokasi);
-}, 2000);
-
-// Panggil fetch chart pertama kali
-fetchChartData(currentLokasiId, currentIsDummy, currentNamaLokasi);
+    }
+});
 
 // ================= FUNGSI GENERATE DATA DUMMY (SIMULASI) =================
 // Fungsi ini hanya dipanggil saat titik lokasi SELAIN LOK-002 diklik
@@ -1345,26 +1292,21 @@ async function updateDashboard() {
         }
     }
     
-    if (typeof dataChart !== 'undefined' && dataChart && dataChart.labels) {
-        const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
-        if (lastTime !== data.waktu) {
-            dataChart.labels.push(data.waktu);
-            if (dataChart.datasets && dataChart.datasets.length > 0) {
-                dataChart.datasets[0].data.push(data.apiValue !== undefined ? data.apiValue : (data.api === "Terdeteksi Api" ? 1 : 0));
-                if (dataChart.datasets[1]) dataChart.datasets[1].data.push(data.asap_value !== undefined ? parseFloat(data.asap_value) : (data.asap === "Tinggi" ? 1 : (data.asap === "Sedang" ? 0.5 : 0)));
-                if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.suhu) || 0);
-                if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.kelembapan) || 0);
-                if (dataChart.datasets[4]) dataChart.datasets[4].data.push(parseFloat(data.tegangan) || 0);
-                if (dataChart.datasets[5]) dataChart.datasets[5].data.push(parseFloat(data.arus) || 0);
-            }
-            if (dataChart.labels.length > 20) { 
-                dataChart.labels.shift(); 
-                if (dataChart.datasets) dataChart.datasets.forEach(ds => ds.data.shift()); 
-            }
-            if (typeof myChart !== 'undefined' && myChart && typeof myChart.update === 'function') {
-                myChart.update();
-            }
+    const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
+    if (lastTime !== data.waktu) {
+        dataChart.labels.push(data.waktu);
+        dataChart.datasets[0].data.push(data.apiValue !== undefined ? data.apiValue : (data.api === "Terdeteksi Api" ? 1 : 0));
+        dataChart.datasets[1].data.push(data.asap_value !== undefined ? parseFloat(data.asap_value) : (data.asap === "Tinggi" ? 1 : (data.asap === "Sedang" ? 0.5 : 0)));
+        dataChart.datasets[2].data.push(parseFloat(data.suhu) || 0);
+        dataChart.datasets[3].data.push(parseFloat(data.kelembapan) || 0);
+        dataChart.datasets[4].data.push(parseFloat(data.tegangan) || 0);
+        dataChart.datasets[5].data.push(parseFloat(data.arus) || 0);
+        
+        if (dataChart.labels.length > 20) { 
+            dataChart.labels.shift(); 
+            dataChart.datasets.forEach(ds => ds.data.shift()); 
         }
+        myChart.update();
     }
 }
 
