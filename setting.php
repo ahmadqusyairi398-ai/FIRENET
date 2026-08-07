@@ -205,26 +205,17 @@ function getLocations($conn) {
 
 // ========== FUNGSI TAMBAH LOKASI BARU ==========
 function addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude) {
-    $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_alat (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "ssdd", $id_alat, $nama_lokasi, $latitude, $longitude);
-        $result = mysqli_stmt_execute($stmt);
-        mysqli_stmt_close($stmt);
-        return $result;
-    }
-    return false;
+    $id_alat = mysqli_real_escape_string($conn, $id_alat);
+    $nama_lokasi = mysqli_real_escape_string($conn, $nama_lokasi);
+    $latitude = floatval($latitude);
+    $longitude = floatval($longitude);
+    return mysqli_query($conn, "INSERT INTO lokasi_alat (id_alat, nama_lokasi, latitude, longitude) VALUES ('$id_alat', '$nama_lokasi', $latitude, $longitude)");
 }
 
 // ========== FUNGSI HAPUS LOKASI ==========
 function deleteLocationById($conn, $id) {
-    $stmt = mysqli_prepare($conn, "DELETE FROM lokasi_alat WHERE id = ?");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "i", $id);
-        $result = mysqli_stmt_execute($stmt);
-        mysqli_stmt_close($stmt);
-        return $result;
-    }
-    return false;
+    $id = intval($id);
+    return mysqli_query($conn, "DELETE FROM lokasi_alat WHERE id = $id");
 }
 
 // ========== FUNGSI USER ==========
@@ -232,8 +223,10 @@ function getUsers($conn)
 {
     $users = [];
     $query = mysqli_query($conn, "SELECT id, username, role, updated_at as last_update FROM pengguna ORDER BY id DESC");
-    while ($row = mysqli_fetch_assoc($query)) {
-        $users[] = $row;
+    if ($query) {
+        while ($row = mysqli_fetch_assoc($query)) {
+            $users[] = $row;
+        }
     }
     return $users;
 }
@@ -241,8 +234,11 @@ function getUsers($conn)
 function countActiveAdmins($conn)
 {
     $query = mysqli_query($conn, "SELECT COUNT(*) as total FROM pengguna WHERE role = 'admin'");
-    $row = mysqli_fetch_assoc($query);
-    return $row['total'];
+    if ($query) {
+        $row = mysqli_fetch_assoc($query);
+        return intval($row['total'] ?? 0);
+    }
+    return 0;
 }
 
 // ========== FUNGSI UNTUK BATAS SENSOR ==========
@@ -251,49 +247,46 @@ function getSensorAlarmData($conn)
     $sensors = [];
     $sql = "SELECT * FROM batas_sensor ORDER BY id ASC";
     $query = mysqli_query($conn, $sql);
-    while ($row = mysqli_fetch_assoc($query)) {
-        $sensors[] = $row;
+    if ($query) {
+        while ($row = mysqli_fetch_assoc($query)) {
+            $sensors[] = $row;
+        }
     }
     return $sensors;
 }
 
 function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max)
 {
-    $stmt = mysqli_prepare($conn, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, last_update = NOW() WHERE id = ?");
-    mysqli_stmt_bind_param($stmt, "dddi", $nilai_alarm, $batas_min, $batas_max, $id);
-    $result = mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
-    return $result;
+    $id = intval($id);
+    $nilai_alarm = floatval($nilai_alarm);
+    $batas_min = floatval($batas_min);
+    $batas_max = floatval($batas_max);
+    return mysqli_query($conn, "UPDATE batas_sensor SET nilai_alarm = $nilai_alarm, batas_min = $batas_min, batas_max = $batas_max, last_update = NOW() WHERE id = $id");
 }
+
+$success_message = $error_message = '';
 
 // ========== TAMBAH SENSOR BARU ==========
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_sensor'])) {
-    $nama_sensor = trim($_POST['sensor_name']);
+    $nama_sensor = mysqli_real_escape_string($conn, trim($_POST['sensor_name']));
     $nilai_alarm = floatval($_POST['alarm_value']);
-    $satuan = trim($_POST['satuan']);
+    $satuan = mysqli_real_escape_string($conn, trim($_POST['satuan']));
     $batas_min = floatval($_POST['batas_min']);
     $batas_max = floatval($_POST['batas_max']);
-    $deskripsi = trim($_POST['deskripsi'] ?? '');
+    $deskripsi = mysqli_real_escape_string($conn, trim($_POST['deskripsi'] ?? ''));
     
     if (!empty($nama_sensor) && !empty($satuan)) {
-        $stmt_cek = mysqli_prepare($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = ?");
-        mysqli_stmt_bind_param($stmt_cek, "s", $nama_sensor);
-        mysqli_stmt_execute($stmt_cek);
-        mysqli_stmt_store_result($stmt_cek);
-        
-        if (mysqli_stmt_num_rows($stmt_cek) > 0) {
+        $stmt_cek = mysqli_query($conn, "SELECT id FROM batas_sensor WHERE nama_sensor = '$nama_sensor'");
+        if ($stmt_cek && mysqli_num_rows($stmt_cek) > 0) {
             $error_message = "Sensor '$nama_sensor' sudah terdaftar!";
         } else {
-            $stmt_ins = mysqli_prepare($conn, "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES (?, ?, ?, ?, ?, ?)");
-            mysqli_stmt_bind_param($stmt_ins, "sdsdds", $nama_sensor, $nilai_alarm, $satuan, $batas_min, $batas_max, $deskripsi);
-            if (mysqli_stmt_execute($stmt_ins)) {
+            $sql = "INSERT INTO batas_sensor (nama_sensor, nilai_alarm, satuan, batas_min, batas_max, deskripsi) VALUES ('$nama_sensor', $nilai_alarm, '$satuan', $batas_min, $batas_max, '$deskripsi')";
+            if (mysqli_query($conn, $sql)) {
                 $success_message = "Sensor '$nama_sensor' berhasil ditambahkan!";
             } else {
-                $error_message = "Gagal menambahkan sensor!";
+                $error_message = "Gagal menambahkan sensor: " . mysqli_error($conn);
             }
-            mysqli_stmt_close($stmt_ins);
         }
-        mysqli_stmt_close($stmt_cek);
     } else {
         $error_message = "Nama sensor dan satuan harus diisi!";
     }
@@ -303,177 +296,164 @@ $maxAdmin = 2;
 $adminCount = countActiveAdmins($conn);
 $canAddAdmin = $adminCount < $maxAdmin;
 
-// ========== PROSES POST ==========
-$success_message = $error_message = '';
-
+// ========== PROSES POST LAINNYA ==========
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // UPDATE NILAI ALARM SENSOR
-    if (isset($_POST['update_alarm_value'])) {
-        $sensor_id = intval($_POST['sensor_id']);
-        $new_value = floatval($_POST['alarm_value']);
-        $batas_min = floatval($_POST['batas_min']);
-        $batas_max = floatval($_POST['batas_max']);
+    try {
+        // UPDATE NILAI ALARM SENSOR
+        if (isset($_POST['update_alarm_value'])) {
+            $sensor_id = intval($_POST['sensor_id']);
+            $new_value = floatval($_POST['alarm_value']);
+            $batas_min = floatval($_POST['batas_min']);
+            $batas_max = floatval($_POST['batas_max']);
 
-        if ($batas_min >= $batas_max) {
-            $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
-        } else {
-            $check_query = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = " . intval($sensor_id));
-            $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
+            if ($batas_min >= $batas_max) {
+                $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
+            } else {
+                $check_query = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
+                $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
 
-            if ($sensor) {
-                if ($new_value >= $batas_min && $new_value <= $batas_max) {
-                    if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max)) {
-                        $success_message = "Nilai alarm dan batas range {$sensor['nama_sensor']} berhasil diupdate!";
+                if ($sensor) {
+                    if ($new_value >= $batas_min && $new_value <= $batas_max) {
+                        if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max)) {
+                            $success_message = "Nilai alarm dan batas range {$sensor['nama_sensor']} berhasil diupdate!";
+                        } else {
+                            $error_message = "Gagal mengupdate nilai alarm: " . mysqli_error($conn);
+                        }
                     } else {
-                        $error_message = "Gagal mengupdate nilai alarm!";
+                        $error_message = "Nilai alarm harus antara {$batas_min} - {$batas_max} {$sensor['satuan']}!";
                     }
                 } else {
-                    $error_message = "Nilai alarm harus antara {$batas_min} - {$batas_max} {$sensor['satuan']}!";
+                    $error_message = "Sensor tidak ditemukan!";
                 }
-            } else {
-                $error_message = "Sensor tidak ditemukan!";
             }
         }
-    }
 
-    // ========== CRUD LOKASI DENGAN DATABASE ==========
-    
-    // TAMBAH LOKASI
-    if (isset($_POST['add_location'])) {
-        $id_alat = trim($_POST['id_alat']);
-        $nama_lokasi = trim($_POST['nama_lokasi'] ?? '');
-        $latitude = floatval($_POST['latitude']);
-        $longitude = floatval($_POST['longitude']);
+        // ========== CRUD LOKASI DENGAN DATABASE ==========
         
-        if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            if (addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude)) {
-                $success_message = "Lokasi baru berhasil ditambahkan!";
-            } else {
-                $error_message = "Gagal menambahkan lokasi!";
-            }
-        } else {
-            $error_message = "ID Alat, Latitude, dan Longitude harus diisi!";
-        }
-    }
-
-    // EDIT LOKASI
-    if (isset($_POST['edit_location'])) {
-        $location_id = intval($_POST['location_id']);
-        $id_alat = trim($_POST['edit_id_alat']);
-        $nama_lokasi = trim($_POST['edit_nama_lokasi'] ?? '');
-        $latitude = floatval($_POST['edit_latitude']);
-        $longitude = floatval($_POST['edit_longitude']);
-        
-        if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
-            $stmt = mysqli_prepare($conn, "UPDATE lokasi_alat SET id_alat = ?, nama_lokasi = ?, latitude = ?, longitude = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "ssddi", $id_alat, $nama_lokasi, $latitude, $longitude, $location_id);
-            if (mysqli_stmt_execute($stmt)) {
-                $success_message = "Lokasi berhasil diperbarui!";
-            } else {
-                $error_message = "Gagal memperbarui lokasi!";
-            }
-            mysqli_stmt_close($stmt);
-        } else {
-            $error_message = "ID Alat, Latitude, dan Longitude harus diisi!";
-        }
-    }
-
-    // HAPUS LOKASI
-    if (isset($_POST['delete_location'])) {
-        $location_id = intval($_POST['location_id']);
-        
-        $check = mysqli_query($conn, "SELECT id FROM lokasi_alat WHERE id = $location_id");
-        if (mysqli_num_rows($check) > 0) {
-            if (deleteLocationById($conn, $location_id)) {
-                $success_message = "Lokasi berhasil dihapus!";
-            } else {
-                $error_message = "Gagal menghapus lokasi!";
-            }
-        } else {
-            $error_message = "Lokasi tidak ditemukan!";
-        }
-    }
-
-    // ========== MANAJEMEN USER DENGAN PREPARED STATEMENT ==========
-    
-    // TAMBAH USER
-    if (isset($_POST['add_user'])) {
-        $new_username = trim($_POST['new_username']);
-        $new_password = trim($_POST['new_password']);
-        $new_role = $_POST['new_role'] ?? 'user';
-        
-        if (!empty($new_username) && !empty($new_password)) {
-            $stmt_cek = mysqli_prepare($conn, "SELECT id FROM pengguna WHERE username = ?");
-            mysqli_stmt_bind_param($stmt_cek, "s", $new_username);
-            mysqli_stmt_execute($stmt_cek);
-            mysqli_stmt_store_result($stmt_cek);
+        // TAMBAH LOKASI
+        if (isset($_POST['add_location'])) {
+            $id_alat = trim($_POST['id_alat']);
+            $nama_lokasi = trim($_POST['nama_lokasi'] ?? '');
+            $latitude = floatval($_POST['latitude']);
+            $longitude = floatval($_POST['longitude']);
             
-            if (mysqli_stmt_num_rows($stmt_cek) > 0) {
-                $error_message = "Username sudah terdaftar!";
-            } else {
-                $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-                $stmt_ins = mysqli_prepare($conn, "INSERT INTO pengguna (username, password, role, status, created_at) VALUES (?, ?, ?, 'approved', NOW())");
-                mysqli_stmt_bind_param($stmt_ins, "sss", $new_username, $password_hash, $new_role);
-                if (mysqli_stmt_execute($stmt_ins)) {
-                    $success_message = "Akun user berhasil ditambahkan!";
+            if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
+                if (addLocation($conn, $id_alat, $nama_lokasi, $latitude, $longitude)) {
+                    $success_message = "Lokasi baru berhasil ditambahkan!";
                 } else {
-                    $error_message = "Gagal menambahkan akun: " . mysqli_error($conn);
+                    $error_message = "Gagal menambahkan lokasi: " . mysqli_error($conn);
                 }
-                mysqli_stmt_close($stmt_ins);
-            }
-            mysqli_stmt_close($stmt_cek);
-        } else {
-            $error_message = "Username dan password harus diisi!";
-        }
-    }
-
-    // EDIT USER
-    if (isset($_POST['edit_user'])) {
-        $user_id = intval($_POST['user_id']);
-        $edit_username = trim($_POST['edit_username']);
-        $edit_role = $_POST['edit_role'];
-        $edit_password = trim($_POST['edit_password']);
-        
-        if (!empty($edit_username)) {
-            if (!empty($edit_password)) {
-                $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
-                $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, password = ?, role = ?, updated_at = NOW() WHERE id = ?");
-                mysqli_stmt_bind_param($stmt_upd, "sssi", $edit_username, $password_hash, $edit_role, $user_id);
             } else {
-                $stmt_upd = mysqli_prepare($conn, "UPDATE pengguna SET username = ?, role = ?, updated_at = NOW() WHERE id = ?");
-                mysqli_stmt_bind_param($stmt_upd, "ssi", $edit_username, $edit_role, $user_id);
+                $error_message = "ID Alat, Latitude, dan Longitude harus diisi!";
             }
+        }
+
+        // EDIT LOKASI
+        if (isset($_POST['edit_location'])) {
+            $location_id = intval($_POST['location_id']);
+            $id_alat = mysqli_real_escape_string($conn, trim($_POST['edit_id_alat']));
+            $nama_lokasi = mysqli_real_escape_string($conn, trim($_POST['edit_nama_lokasi'] ?? ''));
+            $latitude = floatval($_POST['edit_latitude']);
+            $longitude = floatval($_POST['edit_longitude']);
             
-            if (mysqli_stmt_execute($stmt_upd)) {
-                $success_message = "Akun user berhasil diperbarui!";
+            if (!empty($id_alat) && $latitude != 0 && $longitude != 0) {
+                $sql = "UPDATE lokasi_alat SET id_alat = '$id_alat', nama_lokasi = '$nama_lokasi', latitude = $latitude, longitude = $longitude WHERE id = $location_id";
+                if (mysqli_query($conn, $sql)) {
+                    $success_message = "Lokasi berhasil diperbarui!";
+                } else {
+                    $error_message = "Gagal memperbarui lokasi: " . mysqli_error($conn);
+                }
             } else {
-                $error_message = "Gagal memperbarui akun: " . mysqli_error($conn);
+                $error_message = "ID Alat, Latitude, dan Longitude harus diisi!";
             }
-            mysqli_stmt_close($stmt_upd);
-        } else {
-            $error_message = "Username harus diisi!";
         }
-    }
 
-    // HAPUS USER
-    if (isset($_POST['delete_user'])) {
-        $user_id = intval($_POST['user_id']);
-        
-        $check_query = mysqli_query($conn, "SELECT username FROM pengguna WHERE id = " . intval($user_id));
-        $user_data = $check_query ? mysqli_fetch_assoc($check_query) : null;
-        
-        if ($user_data && $user_data['username'] == 'admin') {
-            $error_message = "Tidak dapat menghapus akun admin utama!";
-        } else {
-            $stmt_del = mysqli_prepare($conn, "DELETE FROM pengguna WHERE id = ?");
-            mysqli_stmt_bind_param($stmt_del, "i", $user_id);
-            if (mysqli_stmt_execute($stmt_del)) {
-                $success_message = "Akun user berhasil dihapus!";
+        // HAPUS LOKASI
+        if (isset($_POST['delete_location'])) {
+            $location_id = intval($_POST['location_id']);
+            
+            $check = mysqli_query($conn, "SELECT id FROM lokasi_alat WHERE id = $location_id");
+            if ($check && mysqli_num_rows($check) > 0) {
+                if (deleteLocationById($conn, $location_id)) {
+                    $success_message = "Lokasi berhasil dihapus!";
+                } else {
+                    $error_message = "Gagal menghapus lokasi: " . mysqli_error($conn);
+                }
             } else {
-                $error_message = "Gagal menghapus akun: " . mysqli_error($conn);
+                $error_message = "Lokasi tidak ditemukan!";
             }
-            mysqli_stmt_close($stmt_del);
         }
+
+        // ========== MANAJEMEN USER ==========
+        
+        // TAMBAH USER
+        if (isset($_POST['add_user'])) {
+            $new_username = mysqli_real_escape_string($conn, trim($_POST['new_username']));
+            $new_password = trim($_POST['new_password']);
+            $new_role = mysqli_real_escape_string($conn, $_POST['new_role'] ?? 'user');
+            
+            if (!empty($new_username) && !empty($new_password)) {
+                $stmt_cek = mysqli_query($conn, "SELECT id FROM pengguna WHERE username = '$new_username'");
+                if ($stmt_cek && mysqli_num_rows($stmt_cek) > 0) {
+                    $error_message = "Username sudah terdaftar!";
+                } else {
+                    $password_hash = password_hash($new_password, PASSWORD_DEFAULT);
+                    $sql = "INSERT INTO pengguna (username, password, role, status, created_at) VALUES ('$new_username', '$password_hash', '$new_role', 'approved', NOW())";
+                    if (mysqli_query($conn, $sql)) {
+                        $success_message = "Akun user berhasil ditambahkan!";
+                    } else {
+                        $error_message = "Gagal menambahkan akun: " . mysqli_error($conn);
+                    }
+                }
+            } else {
+                $error_message = "Username dan password harus diisi!";
+            }
+        }
+
+        // EDIT USER
+        if (isset($_POST['edit_user'])) {
+            $user_id = intval($_POST['user_id']);
+            $edit_username = mysqli_real_escape_string($conn, trim($_POST['edit_username']));
+            $edit_role = mysqli_real_escape_string($conn, $_POST['edit_role']);
+            $edit_password = trim($_POST['edit_password']);
+            
+            if (!empty($edit_username)) {
+                if (!empty($edit_password)) {
+                    $password_hash = password_hash($edit_password, PASSWORD_DEFAULT);
+                    $sql = "UPDATE pengguna SET username = '$edit_username', password = '$password_hash', role = '$edit_role', updated_at = NOW() WHERE id = $user_id";
+                } else {
+                    $sql = "UPDATE pengguna SET username = '$edit_username', role = '$edit_role', updated_at = NOW() WHERE id = $user_id";
+                }
+                
+                if (mysqli_query($conn, $sql)) {
+                    $success_message = "Akun user berhasil diperbarui!";
+                } else {
+                    $error_message = "Gagal memperbarui akun: " . mysqli_error($conn);
+                }
+            } else {
+                $error_message = "Username harus diisi!";
+            }
+        }
+
+        // HAPUS USER
+        if (isset($_POST['delete_user'])) {
+            $user_id = intval($_POST['user_id']);
+            
+            $check_query = mysqli_query($conn, "SELECT username FROM pengguna WHERE id = $user_id");
+            $user_data = $check_query ? mysqli_fetch_assoc($check_query) : null;
+            
+            if ($user_data && $user_data['username'] == 'admin') {
+                $error_message = "Tidak dapat menghapus akun admin utama!";
+            } else {
+                if (mysqli_query($conn, "DELETE FROM pengguna WHERE id = $user_id")) {
+                    $success_message = "Akun user berhasil dihapus!";
+                } else {
+                    $error_message = "Gagal menghapus akun: " . mysqli_error($conn);
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        $error_message = "Terjadi kesalahan sistem: " . $e->getMessage();
     }
 }
 
