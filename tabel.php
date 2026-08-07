@@ -1130,6 +1130,9 @@ $(document).ready(function() {
 
     window.changeTableLocation = function(locId) {
         activeTableLocationId = parseInt(locId) || 1;
+        try {
+            localStorage.setItem('activeLocationId', activeTableLocationId);
+        } catch(e) {}
         const isDummy = (activeTableLocationId !== 1);
 
         const tag = document.getElementById('data-type-tag');
@@ -1246,8 +1249,22 @@ $(document).ready(function() {
             .catch(err => console.error("Error updating table data:", err));
     }
 
-    // Jalankan pembaruan tabel otomatis (30s Alat Utama, 15s Dummy)
-    scheduleNextTableUpdate();
+    // Restore lokasi dari localStorage jika pernah dipilih di Dashboard/Chart
+    try {
+        const savedLocId = localStorage.getItem('activeLocationId');
+        if (savedLocId) {
+            const numSavedId = parseInt(savedLocId) || 1;
+            const locSelect = document.getElementById('locationSelect');
+            if (locSelect) {
+                locSelect.value = numSavedId;
+            }
+            changeTableLocation(numSavedId);
+        } else {
+            scheduleNextTableUpdate();
+        }
+    } catch(e) {
+        scheduleNextTableUpdate();
+    }
 });
 </script>
 

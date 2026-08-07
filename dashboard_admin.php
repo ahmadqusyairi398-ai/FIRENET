@@ -1209,6 +1209,9 @@ function updateSensorDisplayCards(displayData) {
 function flyToLocation(lat, lng, id) {
     var prevId = activeSelectedLocationId;
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
+    try {
+        localStorage.setItem('activeLocationId', id);
+    } catch(e) {}
 
     if (prevId !== id) {
         switchLocationChartData(id);
@@ -1517,6 +1520,18 @@ function scheduleNextUpdate() {
 
 fetchDataFromDB(); // Jalankan pertama kali saat load
 scheduleNextUpdate(); // Jalankan penjadwalan otomatis
+
+// Restore lokasi aktif dari localStorage jika ada
+try {
+    var savedLocId = localStorage.getItem('activeLocationId');
+    if (savedLocId) {
+        var numSavedId = parseInt(savedLocId) || 1;
+        var foundLoc = allLocations.find(function(l) { return l.id === numSavedId; });
+        if (foundLoc) {
+            flyToLocation(foundLoc.lat, foundLoc.lng, foundLoc.id);
+        }
+    }
+} catch(e) {}
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;

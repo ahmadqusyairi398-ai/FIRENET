@@ -1123,6 +1123,9 @@ let activeLocationId = 1;
 
 function changeChartLocation(locId) {
     activeLocationId = parseInt(locId) || 1;
+    try {
+        localStorage.setItem('activeLocationId', activeLocationId);
+    } catch(e) {}
     const isDummy = (activeLocationId !== 1);
     
     // Update Badge
@@ -1204,6 +1207,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
     
     fullData = [...realDataOriginal];
+    
+    // Restore lokasi dari localStorage jika pernah dipilih di Dashboard/Tabel
+    try {
+        const savedLocId = localStorage.getItem('activeLocationId');
+        if (savedLocId) {
+            const numSavedId = parseInt(savedLocId) || 1;
+            const locSelect = document.getElementById('locationSelect');
+            if (locSelect) {
+                locSelect.value = numSavedId;
+            }
+            changeChartLocation(numSavedId);
+            return;
+        }
+    } catch(e) {}
+
     if (fullData.length === 0) {
         createChart([], []);
         console.warn('Tidak ada data sensor di database. Grafik akan kosong.');
