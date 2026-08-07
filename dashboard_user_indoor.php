@@ -672,10 +672,10 @@ canvas {
         <div class="grid">
             <div class="box <?= $latest_sensor['api'] === 'Terdeteksi Api' ? 'pulse-animation' : '' ?>" id="api-box" style="<?= $latest_sensor['api'] === 'Terdeteksi Api' ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>"><i class="fas fa-fire"></i><div class="sensor-label">Sensor Api</div><b id="api-status"><?= $latest_sensor['api'] === 'Terdeteksi Api' ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman' ?></b></div>
             <div class="box <?= $latest_sensor['asap'] === 'Tinggi' ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= $latest_sensor['asap'] === 'Tinggi' ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>"><i class="fas fa-smog"></i><div class="sensor-label">Sensor Asap</div><b id="asap"><?= $latest_sensor['asap'] === 'Tinggi' ? '<i class="fas fa-smog"></i> Tinggi (Berbahaya)' : ($latest_sensor['asap'] === 'Sedang' ? '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)' : '<i class="fas fa-check"></i> Normal') ?></b></div>
-            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Sensor Suhu</div><b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b></div>
-            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Sensor Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b></div>
-            <div class="box"><i class="fas fa-bolt"></i><div class="sensor-label">Sensor Tegangan</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b></div>
-            <div class="box"><i class="fas fa-charging-station"></i><div class="sensor-label">Sensor Arus</div><b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b></div>
+            <div class="box" id="suhu-box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Sensor Suhu</div><b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?><?= $latest_sensor['suhu'] !== '-' ? ' °C' : '' ?> <i class="fas fa-thermometer-half"></i></b></div>
+            <div class="box" id="kelembapan-box"><i class="fas fa-tint"></i><div class="sensor-label">Sensor Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?><?= $latest_sensor['kelembapan'] !== '-' ? ' %' : '' ?> <i class="fas fa-tint"></i></b></div>
+            <div class="box" id="tegangan-box"><i class="fas fa-bolt"></i><div class="sensor-label">Sensor Tegangan</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?><?= $latest_sensor['tegangan'] !== '-' ? ' V' : '' ?> <i class="fas fa-bolt"></i></b></div>
+            <div class="box" id="arus-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Sensor Arus</div><b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?><?= $latest_sensor['arus'] !== '-' ? ' A' : '' ?> <i class="fas fa-charging-station"></i></b></div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-building" style="color: #0083b0;"></i>
@@ -1098,18 +1098,22 @@ function generateDummyData() {
         suhu: (24 + Math.random() * 3).toFixed(1), // Acak 24.0 - 27.0 °C
         kelembapan: (50 + Math.random() * 10).toFixed(1), // Acak 50.0 - 60.0 %
         tegangan: (218 + Math.random() * 4).toFixed(1), // Acak 218.0 - 222.0 V
-        arus: (0.10 + Math.random() * 0.15).toFixed(3), // Acak 0.100 - 0.250 A (3 desimal)
+        arus: (0.10 + Math.random() * 0.15).toFixed(3),
         rssi: -50 - Math.floor(Math.random() * 20),
         ip: "192.168.1." + Math.floor(100 + Math.random() * 50),
         isDanger: false,
-        apiValue: 0
+        apiValue: 0,
+        limit_suhu: 40,
+        limit_kelembapan: 20,
+        limit_tegangan: 240,
+        limit_arus: 5
     };
 }
 
 // ================= AMBIL DATA SENSOR DARI DATABASE =================
 async function fetchSensorData() {
     try {
-        const response = await fetch('get_sensor_data_indoor.php');
+        const response = await fetch('api_get_data.php?device=indoor');
         const data = await response.json();
         
         if (data.error) {
@@ -1204,6 +1208,59 @@ async function updateDashboard() {
         } else {
             apiBox.classList.remove('pulse-animation');
             apiBox.style.background = "";
+        }
+    }
+    
+    // Ambil elemen kotak sensor Suhu, Kelembapan, Tegangan, Arus
+    const suhuBox = document.getElementById('suhu-box');
+    const kelembapanBox = document.getElementById('kelembapan-box');
+    const teganganBox = document.getElementById('tegangan-box');
+    const arusBox = document.getElementById('arus-box');
+    const dangerStyle = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+
+    // LOGIKA MERAH DINAMIS (Membandingkan Data Asli vs Set Point dari Database)
+
+    // Suhu (Merah jika melebihi limit_suhu)
+    if (suhuBox) {
+        if (data.limit_suhu !== undefined && parseFloat(data.suhu) > parseFloat(data.limit_suhu)) {
+            suhuBox.style.background = dangerStyle;
+            suhuBox.classList.add('pulse-animation');
+        } else {
+            suhuBox.style.background = "";
+            suhuBox.classList.remove('pulse-animation');
+        }
+    }
+
+    // Kelembapan (Merah jika di bawah limit_kelembapan)
+    if (kelembapanBox) {
+        if (data.limit_kelembapan !== undefined && parseFloat(data.kelembapan) < parseFloat(data.limit_kelembapan)) {
+            kelembapanBox.style.background = dangerStyle;
+            kelembapanBox.classList.add('pulse-animation');
+        } else {
+            kelembapanBox.style.background = "";
+            kelembapanBox.classList.remove('pulse-animation');
+        }
+    }
+
+    // Tegangan (Merah jika melebihi limit_tegangan)
+    if (teganganBox) {
+        if (data.limit_tegangan !== undefined && parseFloat(data.tegangan) > parseFloat(data.limit_tegangan)) {
+            teganganBox.style.background = dangerStyle;
+            teganganBox.classList.add('pulse-animation');
+        } else {
+            teganganBox.style.background = "";
+            teganganBox.classList.remove('pulse-animation');
+        }
+    }
+
+    // Arus (Merah jika melebihi limit_arus)
+    if (arusBox) {
+        if (data.limit_arus !== undefined && parseFloat(data.arus) > parseFloat(data.limit_arus)) {
+            arusBox.style.background = dangerStyle;
+            arusBox.classList.add('pulse-animation');
+        } else {
+            arusBox.style.background = "";
+            arusBox.classList.remove('pulse-animation');
         }
     }
     

@@ -25,6 +25,23 @@ if (!$conn || mysqli_connect_errno()) {
 $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
 $result = mysqli_query($conn, $sql);
 
+// Ambil batas sensor (set points) dari database
+$limit_suhu = 40.0;
+$limit_kelembapan = 20.0;
+$limit_tegangan = 240.0;
+$limit_arus = 5.0;
+
+$q_batas = @mysqli_query($conn, "SELECT nama_sensor, batas_max, batas_min FROM batas_sensor");
+if ($q_batas && mysqli_num_rows($q_batas) > 0) {
+    while ($r_b = mysqli_fetch_assoc($q_batas)) {
+        $nama_b = strtolower(trim($r_b['nama_sensor']));
+        if ($nama_b == 'suhu') $limit_suhu = (float)$r_b['batas_max'];
+        if ($nama_b == 'kelembapan') $limit_kelembapan = (float)$r_b['batas_min'];
+        if ($nama_b == 'tegangan listrik' || $nama_b == 'tegangan') $limit_tegangan = (float)$r_b['batas_max'];
+        if ($nama_b == 'arus listrik' || $nama_b == 'arus') $limit_arus = (float)$r_b['batas_max'];
+    }
+}
+
 if ($result && mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
     
@@ -74,44 +91,61 @@ if ($result && mysqli_num_rows($result) > 0) {
             }
         }
         
-        $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi");
+        $suhuVal = isset($row['suhu']) ? (float)$row['suhu'] : 0.0;
+        $kelembapanVal = isset($row['kelembapan']) ? (float)$row['kelembapan'] : 0.0;
+        $teganganVal = isset($row['tegangan']) ? (float)$row['tegangan'] : 0.0;
+        $arusVal = isset($row['arus']) ? (float)$row['arus'] : 0.0;
+
+        $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi"
+            || ($suhuVal > $limit_suhu)
+            || ($kelembapanVal < $limit_kelembapan)
+            || ($teganganVal > $limit_tegangan)
+            || ($arusVal > $limit_arus));
 
         $data = [
-            "error"      => false,
-            "waktu"      => date('H:i:s', strtotime($waktu_raw)),
-            "api"        => $apiStatus,
-            "asap"       => $asapStatus,
-            "asap_value" => $asapNum,
-            "suhu"       => isset($row['suhu']) ? number_format((float)$row['suhu'], 1) : "0.0",
-            "kelembapan" => isset($row['kelembapan']) ? number_format((float)$row['kelembapan'], 1) : "0.0",
-            "tegangan"   => isset($row['tegangan']) ? number_format((float)$row['tegangan'], 1) : "0.0",
-            "arus"       => isset($row['arus']) ? number_format((float)$row['arus'], 2) : "0.00",
-            "rssi"       => $row['rssi'] ?? '-',
-            "ip"         => !empty($row['ip_address']) ? $row['ip_address'] : '-',
-            "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
-            "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
-            "isDanger"   => $isDanger,
-            "apiValue"   => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
-            "status"     => "Online"
+            "error"            => false,
+            "waktu"            => date('H:i:s', strtotime($waktu_raw)),
+            "api"              => $apiStatus,
+            "asap"             => $asapStatus,
+            "asap_value"       => $asapNum,
+            "suhu"             => number_format($suhuVal, 1),
+            "kelembapan"       => number_format($kelembapanVal, 1),
+            "tegangan"         => number_format($teganganVal, 1),
+            "arus"             => number_format($arusVal, 2),
+            "rssi"             => $row['rssi'] ?? '-',
+            "ip"               => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+            "latitude"         => isset($row['latitude']) ? (float)$row['latitude'] : null,
+            "longitude"        => isset($row['longitude']) ? (float)$row['longitude'] : null,
+            "isDanger"         => $isDanger,
+            "apiValue"         => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
+            "status"           => "Online",
+            "limit_suhu"       => $limit_suhu,
+            "limit_kelembapan" => $limit_kelembapan,
+            "limit_tegangan"   => $limit_tegangan,
+            "limit_arus"       => $limit_arus
         ];
     } else {
         $data = [
-            "error"      => false,
-            "waktu"      => date('H:i:s'),
-            "api"        => "Aman",
-            "asap"       => "Normal",
-            "asap_value" => 0,
-            "suhu"       => "0.0",
-            "kelembapan" => "0.0",
-            "tegangan"   => "0.0",
-            "arus"       => "0.00",
-            "rssi"       => '-',
-            "ip"         => '-',
-            "latitude"   => isset($row['latitude']) ? (float)$row['latitude'] : null,
-            "longitude"  => isset($row['longitude']) ? (float)$row['longitude'] : null,
-            "isDanger"   => false,
-            "apiValue"   => 0,
-            "status"     => "Offline"
+            "error"            => false,
+            "waktu"            => date('H:i:s'),
+            "api"              => "Aman",
+            "asap"             => "Normal",
+            "asap_value"       => 0,
+            "suhu"             => "0.0",
+            "kelembapan"       => "0.0",
+            "tegangan"         => "0.0",
+            "arus"             => "0.00",
+            "rssi"             => '-',
+            "ip"               => '-',
+            "latitude"         => isset($row['latitude']) ? (float)$row['latitude'] : null,
+            "longitude"        => isset($row['longitude']) ? (float)$row['longitude'] : null,
+            "isDanger"         => false,
+            "apiValue"         => 0,
+            "status"           => "Offline",
+            "limit_suhu"       => $limit_suhu,
+            "limit_kelembapan" => $limit_kelembapan,
+            "limit_tegangan"   => $limit_tegangan,
+            "limit_arus"       => $limit_arus
         ];
     }
     

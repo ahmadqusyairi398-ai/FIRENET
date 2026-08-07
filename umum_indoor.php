@@ -1023,13 +1023,17 @@ function generateDummyData() {
         rssi: -50 - Math.floor(Math.random() * 20),
         ip: "192.168.1." + Math.floor(100 + Math.random() * 50),
         isDanger: false,
-        apiValue: 0
+        apiValue: 0,
+        limit_suhu: 40,
+        limit_kelembapan: 20,
+        limit_tegangan: 240,
+        limit_arus: 5
     };
 }
 
 async function fetchSensorData() {
     try {
-        const response = await fetch('get_sensor_data_indoor.php');
+        const response = await fetch('api_get_data.php?device=indoor');
         const data = await response.json();
         if (data.error) return null;
         return data;
@@ -1131,7 +1135,35 @@ async function fetchDataFromDB() {
             }
         }
 
-        var isDanger = (data.api === "Terdeteksi Api" || asapVal === "Tinggi" || asapVal === "Bahaya");
+        // Ambil elemen kotak sensor Suhu, Kelembapan
+        const suhuBox = document.getElementById('suhu-box');
+        const kelembapanBox = document.getElementById('kelembapan-box');
+        const dangerStyle = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+
+        var isDanger = data.isDanger || (data.api === "Terdeteksi Api") || (asapVal === "Tinggi" || asapVal === "Bahaya");
+
+        if (suhuBox) {
+            if (data.limit_suhu !== undefined && parseFloat(data.suhu) > parseFloat(data.limit_suhu)) {
+                suhuBox.style.background = dangerStyle;
+                suhuBox.classList.add('pulse-animation');
+                isDanger = true;
+            } else {
+                suhuBox.style.background = "";
+                suhuBox.classList.remove('pulse-animation');
+            }
+        }
+
+        if (kelembapanBox) {
+            if (data.limit_kelembapan !== undefined && parseFloat(data.kelembapan) < parseFloat(data.limit_kelembapan)) {
+                kelembapanBox.style.background = dangerStyle;
+                kelembapanBox.classList.add('pulse-animation');
+                isDanger = true;
+            } else {
+                kelembapanBox.style.background = "";
+                kelembapanBox.classList.remove('pulse-animation');
+            }
+        }
+
         if (typeof updateLocationStatus === 'function') {
             updateLocationStatus(isDanger);
         }
