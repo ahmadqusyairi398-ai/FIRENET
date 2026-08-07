@@ -1056,6 +1056,12 @@ function filterData() {
     }
     const labels = filteredData.map(d => d.waktu);
     createChart(labels, filteredData);
+
+    // -- KODE TAMBAHAN UNTUK MENCEGAH CHART MENGHILANG --
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (activeTab) {
+        setMode(currentMode, activeTab);
+    }
 }
 
 function resetFilter() {
