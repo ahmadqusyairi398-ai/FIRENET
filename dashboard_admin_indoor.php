@@ -395,6 +395,23 @@ body::before {
 }
 .btn-home-header:hover { background: rgba(34, 6, 244, 0.3); transform: translateY(-2px); }
 
+.btn-delete-dummy {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-delete-dummy:hover { background: rgba(220, 53, 69, 0.3); transform: translateY(-2px); }
+
 .card {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
@@ -631,6 +648,7 @@ canvas {
     .node-status-header { justify-content: center; }
     .header-right { justify-content: center; flex-wrap: wrap; }
     .btn-home-header { padding: 6px 12px; font-size: 12px; }
+    .btn-delete-dummy { padding: 6px 12px; font-size: 12px; }
     .modal-box { padding: 30px 20px; }
     .modal-buttons { flex-direction: column; }
     .btn-modal { justify-content: center; }
@@ -700,6 +718,7 @@ canvas {
             <button class="btn-home-header" onclick="openHomeModal()">
                 <i class="fas fa-home"></i> HOME
             </button>
+            <button type="button" class="btn-delete-dummy" onclick="deleteDummyData()"><i class="fas fa-trash-alt"></i> Hapus Dummy</button>
             <div class="user-info">
                 <i class="fas fa-user-shield"></i>
                 <span><?= htmlspecialchars($user) ?><span class="admin-tag">Admin</span></span>
@@ -891,6 +910,38 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// ================= FUNGSI HAPUS DATA DUMMY =================
+function deleteDummyData() {
+    if (confirm("Apakah Anda yakin ingin menghapus semua data simulasi (dummy)? Data asli tidak akan terhapus.")) {
+        fetch('api_delete_dummy.php?device=indoor')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    
+                    // Kosongkan / refresh sementara grafik secara otomatis
+                    if (typeof dataChart !== 'undefined' && typeof myChart !== 'undefined') {
+                        dataChart.labels = [];
+                        dataChart.datasets.forEach(function(ds) {
+                            ds.data = [];
+                        });
+                        myChart.update();
+                    }
+                    
+                    if (typeof fetchDataFromDB === 'function') {
+                        fetchDataFromDB();
+                    }
+                } else {
+                    alert('Gagal menghapus data dummy: ' + (data.message || 'Terjadi kesalahan.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting dummy data:', error);
+                alert('Terjadi kesalahan koneksi saat menghapus data dummy.');
+            });
+    }
+}
 
 // ================= PETA & LOKASI DINAMIS DARI DATABASE (lokasi_monitoring) =================
 var defaultLat = <?= (float)$primary_loc['latitude']; ?>;
