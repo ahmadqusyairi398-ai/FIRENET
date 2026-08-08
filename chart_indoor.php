@@ -69,11 +69,11 @@ try {
 
     $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
 
-    // Ambil 50 data terbaru dari database (DESC LIMIT 50)
+    // Ambil 5000 data terbaru dari database (DESC LIMIT 5000)
     if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC LIMIT 50";
+        $query .= " ORDER BY $dateColumn DESC LIMIT 5000";
     } else {
-        $query .= " ORDER BY id DESC LIMIT 50";
+        $query .= " ORDER BY id DESC LIMIT 5000";
     }
 
     $stmt = $pdo_indoor->prepare($query);

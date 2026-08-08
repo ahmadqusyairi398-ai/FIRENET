@@ -50,7 +50,7 @@ try {
                 latitude,
                 longitude
               FROM data_sensor 
-              ORDER BY timestamp DESC";
+              ORDER BY timestamp DESC LIMIT 5000";
               
     $stmt = $pdo_indoor->prepare($query);
     $stmt->execute();
