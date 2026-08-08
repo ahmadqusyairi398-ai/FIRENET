@@ -105,7 +105,7 @@ ensureLocationTable($conn);
 function getLocations($conn) {
     $locations = [];
     if ($conn) {
-        $query = mysqli_query($conn, "SELECT id, id_alat, latitude, longitude, interval_kirim, updated_at as last_update FROM lokasi_monitoring ORDER BY id ASC");
+        $query = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, interval_kirim, updated_at as last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 $locations[] = $row;
@@ -409,14 +409,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // CRUD Lokasi via MySQL Database
     if (isset($_POST['add_location'])) {
         $id_alat = trim($_POST['id_alat']);
+        $nama_lokasi = trim($_POST['nama_lokasi'] ?? '');
         $latitude = floatval($_POST['latitude']);
         $longitude = floatval($_POST['longitude']);
         $interval_kirim = isset($_POST['interval_kirim']) ? intval($_POST['interval_kirim']) : 15;
 
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0 && $interval_kirim > 0) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, latitude, longitude, interval_kirim) VALUES (?, ?, ?, ?)");
+            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, nama_lokasi, latitude, longitude, interval_kirim) VALUES (?, ?, ?, ?, ?)");
             if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "sddi", $id_alat, $latitude, $longitude, $interval_kirim);
+                mysqli_stmt_bind_param($stmt, "ssddi", $id_alat, $nama_lokasi, $latitude, $longitude, $interval_kirim);
                 if(mysqli_stmt_execute($stmt)) {
                     $success_message = "Lokasi baru berhasil ditambahkan!";
                     // Kirim instruksi/perintah (HTTP POST) ke Node-RED Indoor (Port 1881)
@@ -442,14 +443,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['edit_location'])) {
         $location_id = intval($_POST['location_id']);
         $id_alat = trim($_POST['edit_id_alat']);
-        $latitude = floatval($_POST['edit_latitude']);
-        $longitude = floatval($_POST['edit_longitude']);
+        $nama_lokasi = trim($_POST['edit_nama_lokasi'] ?? '');
+        $latitude = floatval($_POST['latitude'] ?? $_POST['edit_latitude']);
+        $longitude = floatval($_POST['longitude'] ?? $_POST['edit_longitude']);
         $interval_kirim = isset($_POST['edit_interval_kirim']) ? intval($_POST['edit_interval_kirim']) : 15;
 
         if (!empty($id_alat) && $latitude != 0 && $longitude != 0 && $interval_kirim > 0) {
-            $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET id_alat = ?, latitude = ?, longitude = ?, interval_kirim = ?, updated_at = current_timestamp() WHERE id = ?");
+            $stmt = mysqli_prepare($conn, "UPDATE lokasi_monitoring SET id_alat = ?, nama_lokasi = ?, latitude = ?, longitude = ?, interval_kirim = ?, updated_at = current_timestamp() WHERE id = ?");
             if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "sddii", $id_alat, $latitude, $longitude, $interval_kirim, $location_id);
+                mysqli_stmt_bind_param($stmt, "ssddii", $id_alat, $nama_lokasi, $latitude, $longitude, $interval_kirim, $location_id);
                 if(mysqli_stmt_execute($stmt)) {
                     $success_message = "Lokasi berhasil diperbarui!";
                     // Kirim instruksi/perintah (HTTP POST) ke Node-RED Indoor (Port 1881)
@@ -1312,8 +1314,9 @@ $totalUsers = count($users);
                             <tr>
                                 <th>NO</th>
                                 <th>ID ALAT</th>
+                                <th>NAMA LOKASI</th>
                                 <th>KETERANGAN</th>
-                                <th>LAT/LONG</th>
+                                <th>KOORDINAT</th>
                                 <th>INTERVAL</th>
                                 <th>WAKTU UPDATE</th>
                                 <th>AKSI</th>
@@ -1324,6 +1327,7 @@ $totalUsers = count($users);
                                 <?php foreach ($locations as $index => $loc): ?>
                                     <?php
                                     $id_alat_display = htmlspecialchars($loc['id_alat']);
+                                    $nama_lokasi_display = isset($loc['nama_lokasi']) && $loc['nama_lokasi'] !== '' ? htmlspecialchars($loc['nama_lokasi']) : '-';
 
                                     // ----------------------------------------------------
                                     // LOGIKA OTOMATIS: LOK-002 Adalah Fisik Utama, Sisanya Dummy
@@ -1340,6 +1344,7 @@ $totalUsers = count($users);
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td><strong><?= $id_alat_display ?></strong></td>
+                                        <td><?= $nama_lokasi_display ?></td>
                                         <td><?= $badge ?></td>
                                         <td>
                                             Lat: <?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?><br>
@@ -1350,11 +1355,12 @@ $totalUsers = count($users);
                                         <td class="action-buttons">
                                             <?php
                                             $id = isset($loc['id']) ? (int)$loc['id'] : 0;
+                                            $nama_lokasi_val = isset($loc['nama_lokasi']) ? htmlspecialchars($loc['nama_lokasi'], ENT_QUOTES) : '';
                                             $lat = isset($loc['latitude']) ? (float)$loc['latitude'] : 0;
                                             $lng = isset($loc['longitude']) ? (float)$loc['longitude'] : 0;
                                             $interval = isset($loc['interval_kirim']) ? (int)$loc['interval_kirim'] : 15;
                                             ?>
-                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= $id_alat_display ?>', <?= $lat ?>, <?= $lng ?>, <?= $interval ?>)">
+                                            <button class="btn-warning" onclick="openEditLocationModal(<?= $id ?>, '<?= $id_alat_display ?>', '<?= $nama_lokasi_val ?>', <?= $lat ?>, <?= $lng ?>, <?= $interval ?>)">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button class="btn-danger btn-delete-location" data-id="<?= $id ?>">
@@ -1365,7 +1371,7 @@ $totalUsers = count($users);
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7" style="text-align: center; padding: 30px; color: #999;">
+                                    <td colspan="8" style="text-align: center; padding: 30px; color: #999;">
                                         <i class="fas fa-inbox" style="font-size: 30px; display: block; margin-bottom: 10px;"></i>
                                         Tidak ada data lokasi
                                     </td>
@@ -1590,6 +1596,13 @@ $totalUsers = count($users);
                     </small>
                 </div>
                 <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="nama_lokasi" id="add_nama_lokasi" placeholder="Contoh: Gedung Elektro Poltekba">
+                    <small style="color:#666; display:block; margin-top:5px;">
+                        <i class="fas fa-info-circle"></i> Masukkan nama lokasi tempat alat dipasang
+                    </small>
+                </div>
+                <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
                     <input type="number" name="latitude" id="add_latitude" step="any" required>
                     <small>Contoh: -1.20249 (negatif untuk selatan)</small>
@@ -1627,6 +1640,10 @@ $totalUsers = count($users);
                 <div class="form-group">
                     <label>ID Alat <span style="color:red;">*</span></label>
                     <input type="text" name="edit_id_alat" id="edit_id_alat" required>
+                </div>
+                <div class="form-group">
+                    <label>Nama Lokasi</label>
+                    <input type="text" name="edit_nama_lokasi" id="edit_nama_lokasi" placeholder="Contoh: Gedung Elektro Poltekba">
                 </div>
                 <div class="form-group">
                     <label>Latitude <span style="color:red;">*</span></label>
@@ -1838,10 +1855,11 @@ $totalUsers = count($users);
         }
 
         // ========== FUNGSI OPEN EDIT LOCATION MODAL ==========
-        function openEditLocationModal(id, id_alat, lat, lng, interval) {
+        function openEditLocationModal(id, id_alat, nama_lokasi, lat, lng, interval) {
             try {
                 document.getElementById('edit_location_id').value = id;
                 document.getElementById('edit_id_alat').value = id_alat;
+                document.getElementById('edit_nama_lokasi').value = nama_lokasi || '';
                 document.getElementById('edit_latitude').value = lat;
                 document.getElementById('edit_longitude').value = lng;
                 document.getElementById('edit_interval_kirim').value = interval;
