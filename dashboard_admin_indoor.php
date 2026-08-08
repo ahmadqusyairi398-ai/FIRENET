@@ -1081,23 +1081,36 @@ function renderLocationMarkers(locations, isDanger) {
     const totalElem = document.getElementById('total-locations');
     if (totalElem) {
         totalElem.innerHTML = locations.length;
-    }
-
-    const statusElem = document.getElementById('location-status');
+    }    const statusElem = document.getElementById('location-status');
     const zoneElem = document.getElementById('zone');
     
-    if (isDanger) {
-        if (statusElem) {
-            statusElem.innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
+    if (statusElem) {
+        if (statusText && statusText !== 'Aman') {
+            statusElem.innerHTML = statusText;
+            if (statusText === 'Kebakaran') {
+                statusElem.style.color = '#dc2626';
+            } else {
+                statusElem.style.color = '#f59e0b';
+            }
+        } else if (isDanger) {
+            statusElem.innerHTML = 'Kebakaran';
             statusElem.style.color = '#dc2626';
-        }
-        if (zoneElem) zoneElem.innerHTML = 'Zona Merah (Peringatan Bahaya)';
-    } else {
-        if (statusElem) {
+        } else {
             statusElem.innerHTML = 'Aman';
             statusElem.style.color = '#28a745';
         }
-        if (zoneElem) zoneElem.innerHTML = 'Zona Indoor (Gedung)';
+    }
+
+    if (zoneElem) {
+        if (statusText === 'Kebakaran' || (isDanger && !statusText)) {
+            zoneElem.innerHTML = 'Zona Merah (Deteksi Kebakaran)';
+        } else if (statusText === 'lingkungan tidak normal' || statusText === 'Lingkungan tidak normal') {
+            zoneElem.innerHTML = 'Zona Waspada (Lingkungan Tidak Normal)';
+        } else if (statusText === 'Gangguan listrik') {
+            zoneElem.innerHTML = 'Zona Waspada (Gangguan Listrik)';
+        } else {
+            zoneElem.innerHTML = 'Zona Indoor (Gedung)';
+        }
     }
 
     locations.forEach((loc, idx) => {
@@ -1194,14 +1207,14 @@ function renderLocationMarkers(locations, isDanger) {
     }
 }
 
-async function updateLocationStatus(isDanger) {
+async function updateLocationStatus(statusText, isDanger) {
     const locations = await fetchLocationsFromDB();
-    renderLocationMarkers(locations, isDanger);
+    renderLocationMarkers(locations, isDanger, statusText);
 }
 
 // Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false);
-updateLocationStatus(false);
+renderLocationMarkers(initialLocations, false, 'Aman');
+updateLocationStatus('Aman', false);
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================
 const ctx = document.getElementById('myChart').getContext('2d');
@@ -1265,8 +1278,8 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= GENERATE DATA (SIKLUS NORMAL -> WASPADA -> BAHAYA) =================
-let dummyState = 0; // 0 = Normal, 1 = Waspada, 2 = Bahaya
+// ================= GENERATE DATA (SIKLUS NORMAL -> LINGKUNGAN TIDAK NORMAL -> GANGGUAN LISTRIK -> KEBAKARAN) =================
+let dummyState = 0; // 0 = Normal, 1 = Lingkungan Tidak Normal, 2 = Gangguan Listrik, 3 = Kebakaran
 
 function generateData() {
     let apiStatus = "Aman";
@@ -1282,32 +1295,41 @@ function generateData() {
         // === STATUS NORMAL ===
         apiStatus = "Aman";
         asapStatus = "Normal";
-        suhu = (Math.random() * 5 + 25).toFixed(1); // Suhu 25-30
-        kelembapan = (Math.random() * 15 + 50).toFixed(1);
+        suhu = (Math.random() * 5 + 25).toFixed(1); // Suhu 25-30 °C
+        kelembapan = (Math.random() * 15 + 50).toFixed(1); // Kelembapan 50-65 %
+        tegangan = 220;
+        arus = (Math.random() * 1 + 2).toFixed(2); // Arus 2-3 A
+    } else if (dummyState === 1) {
+        // === STATUS LINGKUNGAN TIDAK NORMAL ===
+        apiStatus = "Aman";
+        asapStatus = "Normal";
+        suhu = (Math.random() * 5 + 42).toFixed(1); // Suhu tinggi (> 40 °C)
+        kelembapan = (Math.random() * 5 + 12).toFixed(1); // Kelembapan rendah (< 20 %)
         tegangan = 220;
         arus = (Math.random() * 1 + 2).toFixed(2);
-    } else if (dummyState === 1) {
-        // === STATUS WASPADA ===
-        apiStatus = "Aman"; // Api belum nyala, tapi asap mulai ada
-        asapStatus = "Waspada";
-        suhu = (Math.random() * 5 + 35).toFixed(1); // Suhu 35-40
-        kelembapan = (Math.random() * 10 + 40).toFixed(1);
-        tegangan = 225;
-        arus = (Math.random() * 2 + 5).toFixed(2);
+        isWarning = true;
+    } else if (dummyState === 2) {
+        // === STATUS GANGGUAN LISTRIK ===
+        apiStatus = "Aman";
+        asapStatus = "Normal";
+        suhu = (Math.random() * 5 + 25).toFixed(1);
+        kelembapan = (Math.random() * 15 + 50).toFixed(1);
+        tegangan = (Math.random() * 10 + 245).toFixed(1); // Tegangan tinggi (> 240 V)
+        arus = (Math.random() * 3 + 6.5).toFixed(2); // Arus tinggi (> 5 A)
         isWarning = true;
     } else {
-        // === STATUS BAHAYA ===
+        // === STATUS KEBAKARAN ===
         apiStatus = "Terdeteksi Api";
         asapStatus = "Tinggi";
-        suhu = (Math.random() * 15 + 45).toFixed(1); // Suhu 45-60
-        kelembapan = (Math.random() * 10 + 20).toFixed(1);
+        suhu = (Math.random() * 15 + 48).toFixed(1);
+        kelembapan = (Math.random() * 10 + 15).toFixed(1);
         tegangan = 210;
         arus = (Math.random() * 5 + 10).toFixed(2);
         isDanger = true;
     }
 
-    // Putar state untuk detik berikutnya (0 -> 1 -> 2 -> 0)
-    dummyState = (dummyState + 1) % 3;
+    // Putar state untuk perputaran berikutnya (0 -> 1 -> 2 -> 3 -> 0)
+    dummyState = (dummyState + 1) % 4;
 
     return {
         waktu: new Date().toLocaleTimeString(),
@@ -1377,7 +1399,7 @@ async function updateDashboard() {
         document.getElementById("rssi").innerHTML = '-';
         document.getElementById("ip").innerHTML = '-';
         document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> Gagal ambil data`;
-        updateLocationStatus(false);
+        updateLocationStatus('Aman', false);
         return;
     }
 
@@ -1393,6 +1415,40 @@ async function updateDashboard() {
 
     const boxes = document.querySelectorAll('.grid .box');
 
+    // Evaluasi Jenis Sensor Terdeteksi
+    const isApiDanger = (data.api === "Terdeteksi Api");
+    const isAsapDanger = (data.asap === "Tinggi" || data.asap === "Bahaya");
+
+    const limitSuhu = data.limit_suhu !== undefined ? parseFloat(data.limit_suhu) : 40;
+    const limitKelembapan = data.limit_kelembapan !== undefined ? parseFloat(data.limit_kelembapan) : 20;
+    const isSuhuAbnormal = (data.suhu !== undefined && parseFloat(data.suhu) > limitSuhu);
+    const isKelembapanAbnormal = (data.kelembapan !== undefined && parseFloat(data.kelembapan) < limitKelembapan);
+
+    const limitTegangan = data.limit_tegangan !== undefined ? parseFloat(data.limit_tegangan) : 240;
+    const limitArus = data.limit_arus !== undefined ? parseFloat(data.limit_arus) : 5;
+    const isTeganganOver = (data.tegangan !== undefined && parseFloat(data.tegangan) > limitTegangan);
+    const isArusOver = (data.arus !== undefined && parseFloat(data.arus) > limitArus);
+
+    let statusText = "Aman";
+    let isDangerDetected = false;
+
+    if (isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0)) {
+        statusText = "Kebakaran";
+        isDangerDetected = true;
+    } else if (isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2)) {
+        statusText = "lingkungan tidak normal";
+        isDangerDetected = true;
+    } else if (isTeganganOver || isArusOver || (data.isWarning && dummyState === 3)) {
+        statusText = "Gangguan listrik";
+        isDangerDetected = true;
+    } else if (data.isDanger) {
+        statusText = "Kebakaran";
+        isDangerDetected = true;
+    } else {
+        statusText = "Aman";
+        isDangerDetected = false;
+    }
+
     // Fungsi bantuan untuk mengganti warna kotak sensor
     function setBoxColor(box, index, danger, warning) {
         if (!box) return;
@@ -1404,12 +1460,11 @@ async function updateDashboard() {
             box.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING
         } else {
             box.classList.remove('pulse-animation');
-            // Kembalikan ke warna default aman yang sama dengan box lainnya
             box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
         }
     }
 
-    // Grup 1: Api & Asap (Nilai Teks & Warna berubah pada detik ke-0)
+    // Grup 1: Api & Asap (Nilai Teks & Warna pada detik ke-0)
     const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
     document.getElementById("api").innerHTML = apiValue;
 
@@ -1418,8 +1473,8 @@ async function updateDashboard() {
     if(data.asap === "Tinggi" || data.asap === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
     document.getElementById("asap").innerHTML = asapIcon;
 
-    setBoxColor(boxes[0], 0, data.isDanger, data.isWarning);
-    setBoxColor(boxes[1], 1, data.isDanger, data.isWarning);
+    setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+    setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
 
     // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna berubah setelah JEDA 1 detik)
     setTimeout(() => {
@@ -1430,8 +1485,8 @@ async function updateDashboard() {
         }
         document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
 
-        setBoxColor(boxes[2], 2, data.isDanger, data.isWarning);
-        setBoxColor(boxes[3], 3, data.isDanger, data.isWarning);
+        setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+        setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
     }, 1000);
 
     // Grup 3: Tegangan & Arus (Nilai Teks & Warna berubah setelah JEDA 2 detik)
@@ -1439,12 +1494,12 @@ async function updateDashboard() {
         document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
         document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
 
-        setBoxColor(boxes[4], 4, data.isDanger, data.isWarning);
-        setBoxColor(boxes[5], 5, data.isDanger, data.isWarning);
+        setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+        setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
     }, 2000);
 
-    // Peta & Animasi
-    updateLocationStatus(data.isDanger);
+    // Peta & Animasi + Status Lokasi
+    updateLocationStatus(statusText, isDangerDetected);
 
     // 4. Update Grafik
     const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
