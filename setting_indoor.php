@@ -1210,7 +1210,6 @@ $totalUsers = count($users);
         <div class="tab-menu">
             <button class="tab-btn active" onclick="openTab('tab1', this)"><i class="fas fa-sliders-h"></i> Ubah Nilai Alarm</button>
             <button class="tab-btn" onclick="openTab('tab2', this)"><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</button>
-            <button class="tab-btn" onclick="openTab('tab4', this)"><i class="fas fa-clock"></i> Pengaturan Interval (IoT)</button>
             <button class="tab-btn" onclick="openTab('tab3', this)"><i class="fas fa-users"></i> Daftar Akun User</button>
         </div>
 
@@ -1403,50 +1402,6 @@ $totalUsers = count($users);
                             <?php endif; ?>
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 4: Pengaturan Interval Alat Indoor (IoT Bidirectional) -->
-        <div id="tab4" class="tab-content">
-            <!-- Form Pengaturan Interval Alat Indoor -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 bg-primary">
-                    <h6 class="m-0 font-weight-bold text-white">⚙️ Pengaturan Interval Pengiriman Data (IoT Bidirectional)</h6>
-                </div>
-                <div class="card-body">
-                    <form action="" method="POST">
-
-                        <!-- Dropdown Pilih Lokasi -->
-                        <div class="form-group mb-3">
-                            <label for="id_alat" class="font-weight-bold">Pilih Lokasi Alat:</label>
-                            <select name="id_alat" id="id_alat" class="form-control" required>
-                                <option value="">-- Pilih Lokasi --</option>
-                                <?php
-                                // Mengambil daftar lokasi & interval saat ini dari database
-                                $stmt_lok = $pdo_indoor->query("SELECT id_alat, nama_lokasi, interval_kirim FROM lokasi_monitoring");
-                                while ($row_lok = $stmt_lok->fetch(PDO::FETCH_ASSOC)) {
-                                    $cur_int = !empty($row_lok['interval_kirim']) ? $row_lok['interval_kirim'] : 15;
-                                    echo "<option value='".$row_lok['id_alat']."'>";
-                                    echo htmlspecialchars($row_lok['nama_lokasi'] ?: $row_lok['id_alat'])." (Saat ini: ".$cur_int." detik)";
-                                    echo "</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <!-- Input Angka Interval -->
-                        <div class="form-group mb-3">
-                            <label for="interval_kirim" class="font-weight-bold">Interval Baru (dalam Detik):</label>
-                            <input type="number" name="interval_kirim" id="interval_kirim" class="form-control" placeholder="Contoh: 15" min="5" max="3600" required>
-                            <small class="form-text text-muted">Berapa detik sekali alat fisik (ESP32) di lokasi tersebut harus mengirimkan data sensor.</small>
-                        </div>
-
-                        <button type="submit" name="simpan_interval" class="btn btn-success">
-                            <i class="fas fa-save"></i> Simpan & Terapkan ke Alat
-                        </button>
-
-                    </form>
                 </div>
             </div>
         </div>
@@ -1996,7 +1951,6 @@ $totalUsers = count($users);
             document.getElementById('tab1').style.display = 'block';
             document.getElementById('tab2').style.display = 'none';
             document.getElementById('tab3').style.display = 'none';
-            if (document.getElementById('tab4')) document.getElementById('tab4').style.display = 'none';
         });
 
         // ========== FUNGSI MODAL LAINNYA ==========
