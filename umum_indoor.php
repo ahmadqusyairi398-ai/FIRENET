@@ -1004,31 +1004,74 @@ const myChart = new Chart(ctx, {
     }
 });
 
-// ================= FUNGSI GENERATE DATA DUMMY (SIMULASI) =================
-function generateDummyData() {
-    const now = new Date();
-    const jam = String(now.getHours()).padStart(2, '0');
-    const menit = String(now.getMinutes()).padStart(2, '0');
-    const detik = String(now.getSeconds()).padStart(2, '0');
+// ================= GENERATE DATA (SIKLUS NORMAL -> WASPADA -> BAHAYA) =================
+let dummyState = 0; // 0 = Normal, 1 = Waspada, 2 = Bahaya
+
+function generateData() {
+    let apiStatus = "Aman";
+    let asapStatus = "Normal";
+    let suhu = 28;
+    let kelembapan = 60;
+    let tegangan = 220;
+    let arus = 2.5;
+    let isDanger = false;
+    let isWarning = false;
+
+    if (dummyState === 0) {
+        // === STATUS NORMAL ===
+        apiStatus = "Aman";
+        asapStatus = "Normal";
+        suhu = (Math.random() * 5 + 25).toFixed(1); // Suhu 25-30
+        kelembapan = (Math.random() * 15 + 50).toFixed(1);
+        tegangan = 220;
+        arus = (Math.random() * 1 + 2).toFixed(2);
+    } else if (dummyState === 1) {
+        // === STATUS WASPADA ===
+        apiStatus = "Aman"; // Api belum nyala, tapi asap mulai ada
+        asapStatus = "Waspada";
+        suhu = (Math.random() * 5 + 35).toFixed(1); // Suhu 35-40
+        kelembapan = (Math.random() * 10 + 40).toFixed(1);
+        tegangan = 225;
+        arus = (Math.random() * 2 + 5).toFixed(2);
+        isWarning = true;
+    } else {
+        // === STATUS BAHAYA ===
+        apiStatus = "Terdeteksi Api";
+        asapStatus = "Tinggi";
+        suhu = (Math.random() * 15 + 45).toFixed(1); // Suhu 45-60
+        kelembapan = (Math.random() * 10 + 20).toFixed(1);
+        tegangan = 210;
+        arus = (Math.random() * 5 + 10).toFixed(2);
+        isDanger = true;
+    }
+
+    // Putar state untuk detik berikutnya (0 -> 1 -> 2 -> 0)
+    dummyState = (dummyState + 1) % 3;
 
     return {
-        waktu: `${jam}:${menit}:${detik}`,
-        api: "Aman",
-        asap: "Normal",
-        asap_value: 0,
-        suhu: (24 + Math.random() * 3).toFixed(1),
-        kelembapan: (50 + Math.random() * 10).toFixed(1),
-        tegangan: (218 + Math.random() * 4).toFixed(1),
-        arus: (0.10 + Math.random() * 0.15).toFixed(3),
-        rssi: -50 - Math.floor(Math.random() * 20),
-        ip: "192.168.1." + Math.floor(100 + Math.random() * 50),
-        isDanger: false,
-        apiValue: 0,
+        waktu: new Date().toLocaleTimeString(),
+        api: apiStatus,
+        asap: asapStatus,
+        asap_value: asapStatus === "Tinggi" ? 1 : (asapStatus === "Waspada" ? 0.5 : 0),
+        suhu: suhu,
+        kelembapan: kelembapan,
+        tegangan: tegangan,
+        arus: arus,
+        status: 'Online',
+        rssi: Math.floor(Math.random() * 40 + -80),
+        ip: '192.168.1.' + Math.floor(Math.random() * 255),
+        isDanger: isDanger,
+        isWarning: isWarning,
+        apiValue: apiStatus === "Terdeteksi Api" ? 1 : 0,
         limit_suhu: 40,
         limit_kelembapan: 20,
         limit_tegangan: 240,
         limit_arus: 5
     };
+}
+
+function generateDummyData() {
+    return generateData();
 }
 
 async function fetchSensorData() {
@@ -1054,7 +1097,7 @@ async function fetchDataFromDB() {
     if (isLive) {
         data = await fetchSensorData();
     } else {
-        data = generateDummyData();
+        data = generateData();
     }
 
     if (!data) return;
@@ -1101,7 +1144,7 @@ async function fetchDataFromDB() {
             var numAsap = parseFloat(asapVal);
             if (!isNaN(numAsap)) {
                 if (numAsap > (numAsap > 1 ? 750 : 0.5)) asapVal = "Tinggi";
-                else if (numAsap > (numAsap > 1 ? 350 : 0.25)) asapVal = "Sedang";
+                else if (numAsap > (numAsap > 1 ? 350 : 0.25)) asapVal = "Waspada";
                 else asapVal = "Normal";
             }
         }
@@ -1129,6 +1172,9 @@ async function fetchDataFromDB() {
             if (data.api === "Terdeteksi Api") {
                 apiBox.classList.add('pulse-animation');
                 apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else if (data.isWarning) {
+                apiBox.classList.remove('pulse-animation');
+                apiBox.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))";
             } else {
                 apiBox.classList.remove('pulse-animation');
                 apiBox.style.background = "";
@@ -1321,9 +1367,9 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Panggil pertama kali, lalu ulangi setiap 2 detik
+// Panggil pertama kali, lalu ulangi setiap 10 detik (10000 ms)
 fetchDataFromDB();
-setInterval(fetchDataFromDB, 2000);
+setInterval(fetchDataFromDB, 10000);
 </script>
 
 <!-- ========== MODAL HOME ========== -->
