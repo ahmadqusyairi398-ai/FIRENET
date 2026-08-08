@@ -780,7 +780,10 @@ canvas {
     <!-- ========== 3. GRAFIK REAL TIME SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+        <h3>
+            <i class="fas fa-chart-line"></i> Grafik Real Time Sensor
+            <span id="chart-badge" style="font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: bold; margin-left: 10px; color: white; transition: all 0.3s;"></span>
+        </h3>
         <div class="chart-container"><canvas id="myChart"></canvas></div>
     </div>
 
@@ -1425,6 +1428,20 @@ async function updateDashboard() {
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
+
+    // === UPDATE LABEL/BADGE DI ATAS CHART ===
+    const chartBadge = document.getElementById("chart-badge");
+    if (chartBadge) {
+        if (isLive) {
+            // Jika LOK-002 (Alat Asli) -> Badge Hijau Live
+            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+        } else {
+            // Jika LOK-lain (Dummy) -> Badge Kuning/Oranye Dummy
+            chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
+            chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
 
     const boxes = document.querySelectorAll('.grid .box');
 

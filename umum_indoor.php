@@ -650,7 +650,10 @@ canvas {
     <!-- CHART -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px;">
-            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-chart-line"></i> Grafik Real Time Sensor</h3>
+            <h3 style="margin: 0; padding: 0; border: none;">
+                <i class="fas fa-chart-line"></i> Grafik Real Time Sensor
+                <span id="chart-badge" style="font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: bold; margin-left: 10px; color: white; transition: all 0.3s;"></span>
+            </h3>
             <span style="font-size: 12px; background: rgba(40, 167, 69, 0.1); color: #28a745; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
                 <i class="fas fa-sync-alt fa-spin"></i> Live Real-Time (2s)
             </span>
@@ -1164,7 +1167,21 @@ async function fetchDataFromDB() {
         if (ipElem) ipElem.innerHTML = data.ip || '-';
 
         var waktuElem = document.getElementById("waktu");
-        if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+    if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+    
+    // === UPDATE LABEL/BADGE DI ATAS CHART ===
+    const chartBadge = document.getElementById("chart-badge");
+    if (chartBadge) {
+        if (isLive) {
+            // Jika LOK-002 (Alat Asli) -> Badge Hijau Live
+            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+        } else {
+            // Jika LOK-lain (Dummy) -> Badge Kuning/Oranye Dummy
+            chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
+            chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
         
         // EFEK WARNA & TEKS KOTAK BERGANTIAN SECARA ESTAFET
         const boxes = document.querySelectorAll('.grid .box');
