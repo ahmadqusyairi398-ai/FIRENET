@@ -754,6 +754,23 @@ canvas {
     </div>
 
     <!-- ============================================================ -->
+    <!-- BANNER PERINGATAN H-1 (Disembunyikan secara default) -->
+    <!-- ============================================================ -->
+    <div id="auto-clean-banner" style="display: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 28px;"></i>
+            <div>
+                <strong style="display: block; font-size: 16px;">⚠️ Peringatan: Penghapusan Data Otomatis!</strong>
+                <span style="font-size: 14px;" id="auto-clean-text">Terdapat data yang sudah berusia 6 hari dan akan dihapus otomatis besok.</span>
+            </div>
+        </div>
+        <div>
+            <a href="tabel_indoor.php" style="background: white; color: #d97706; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-weight: bold; margin-right: 10px;"><i class="fas fa-file-excel"></i> Export Sekarang</a>
+            <button onclick="document.getElementById('auto-clean-banner').style.display='none'" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 5px; cursor: pointer;"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
     <!-- ========== 2. DATA SENSOR ========== -->
     <!-- ============================================================ -->
     <div class="card">
@@ -1667,6 +1684,27 @@ function scheduleNextIndoorUpdate() {
 // Jalankan update pertama kali dan jalankan penjadwalan otomatis
 updateDashboard();
 scheduleNextIndoorUpdate();
+
+// ================= JALANKAN AUTO CLEAN SAAT HALAMAN DIBUKA =================
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('api_auto_clean_indoor.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Notif di console jika ada data usang (>7 hari) yang terhapus
+                if (data.deleted_rows > 0) {
+                    console.log('Auto-clean: Berhasil menghapus ' + data.deleted_rows + ' baris data usang (>7 hari).');
+                }
+
+                // Munculkan Banner Kuning jika ada data usia 6 hari (H-1)
+                if (data.warning) {
+                    document.getElementById('auto-clean-banner').style.display = 'flex';
+                    document.getElementById('auto-clean-text').innerText = `Terdapat ${data.warning_count} baris data sensor yang usianya menginjak 6 hari. Data tersebut akan terhapus secara permanen besok.`;
+                }
+            }
+        })
+        .catch(err => console.error('Error auto-clean:', err));
+});
 </script>
 </body>
 </html>
