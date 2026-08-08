@@ -860,7 +860,7 @@ async function updateLocationStatus(isDanger) {
         const namaLokasi = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : `Indoor (${idAlat})`;
         
         const rawIdUpper = String(idAlat || '').toUpperCase();
-        const isLocDanger = (rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || loc.id === 2) ? isDanger : false;
+        const isLocDanger = (loc.id === activeSelectedLocationId) ? isDanger : false;
 
         const icon = createIndoorIcon(idAlat, isLocDanger);
         const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
@@ -1148,67 +1148,40 @@ async function fetchDataFromDB() {
                 else asapVal = "Normal";
             }
         }
-        if (asapElem && asapBox) {
-            if (asapVal === "Tinggi" || asapVal === "Bahaya") {
-                asapElem.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
-                asapElem.className = 'status-bahaya';
-                asapBox.classList.add('pulse-animation');
-                asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-            } else if (asapVal === "Sedang" || asapVal === "Waspada") {
-                asapElem.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
-                asapElem.className = 'status-waspada';
-                asapBox.classList.remove('pulse-animation');
-                asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+        // EFEK WARNA KOTAK BERGANTIAN SECARA ESTAFET
+        const boxes = document.querySelectorAll('.grid .box');
+
+        function setBoxColor(box, index, danger, warning) {
+            if (!box) return;
+            if (danger) {
+                box.classList.add('pulse-animation');
+                box.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))"; // MERAH
+            } else if (warning) {
+                box.classList.remove('pulse-animation');
+                box.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING
             } else {
-                asapElem.innerHTML = '<i class="fas fa-check"></i> Normal';
-                asapElem.className = 'status-aman';
-                asapBox.classList.remove('pulse-animation');
-                asapBox.style.background = "";
+                box.classList.remove('pulse-animation');
+                if(index === 0) box.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+                else if (index === 1) box.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+                else box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
             }
         }
 
-        const apiBox = document.getElementById('api-box');
-        if (apiBox) {
-            if (data.api === "Terdeteksi Api") {
-                apiBox.classList.add('pulse-animation');
-                apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-            } else if (data.isWarning) {
-                apiBox.classList.remove('pulse-animation');
-                apiBox.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))";
-            } else {
-                apiBox.classList.remove('pulse-animation');
-                apiBox.style.background = "";
-            }
-        }
+        // Grup 1: Kotak Api & Asap (detik ke-0)
+        if(boxes.length > 0) setBoxColor(boxes[0], 0, data.isDanger, data.isWarning);
+        if(boxes.length > 1) setBoxColor(boxes[1], 1, data.isDanger, data.isWarning);
 
-        // Ambil elemen kotak sensor Suhu, Kelembapan
-        const suhuBox = document.getElementById('suhu-box');
-        const kelembapanBox = document.getElementById('kelembapan-box');
-        const dangerStyle = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        // Grup 2: Kotak Suhu & Kelembapan setelah 1 detik
+        setTimeout(() => {
+            if(boxes.length > 2) setBoxColor(boxes[2], 2, data.isDanger, data.isWarning);
+            if(boxes.length > 3) setBoxColor(boxes[3], 3, data.isDanger, data.isWarning);
+        }, 1000);
 
-        var isDanger = data.isDanger || (data.api === "Terdeteksi Api") || (asapVal === "Tinggi" || asapVal === "Bahaya");
-
-        if (suhuBox) {
-            if (data.limit_suhu !== undefined && parseFloat(data.suhu) > parseFloat(data.limit_suhu)) {
-                suhuBox.style.background = dangerStyle;
-                suhuBox.classList.add('pulse-animation');
-                isDanger = true;
-            } else {
-                suhuBox.style.background = "";
-                suhuBox.classList.remove('pulse-animation');
-            }
-        }
-
-        if (kelembapanBox) {
-            if (data.limit_kelembapan !== undefined && parseFloat(data.kelembapan) < parseFloat(data.limit_kelembapan)) {
-                kelembapanBox.style.background = dangerStyle;
-                kelembapanBox.classList.add('pulse-animation');
-                isDanger = true;
-            } else {
-                kelembapanBox.style.background = "";
-                kelembapanBox.classList.remove('pulse-animation');
-            }
-        }
+        // Grup 3: Kotak Tegangan & Arus setelah 2 detik (jika ada)
+        setTimeout(() => {
+            if(boxes.length > 4) setBoxColor(boxes[4], 4, data.isDanger, data.isWarning);
+            if(boxes.length > 5) setBoxColor(boxes[5], 5, data.isDanger, data.isWarning);
+        }, 2000);
 
         if (typeof updateLocationStatus === 'function') {
             updateLocationStatus(isDanger);

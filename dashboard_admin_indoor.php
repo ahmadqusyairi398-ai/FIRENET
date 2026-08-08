@@ -1106,9 +1106,9 @@ function renderLocationMarkers(locations, isDanger) {
         const idAlat = loc.id_alat || `Alat-${loc.id}`;
         const namaLokasi = loc.nama_lokasi && loc.nama_lokasi.trim() !== '' ? loc.nama_lokasi : (loc.id_alat ? `Indoor (${loc.id_alat})` : `Lokasi ${loc.id}`);
         
-        // --- TAMBAHAN BARU: Cek apakah ini lokasi utama (LOK-002 / IND-002) atau bukan ---
+        // --- PERBAIKAN: Marker yang berubah warna HANYA marker yang sedang diklik/dipilih ---
         const rawIdUpper = String(idAlat || '').toUpperCase();
-        const isLocDanger = (rawIdUpper === 'LOK-002' || rawIdUpper === 'IND-002' || loc.id === 2) ? isDanger : false;
+        const isLocDanger = (loc.id === activeSelectedLocationId) ? isDanger : false;
 
         // Ubah isDanger menjadi isLocDanger di bawah ini
         const icon = createIndoorIcon(idAlat, isLocDanger);
@@ -1381,7 +1381,7 @@ async function updateDashboard() {
         return;
     }
 
-    // Update header
+    // 1. Update teks header & IP
     if (isLive) {
         document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
     } else {
@@ -1391,7 +1391,7 @@ async function updateDashboard() {
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
 
-    // Update Teks Sensor
+    // 2. Update Nilai Teks Masing-masing Sensor
     const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
     document.getElementById("api").innerHTML = apiValue;
 
@@ -1409,42 +1409,47 @@ async function updateDashboard() {
     document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
     document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
 
-    // Update Warna Box Sensor
-    const apiBox = document.getElementById('api-box');
-    const asapBox = document.getElementById('asap-box');
+    // 3. EFEK WARNA KOTAK BERGANTIAN SECARA ESTAFET
+    const boxes = document.querySelectorAll('.grid .box');
 
-    // Logika Warna Kotak API
-    if (apiBox) {
-        if (data.api === "Terdeteksi Api") {
-            apiBox.classList.add('pulse-animation');
-            apiBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))"; // MERAH BAHAYA
-        } else if (data.isWarning) {
-            apiBox.classList.remove('pulse-animation');
-            apiBox.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING WASPADA
+    // Fungsi bantuan untuk mengganti warna kotak sensor
+    function setBoxColor(box, index, danger, warning) {
+        if (!box) return;
+        if (danger) {
+            box.classList.add('pulse-animation');
+            box.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))"; // MERAH
+        } else if (warning) {
+            box.classList.remove('pulse-animation');
+            box.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING
         } else {
-            apiBox.classList.remove('pulse-animation');
-            apiBox.style.background = ""; // WARNA DEFAULT AMAN
+            box.classList.remove('pulse-animation');
+            // Kembalikan ke warna default (api, asap, dan lainnya beda warna dasar)
+            if(index === 0) box.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
+            else if (index === 1) box.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+            else box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
         }
     }
 
-    // Logika Warna Kotak ASAP
-    if (asapBox) {
-        if (data.asap === "Tinggi" || data.asap === "Bahaya") {
-            asapBox.classList.add('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))"; // MERAH BAHAYA
-        } else if (data.asap === "Waspada" || data.asap === "Sedang") {
-            asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING WASPADA
-        } else {
-            asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = ""; // WARNA DEFAULT AMAN
-        }
-    }
+    // Grup 1: Kotak Api & Asap berubah warna langsung (detik ke-0)
+    setBoxColor(boxes[0], 0, data.isDanger, data.isWarning);
+    setBoxColor(boxes[1], 1, data.isDanger, data.isWarning);
+
+    // Grup 2: Kotak Suhu & Kelembapan berubah warna setelah JEDA 1 detik (1000 ms)
+    setTimeout(() => {
+        setBoxColor(boxes[2], 2, data.isDanger, data.isWarning);
+        setBoxColor(boxes[3], 3, data.isDanger, data.isWarning);
+    }, 1000);
+
+    // Grup 3: Kotak Tegangan & Arus berubah warna setelah JEDA 2 detik (2000 ms)
+    setTimeout(() => {
+        setBoxColor(boxes[4], 4, data.isDanger, data.isWarning);
+        setBoxColor(boxes[5], 5, data.isDanger, data.isWarning);
+    }, 2000);
 
     // Peta & Animasi
     updateLocationStatus(data.isDanger);
 
-    // Update Grafik
+    // 4. Update Grafik
     const lastTime = dataChart.labels.length > 0 ? dataChart.labels[dataChart.labels.length - 1] : null;
     if (lastTime !== data.waktu) {
         dataChart.labels.push(data.waktu);
