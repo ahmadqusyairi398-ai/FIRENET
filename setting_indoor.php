@@ -34,6 +34,38 @@ if (!$conn) {
     </div>");
 }
 
+// Proses saat tombol simpan ditekan
+if (isset($_POST['simpan_interval'])) {
+    $id_alat = $_POST['id_alat'];
+    $interval = (int)$_POST['interval_kirim'];
+
+    try {
+        // 1. Update nilai interval di tabel lokasi_monitoring
+        $stmt = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET interval_kirim = :interval WHERE id_alat = :id_alat");
+        $stmt->execute(['interval' => $interval, 'id_alat' => $id_alat]);
+
+        // 2. Kirim instruksi/perintah (HTTP POST) ke Node-RED Indoor (Port 1881)
+        $url = "http://localhost:1881/set_interval";
+        $payload = json_encode(array(
+            "id_alat" => $id_alat,
+            "interval" => $interval
+        ));
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2); // Batas loading 2 detik agar web tidak hang
+        $result = curl_exec($ch);
+
+        curl_close($ch);
+        // Notifikasi sukses
+        echo "<script>alert('Berhasil! Interval pengiriman data lokasi tersebut diubah menjadi $interval detik.'); window.location.href='setting_indoor.php';</script>";
+    } catch(PDOException $e) {
+        echo "<script>alert('Gagal mengupdate interval: " . $e->getMessage() . "');</script>";
+    }
+}
+
 // ========== FUNGSI GET ICON SENSOR (PHP) ==========
 function getSensorIconPHP($nama)
 {
@@ -61,6 +93,7 @@ function ensureLocationTable($conn) {
             nama_lokasi VARCHAR(100) DEFAULT NULL,
             latitude DECIMAL(10,8) NOT NULL,
             longitude DECIMAL(11,8) NOT NULL,
+            interval_kirim INT DEFAULT 15,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )";
@@ -73,7 +106,7 @@ function ensureLocationTable($conn) {
         ];
         
         foreach ($defaultLocations as $loc) {
-            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, nama_lokasi, latitude, longitude) VALUES (?, ?, ?, ?)");
+            $stmt = mysqli_prepare($conn, "INSERT INTO lokasi_monitoring (id_alat, nama_lokasi, latitude, longitude, interval_kirim) VALUES (?, ?, ?, ?, 15)");
             if ($stmt) {
                 mysqli_stmt_bind_param($stmt, "ssdd", $loc['id_alat'], $loc['nama_lokasi'], $loc['latitude'], $loc['longitude']);
                 mysqli_stmt_execute($stmt);
@@ -86,6 +119,11 @@ function ensureLocationTable($conn) {
         $checkNamaLokasiCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_monitoring LIKE 'nama_lokasi'");
         if (!$checkNamaLokasiCol || mysqli_num_rows($checkNamaLokasiCol) == 0) {
             mysqli_query($conn, "ALTER TABLE lokasi_monitoring ADD COLUMN nama_lokasi VARCHAR(100) DEFAULT NULL AFTER id_alat");
+        }
+        // Pastikan kolom interval_kirim ada jika belum ada
+        $checkIntervalCol = mysqli_query($conn, "SHOW COLUMNS FROM lokasi_monitoring LIKE 'interval_kirim'");
+        if (!$checkIntervalCol || mysqli_num_rows($checkIntervalCol) == 0) {
+            mysqli_query($conn, "ALTER TABLE lokasi_monitoring ADD COLUMN interval_kirim INT DEFAULT 15 AFTER longitude");
         }
     }
     return true;
@@ -100,7 +138,7 @@ function getLocations($conn) {
     $locations = [];
     if ($conn) {
         // Sesuaikan select dengan last_update alias dari updated_at agar tabel UI tetap terbaca
-        $query = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
+        $query = mysqli_query($conn, "SELECT id, id_alat, nama_lokasi, latitude, longitude, interval_kirim, updated_at AS last_update FROM lokasi_monitoring ORDER BY id ASC");
         if ($query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 $locations[] = $row;
@@ -815,6 +853,30 @@ $totalUsers = count($users);
             box-shadow: 0 5px 15px rgba(0, 180, 219, 0.4);
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #218838);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .bg-primary {
+            background: linear-gradient(135deg, #1e3c72, #2a5298) !important;
+            color: white;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 12px 15px;
+        }
+
         .btn-danger {
             background: linear-gradient(135deg, #dc3545, #c82333);
             color: white;
@@ -1148,6 +1210,7 @@ $totalUsers = count($users);
         <div class="tab-menu">
             <button class="tab-btn active" onclick="openTab('tab1', this)"><i class="fas fa-sliders-h"></i> Ubah Nilai Alarm</button>
             <button class="tab-btn" onclick="openTab('tab2', this)"><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</button>
+            <button class="tab-btn" onclick="openTab('tab4', this)"><i class="fas fa-clock"></i> Pengaturan Interval (IoT)</button>
             <button class="tab-btn" onclick="openTab('tab3', this)"><i class="fas fa-users"></i> Daftar Akun User</button>
         </div>
 
@@ -1240,6 +1303,47 @@ $totalUsers = count($users);
 
         <!-- TAB 2: Setting Lokasi Alat -->
         <div id="tab2" class="tab-content">
+            <!-- Form Pengaturan Interval Alat Indoor -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary">
+                    <h6 class="m-0 font-weight-bold text-white">⚙️ Pengaturan Interval Pengiriman Data (IoT Bidirectional)</h6>
+                </div>
+                <div class="card-body">
+                    <form action="" method="POST">
+
+                        <!-- Dropdown Pilih Lokasi -->
+                        <div class="form-group mb-3">
+                            <label for="id_alat_tab2" class="font-weight-bold">Pilih Lokasi Alat:</label>
+                            <select name="id_alat" id="id_alat_tab2" class="form-control" required>
+                                <option value="">-- Pilih Lokasi --</option>
+                                <?php
+                                // Mengambil daftar lokasi & interval saat ini dari database
+                                $stmt_lok = $pdo_indoor->query("SELECT id_alat, nama_lokasi, interval_kirim FROM lokasi_monitoring");
+                                while ($row_lok = $stmt_lok->fetch(PDO::FETCH_ASSOC)) {
+                                    $cur_int = !empty($row_lok['interval_kirim']) ? $row_lok['interval_kirim'] : 15;
+                                    echo "<option value='".$row_lok['id_alat']."'>";
+                                    echo htmlspecialchars($row_lok['nama_lokasi'] ?: $row_lok['id_alat'])." (Saat ini: ".$cur_int." detik)";
+                                    echo "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <!-- Input Angka Interval -->
+                        <div class="form-group mb-3">
+                            <label for="interval_kirim_tab2" class="font-weight-bold">Interval Baru (dalam Detik):</label>
+                            <input type="number" name="interval_kirim" id="interval_kirim_tab2" class="form-control" placeholder="Contoh: 15" min="5" max="3600" required>
+                            <small class="form-text text-muted">Berapa detik sekali alat fisik (ESP32) di lokasi tersebut harus mengirimkan data sensor.</small>
+                        </div>
+
+                        <button type="submit" name="simpan_interval" class="btn btn-success">
+                            <i class="fas fa-save"></i> Simpan & Terapkan ke Alat
+                        </button>
+
+                    </form>
+                </div>
+            </div>
+
             <div class="card">
                 <h3><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur koordinat lokasi monitoring.</p>
@@ -1256,6 +1360,7 @@ $totalUsers = count($users);
                                 <th>NAMA LOKASI</th>
                                 <th>LATITUDE</th>
                                 <th>LONGITUDE</th>
+                                <th>INTERVAL KIRIM</th>
                                 <th>WAKTU UPDATE</th>
                                 <th>AKSI</th>
                             </tr>
@@ -1269,6 +1374,7 @@ $totalUsers = count($users);
                                         <td><?= isset($loc['nama_lokasi']) && $loc['nama_lokasi'] !== '' ? htmlspecialchars($loc['nama_lokasi']) : '-' ?></td>
                                         <td><?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?></td>
                                         <td><?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?></td>
+                                        <td><span class="badge" style="background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:12px; font-weight:600;"><?= isset($loc['interval_kirim']) && $loc['interval_kirim'] ? htmlspecialchars($loc['interval_kirim']) . ' detik' : '15 detik' ?></span></td>
                                         <td><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
                                         <td class="action-buttons">
                                             <?php 
@@ -1289,7 +1395,7 @@ $totalUsers = count($users);
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7" style="text-align: center; padding: 30px; color: #999;">
+                                    <td colspan="8" style="text-align: center; padding: 30px; color: #999;">
                                         <i class="fas fa-inbox" style="font-size: 30px; display: block; margin-bottom: 10px;"></i>
                                         Tidak ada data lokasi
                                     </td>
@@ -1297,6 +1403,50 @@ $totalUsers = count($users);
                             <?php endif; ?>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: Pengaturan Interval Alat Indoor (IoT Bidirectional) -->
+        <div id="tab4" class="tab-content">
+            <!-- Form Pengaturan Interval Alat Indoor -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary">
+                    <h6 class="m-0 font-weight-bold text-white">⚙️ Pengaturan Interval Pengiriman Data (IoT Bidirectional)</h6>
+                </div>
+                <div class="card-body">
+                    <form action="" method="POST">
+
+                        <!-- Dropdown Pilih Lokasi -->
+                        <div class="form-group mb-3">
+                            <label for="id_alat" class="font-weight-bold">Pilih Lokasi Alat:</label>
+                            <select name="id_alat" id="id_alat" class="form-control" required>
+                                <option value="">-- Pilih Lokasi --</option>
+                                <?php
+                                // Mengambil daftar lokasi & interval saat ini dari database
+                                $stmt_lok = $pdo_indoor->query("SELECT id_alat, nama_lokasi, interval_kirim FROM lokasi_monitoring");
+                                while ($row_lok = $stmt_lok->fetch(PDO::FETCH_ASSOC)) {
+                                    $cur_int = !empty($row_lok['interval_kirim']) ? $row_lok['interval_kirim'] : 15;
+                                    echo "<option value='".$row_lok['id_alat']."'>";
+                                    echo htmlspecialchars($row_lok['nama_lokasi'] ?: $row_lok['id_alat'])." (Saat ini: ".$cur_int." detik)";
+                                    echo "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <!-- Input Angka Interval -->
+                        <div class="form-group mb-3">
+                            <label for="interval_kirim" class="font-weight-bold">Interval Baru (dalam Detik):</label>
+                            <input type="number" name="interval_kirim" id="interval_kirim" class="form-control" placeholder="Contoh: 15" min="5" max="3600" required>
+                            <small class="form-text text-muted">Berapa detik sekali alat fisik (ESP32) di lokasi tersebut harus mengirimkan data sensor.</small>
+                        </div>
+
+                        <button type="submit" name="simpan_interval" class="btn btn-success">
+                            <i class="fas fa-save"></i> Simpan & Terapkan ke Alat
+                        </button>
+
+                    </form>
                 </div>
             </div>
         </div>
@@ -1846,6 +1996,7 @@ $totalUsers = count($users);
             document.getElementById('tab1').style.display = 'block';
             document.getElementById('tab2').style.display = 'none';
             document.getElementById('tab3').style.display = 'none';
+            if (document.getElementById('tab4')) document.getElementById('tab4').style.display = 'none';
         });
 
         // ========== FUNGSI MODAL LAINNYA ==========
