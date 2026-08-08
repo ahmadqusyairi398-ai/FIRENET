@@ -929,10 +929,20 @@ function getStatusText(value, type) {
 }
 
 function createRow(item) {
+    // 1. Dapatkan teks status Api ("Aman" atau "Terdeteksi Api")
+    let apiText = getStatusText(item.api, 'api');
+
+    // 2. Paksa angka di dalam kurung: Jika Aman = 0, Jika Terdeteksi = 100
+    // Ini mengabaikan teks mentah dari Node-RED agar tabel selalu tampil konsisten
+    let apiNumber = (apiText === "Aman") ? "0" : "100";
+
+    // 3. Gabungkan Ikon, Teks, dan Angka Paksaan tadi
+    let apiDisplay = `${getStatusIcon(item.api, 'api')} ${apiText} (${apiNumber})`;
+
     return [
         item.no,
         item.tanggal_waktu,
-        `<span class="${getStatusClass(item.api, 'api')}">${getStatusIcon(item.api, 'api')} ${getStatusText(item.api, 'api')} (${item.api})</span>`,
+        `<span class="${getStatusClass(item.api, 'api')}">${apiDisplay}</span>`,
         `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${getStatusText(item.asap, 'asap')} (${item.asap})</span>`,
         `${item.suhu} °C`,
         `${item.kelembapan} %`,
