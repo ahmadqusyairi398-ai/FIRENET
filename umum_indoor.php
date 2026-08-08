@@ -403,8 +403,8 @@ body::before {
 .box i { font-size: 32px; margin-bottom: 10px; display: block; }
 .box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
 .box b { display: block; font-size: 20px; margin-top: 5px; }
-.box.api-box { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); }
-.box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
+.box.api-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
+.box.asap-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
 .box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
 .status-aman { color: #28a745; font-weight: bold; }
 .status-waspada { color: #f59e0b; font-weight: bold; }
@@ -1121,34 +1121,7 @@ async function fetchDataFromDB() {
         var waktuElem = document.getElementById("waktu");
         if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
         
-        // Update Sensor Cards (Api, Asap, Suhu, Kelembapan)
-        var suhuElem = document.getElementById("suhu");
-        if (suhuElem && data.suhu !== undefined) {
-            suhuElem.innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-            currentSuhu = `${data.suhu} °C`;
-            document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
-        }
-
-        var kelembapanElem = document.getElementById("kelembapan");
-        if (kelembapanElem && data.kelembapan !== undefined) kelembapanElem.innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-
-        const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
-        var apiElem = document.getElementById("api");
-        if (apiElem) apiElem.innerHTML = apiValue;
-
-        // Update status Asap
-        var asapElem = document.getElementById("asap");
-        var asapBox = document.getElementById("asap-box");
-        var asapVal = data.asap;
-        if (typeof asapVal === 'number' || (!isNaN(asapVal) && asapVal !== null && asapVal !== '')) {
-            var numAsap = parseFloat(asapVal);
-            if (!isNaN(numAsap)) {
-                if (numAsap > (numAsap > 1 ? 750 : 0.5)) asapVal = "Tinggi";
-                else if (numAsap > (numAsap > 1 ? 350 : 0.25)) asapVal = "Waspada";
-                else asapVal = "Normal";
-            }
-        }
-        // EFEK WARNA KOTAK BERGANTIAN SECARA ESTAFET
+        // EFEK WARNA & TEKS KOTAK BERGANTIAN SECARA ESTAFET
         const boxes = document.querySelectorAll('.grid .box');
 
         function setBoxColor(box, index, danger, warning) {
@@ -1161,24 +1134,60 @@ async function fetchDataFromDB() {
                 box.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING
             } else {
                 box.classList.remove('pulse-animation');
-                if(index === 0) box.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-                else if (index === 1) box.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-                else box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
+                // Kembalikan ke warna default aman yang sama dengan box lainnya
+                box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
             }
         }
 
-        // Grup 1: Kotak Api & Asap (detik ke-0)
+        // Grup 1: Api & Asap (Detik ke-0)
+        const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
+        var apiElem = document.getElementById("api");
+        if (apiElem) apiElem.innerHTML = apiValue;
+
+        var asapElem = document.getElementById("asap");
+        var asapVal = data.asap;
+        if (typeof asapVal === 'number' || (!isNaN(asapVal) && asapVal !== null && asapVal !== '')) {
+            var numAsap = parseFloat(asapVal);
+            if (!isNaN(numAsap)) {
+                if (numAsap > (numAsap > 1 ? 750 : 0.5)) asapVal = "Tinggi";
+                else if (numAsap > (numAsap > 1 ? 350 : 0.25)) asapVal = "Waspada";
+                else asapVal = "Normal";
+            }
+        }
+        if (asapElem) {
+            let asapIcon = '<i class="fas fa-check"></i> Normal';
+            if (asapVal === "Waspada" || asapVal === "Sedang") asapIcon = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+            if (asapVal === "Tinggi" || asapVal === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
+            asapElem.innerHTML = asapIcon;
+        }
+
         if(boxes.length > 0) setBoxColor(boxes[0], 0, data.isDanger, data.isWarning);
         if(boxes.length > 1) setBoxColor(boxes[1], 1, data.isDanger, data.isWarning);
 
-        // Grup 2: Kotak Suhu & Kelembapan setelah 1 detik
+        // Grup 2: Suhu & Kelembapan (Setelah 1 detik / Jeda 1000ms)
         setTimeout(() => {
+            var suhuElem = document.getElementById("suhu");
+            if (suhuElem && data.suhu !== undefined) {
+                suhuElem.innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+                currentSuhu = `${data.suhu} °C`;
+                document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+            }
+
+            var kelembapanElem = document.getElementById("kelembapan");
+            if (kelembapanElem && data.kelembapan !== undefined) kelembapanElem.innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
+
             if(boxes.length > 2) setBoxColor(boxes[2], 2, data.isDanger, data.isWarning);
             if(boxes.length > 3) setBoxColor(boxes[3], 3, data.isDanger, data.isWarning);
         }, 1000);
 
-        // Grup 3: Kotak Tegangan & Arus setelah 2 detik (jika ada)
+        // Grup 3: Tegangan & Arus (Setelah 2 detik / Jeda 2000ms, jika ada)
         setTimeout(() => {
+            var teganganElem = document.getElementById("tegangan");
+            if (teganganElem && data.tegangan !== undefined) teganganElem.innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
+
+            var arusElem = document.getElementById("arus");
+            if (arusElem && data.arus !== undefined) arusElem.innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
+
             if(boxes.length > 4) setBoxColor(boxes[4], 4, data.isDanger, data.isWarning);
             if(boxes.length > 5) setBoxColor(boxes[5], 5, data.isDanger, data.isWarning);
         }, 2000);

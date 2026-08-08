@@ -453,8 +453,8 @@ body::before {
 .box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
 .box b { display: block; font-size: 20px; margin-top: 5px; }
 .box small { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
-.box.api-box { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); }
-.box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
+.box.api-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
+.box.asap-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -1391,25 +1391,6 @@ async function updateDashboard() {
     document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
 
-    // 2. Update Nilai Teks Masing-masing Sensor
-    const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
-    document.getElementById("api").innerHTML = apiValue;
-
-    let asapIcon = '<i class="fas fa-check"></i> Normal';
-    if(data.asap === "Waspada" || data.asap === "Sedang") asapIcon = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
-    if(data.asap === "Tinggi" || data.asap === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
-    document.getElementById("asap").innerHTML = asapIcon;
-
-    document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
-    if (data.suhu !== undefined) {
-        currentSuhu = `${data.suhu} °C`;
-        document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
-    }
-    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
-    document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
-    document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
-
-    // 3. EFEK WARNA KOTAK BERGANTIAN SECARA ESTAFET
     const boxes = document.querySelectorAll('.grid .box');
 
     // Fungsi bantuan untuk mengganti warna kotak sensor
@@ -1423,25 +1404,41 @@ async function updateDashboard() {
             box.style.background = "linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9))"; // KUNING
         } else {
             box.classList.remove('pulse-animation');
-            // Kembalikan ke warna default (api, asap, dan lainnya beda warna dasar)
-            if(index === 0) box.style.background = "linear-gradient(135deg, rgba(255,107,107,0.9), rgba(238,90,36,0.9))";
-            else if (index === 1) box.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
-            else box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
+            // Kembalikan ke warna default aman yang sama dengan box lainnya
+            box.style.background = "linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9))";
         }
     }
 
-    // Grup 1: Kotak Api & Asap berubah warna langsung (detik ke-0)
+    // Grup 1: Api & Asap (Nilai Teks & Warna berubah pada detik ke-0)
+    const apiValue = data.api === "Terdeteksi Api" ? '<i class="fas fa-exclamation-triangle"></i> TERDETEKSI API' : '<i class="fas fa-check-circle"></i> Aman';
+    document.getElementById("api").innerHTML = apiValue;
+
+    let asapIcon = '<i class="fas fa-check"></i> Normal';
+    if(data.asap === "Waspada" || data.asap === "Sedang") asapIcon = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+    if(data.asap === "Tinggi" || data.asap === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
+    document.getElementById("asap").innerHTML = asapIcon;
+
     setBoxColor(boxes[0], 0, data.isDanger, data.isWarning);
     setBoxColor(boxes[1], 1, data.isDanger, data.isWarning);
 
-    // Grup 2: Kotak Suhu & Kelembapan berubah warna setelah JEDA 1 detik (1000 ms)
+    // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna berubah setelah JEDA 1 detik)
     setTimeout(() => {
+        document.getElementById("suhu").innerHTML = `${data.suhu} °C <i class="fas fa-thermometer-half"></i>`;
+        if (data.suhu !== undefined) {
+            currentSuhu = `${data.suhu} °C`;
+            document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
+        }
+        document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
+
         setBoxColor(boxes[2], 2, data.isDanger, data.isWarning);
         setBoxColor(boxes[3], 3, data.isDanger, data.isWarning);
     }, 1000);
 
-    // Grup 3: Kotak Tegangan & Arus berubah warna setelah JEDA 2 detik (2000 ms)
+    // Grup 3: Tegangan & Arus (Nilai Teks & Warna berubah setelah JEDA 2 detik)
     setTimeout(() => {
+        document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
+        document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
+
         setBoxColor(boxes[4], 4, data.isDanger, data.isWarning);
         setBoxColor(boxes[5], 5, data.isDanger, data.isWarning);
     }, 2000);
