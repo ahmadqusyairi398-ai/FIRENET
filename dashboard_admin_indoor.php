@@ -1065,10 +1065,16 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     updateDashboard();
 }
 
-var currentLocationsData = [];
+var currentLocationsData = [];// Render & update seluruh titik lokasi di peta sesuai tabel lokasi_monitoring
+function renderLocationMarkers(locations, statusText, isDanger) {
+    if (typeof statusText === 'boolean') {
+        const temp = isDanger;
+        isDanger = statusText;
+        statusText = typeof temp === 'string' ? temp : (isDanger ? 'Kebakaran' : 'Aman');
+    }
+    if (!statusText) statusText = 'Aman';
+    if (typeof isDanger === 'undefined') isDanger = (statusText !== 'Aman');
 
-// Render & update seluruh titik lokasi di peta sesuai tabel lokasi_monitoring
-function renderLocationMarkers(locations, isDanger) {
     if (!locations || locations.length === 0) locations = initialLocations;
     currentLocationsData = locations;
     
@@ -1081,7 +1087,9 @@ function renderLocationMarkers(locations, isDanger) {
     const totalElem = document.getElementById('total-locations');
     if (totalElem) {
         totalElem.innerHTML = locations.length;
-    }    const statusElem = document.getElementById('location-status');
+    }
+
+    const statusElem = document.getElementById('location-status');
     const zoneElem = document.getElementById('zone');
     
     if (statusElem) {
@@ -1208,12 +1216,17 @@ function renderLocationMarkers(locations, isDanger) {
 }
 
 async function updateLocationStatus(statusText, isDanger) {
+    if (typeof statusText === 'boolean') {
+        const temp = isDanger;
+        isDanger = statusText;
+        statusText = typeof temp === 'string' ? temp : (isDanger ? 'Kebakaran' : 'Aman');
+    }
     const locations = await fetchLocationsFromDB();
-    renderLocationMarkers(locations, isDanger, statusText);
+    renderLocationMarkers(locations, statusText, isDanger);
 }
 
 // Render marker pertama kali secara langsung dari data PHP
-renderLocationMarkers(initialLocations, false, 'Aman');
+renderLocationMarkers(initialLocations, 'Aman', false);
 updateLocationStatus('Aman', false);
 
 // ================= CHART (Terhubung ke Database indoor -> data_sensor) =================

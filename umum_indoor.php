@@ -816,6 +816,14 @@ function flyToLocation(lat, lng, nama, idAlat, locId, event) {
 var currentLocationsData = [];
 
 async function updateLocationStatus(statusText, isDanger) {
+    if (typeof statusText === 'boolean') {
+        const temp = isDanger;
+        isDanger = statusText;
+        statusText = typeof temp === 'string' ? temp : (isDanger ? 'Kebakaran' : 'Aman');
+    }
+    if (!statusText) statusText = 'Aman';
+    if (typeof isDanger === 'undefined') isDanger = (statusText !== 'Aman');
+
     const locations = await fetchLocationsFromDB();
     currentLocationsData = locations;
     

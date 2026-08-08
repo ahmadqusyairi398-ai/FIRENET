@@ -961,6 +961,14 @@ function addMarkerToMap(location, isDanger) {
     return { marker, zone };
 }// ================= FUNGSI UPDATE SEMUA MARKER =================
 function updateAllMarkers(locationsData, statusText, isDanger) {
+    if (typeof statusText === 'boolean') {
+        const temp = isDanger;
+        isDanger = statusText;
+        statusText = typeof temp === 'string' ? temp : (isDanger ? 'Kebakaran' : 'Aman');
+    }
+    if (!statusText) statusText = 'Aman';
+    if (typeof isDanger === 'undefined') isDanger = (statusText !== 'Aman');
+
     currentLocationsData = locationsData;
     markers.forEach(function(marker) {
         map.removeLayer(marker);
@@ -1069,7 +1077,7 @@ async function fetchLocations() {
             return [];
         }
         
-        return result.data || [];
+        return Array.isArray(result) ? result : (result.data || []);
     } catch (error) {
         console.error('Fetch locations error:', error);
         return [];
@@ -1077,6 +1085,11 @@ async function fetchLocations() {
 }
 
 function updateLocationStatus(statusText, isDanger) {
+    if (typeof statusText === 'boolean') {
+        const temp = isDanger;
+        isDanger = statusText;
+        statusText = typeof temp === 'string' ? temp : (isDanger ? 'Kebakaran' : 'Aman');
+    }
     fetchLocations().then(locations => {
         updateAllMarkers(locations, statusText, isDanger);
     });
