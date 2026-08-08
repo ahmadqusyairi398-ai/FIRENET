@@ -23,6 +23,16 @@ if (!$pdo_indoor) {
     </div>");
 }
 
+// --- TAMBAHAN BARU: Ambil daftar lokasi dari database ---
+$db_locations = [];
+try {
+    $stmt_loc = $pdo_indoor->query("SELECT * FROM lokasi_monitoring ORDER BY id ASC");
+    $db_locations = $stmt_loc->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Abaikan jika tabel belum dibuat
+}
+// ---------------------------------------------------------
+
 $columns = [];
 $rows = [];
 
@@ -645,7 +655,12 @@ canvas {
 <!-- MAIN CONTENT -->
 <div class="main">
     <div class="header">
-        <h2><i class="fas fa-chart-line"></i> Chart Monitoring Sensor Indoor</h2>
+        <h2>
+            <i class="fas fa-chart-line"></i> Chart Monitoring Sensor Indoor
+            <span id="chart-badge" style="font-size: 13px; padding: 5px 12px; border-radius: 20px; font-weight: bold; margin-left: 15px; color: white; background: #28a745; transition: all 0.3s;">
+                <i class="fas fa-bolt"></i> Live (Real-Time)
+            </span>
+        </h2>
         <div class="header-right">
             <!-- Tombol HOME dengan onclick untuk membuka modal -->
             <button class="btn-home-header" onclick="openHomeModal()">
@@ -659,8 +674,27 @@ canvas {
     </div>
 
     <div class="filter-section">
-        <div class="filter-form">
-            <label><i class="fas fa-calendar-alt"></i> Dari:</label>
+        <div class="filter-form" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+            <label><i class="fas fa-map-marker-alt"></i> Lokasi Alat:</label>
+            <select id="locationSelect" onchange="filterData()" style="padding: 8px 12px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; cursor: pointer;">
+                <?php foreach ($db_locations as $loc):
+                    $idAlat = !empty($loc['id_alat']) ? $loc['id_alat'] : "LOK-".$loc['id'];
+                    $namaLokasi = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : $idAlat;
+                    $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2);
+                    $labelStatus = $isLive ? "(Alat Utama / Live)" : "(Dummy)";
+                ?>
+                    <option value="<?= htmlspecialchars($idAlat) ?>">
+                        <?= htmlspecialchars($idAlat) ?> - <?= htmlspecialchars($namaLokasi) ?> <?= $labelStatus ?>
+                    </option>
+                <?php endforeach; ?>
+                <?php if (empty($db_locations)): ?>
+                    <option value="LOK-002">LOK-002 (Alat Utama / Live)</option>
+                    <option value="LOK-001">LOK-001 (Dummy)</option>
+                <?php endif; ?>
+            </select>
+
+            <label style="margin-left: 15px;"><i class="fas fa-calendar-alt"></i> Dari:</label>
             <input type="date" id="dateFrom">
             <label>Sampai:</label>
             <input type="date" id="dateTo">
@@ -1034,13 +1068,70 @@ function setMode(mode, element) {
     myChart.update();
 }
 
+// =======================================================
+// FUNGSI BARU: Menghasilkan 50 Riwayat Dummy secara instan
+// =======================================================
+function generateDummyHistory(count) {
+    let dummyHistory = [];
+    let now = new Date();
+    for (let i = 0; i < count; i++) {
+        let timeObj = new Date(now.getTime() - ((count - 1 - i) * 10000));
+        let timeStr = timeObj.getFullYear() + "-" +
+                      String(timeObj.getMonth()+1).padStart(2,'0') + "-" +
+                      String(timeObj.getDate()).padStart(2,'0') + " " +
+                      String(timeObj.getHours()).padStart(2,'0') + ":" +
+                      String(timeObj.getMinutes()).padStart(2,'0') + ":" +
+                      String(timeObj.getSeconds()).padStart(2,'0');
+
+        let api = Math.random() > 0.9 ? 100 : 0;
+        let asap = Math.floor(Math.random() * 80 + 10);
+        let suhu = Math.floor(Math.random() * 20 + 25);
+        let kelembapan = Math.floor(Math.random() * 40 + 30);
+        let tegangan = Math.floor(Math.random() * 15 + 215);
+        let arus = (Math.random() * 5 + 2).toFixed(2);
+
+        if (api > 0) { suhu += 20; kelembapan -= 15; asap += 40; }
+
+        dummyHistory.push({
+            waktu: timeStr, api: api, asap: asap, suhu: suhu,
+            kelembapan: kelembapan, tegangan: tegangan, arus: parseFloat(arus)
+        });
+    }
+    return dummyHistory;
+}
+
+// =======================================================
+// FUNGSI UPDATE/FILTER DATA
+// =======================================================
 function filterData() {
+    const locSelect = document.getElementById('locationSelect');
+    const locationVal = locSelect ? locSelect.value : 'LOK-002';
+
+    // UPDATE BADGE LIVE/DUMMY
+    const chartBadge = document.getElementById('chart-badge');
+    if (chartBadge) {
+        if (locationVal === 'LOK-002') {
+            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+        } else {
+            chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
+            chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
+
+    // CEK SUMBER DATA
+    let sourceData = fullData; // Ambil riwayat LOK-002 dari DB asli
+    if (locationVal !== 'LOK-002') {
+        sourceData = generateDummyHistory(50); // Hasilkan riwayat dummy
+    }
+
     const fromDate = document.getElementById('dateFrom').value;
     const toDate = document.getElementById('dateTo').value;
+
     if (!fromDate && !toDate) {
-        filteredData = [...fullData];
+        filteredData = [...sourceData];
     } else {
-        filteredData = fullData.filter(item => {
+        filteredData = sourceData.filter(item => {
             if (!item.waktu) return true;
             const itemDate = item.waktu.split(' ')[0];
             let ok = true;
@@ -1049,6 +1140,7 @@ function filterData() {
             return ok;
         });
     }
+
     if (filteredData.length === 0) {
         createChart([], []);
         alert('Tidak ada data dalam rentang tanggal tersebut.');
@@ -1057,7 +1149,6 @@ function filterData() {
     const labels = filteredData.map(d => d.waktu);
     createChart(labels, filteredData);
 
-    // -- KODE TAMBAHAN UNTUK MENCEGAH CHART MENGHILANG --
     const activeTab = document.querySelector('.tab-btn.active');
     if (activeTab) {
         setMode(currentMode, activeTab);
@@ -1067,9 +1158,7 @@ function filterData() {
 function resetFilter() {
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value = '';
-    filteredData = [...fullData];
-    const labels = filteredData.map(d => d.waktu);
-    createChart(labels, filteredData);
+    filterData(); // Panggil ulang logika lokasi Live/Dummy
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1083,15 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         api: typeof row.api === 'number' ? row.api : 0
     }));
     
-    if (fullData.length === 0) {
-        createChart([], []);
-        console.warn('Tidak ada data sensor di database. Grafik akan kosong.');
-        alert('Belum ada data sensor. Grafik akan kosong, menunggu data dari database.');
-        return;
-    }
-    filteredData = [...fullData];
-    const labels = filteredData.map(d => d.waktu);
-    createChart(labels, filteredData);
+    filterData();
 });
 </script>
 
