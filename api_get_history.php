@@ -24,10 +24,8 @@
         $dateCol = 'timestamp';
     }
 
-  maju
     // Ambil 20 data terakhir khusus untuk alat yang diklik (is_dummy), lalu balik urutannya agar grafik berjalan
-    $sql = "SELECT * FROM (SELECT * FROM data_sensor WHERE is_dummy = $is_dummy ORDER BY id DESC LIMIT 20) sub ORDER
-  BY id ASC";
+    $sql = "SELECT * FROM (SELECT * FROM data_sensor WHERE is_dummy = $is_dummy ORDER BY id DESC LIMIT 20) sub ORDER BY id ASC";
     $result = @mysqli_query($conn, $sql);
 
     $data = [];
