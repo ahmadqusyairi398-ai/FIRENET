@@ -329,21 +329,21 @@ body::before {
 .grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    gap: 12px;
 }
 .box {
-    padding: 25px 20px;
-    border-radius: 12px;
+    padding: 12px 10px;
+    border-radius: 10px;
     text-align: center;
     color: white;
     transition: transform 0.2s;
     backdrop-filter: blur(5px);
 }
 .box:hover { transform: scale(1.02); }
-.box i { font-size: 36px; margin-bottom: 12px; display: block; }
-.box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-.box b { display: block; font-size: 24px; margin-top: 5px; }
-.box small { display: block; font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.box i { font-size: 22px; margin-bottom: 6px; display: block; }
+.box .sensor-label { font-size: 12px; opacity: 0.9; margin-bottom: 4px; }
+.box b { display: block; font-size: 16px; margin-top: 3px; }
+.box small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; }
 
 /* Warna khusus untuk masing-masing sensor */
 .box.daya-box { 

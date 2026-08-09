@@ -456,23 +456,23 @@ body::before {
 /* ========== GRID SENSOR ========== */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
 }
 .box {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
-    padding: 20px;
-    border-radius: 12px;
+    padding: 12px 10px;
+    border-radius: 10px;
     text-align: center;
     color: white;
     transition: transform 0.2s;
     backdrop-filter: blur(5px);
 }
 .box:hover { transform: scale(1.02); }
-.box i { font-size: 32px; margin-bottom: 10px; display: block; }
-.box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
-.box b { display: block; font-size: 20px; margin-top: 5px; }
-.box small { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
+.box i { font-size: 22px; margin-bottom: 6px; display: block; }
+.box .sensor-label { font-size: 12px; opacity: 0.9; margin-bottom: 4px; }
+.box b { display: block; font-size: 16px; margin-top: 3px; }
+.box small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; }
 .box.solar-box { background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); }
 .box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
 .box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
