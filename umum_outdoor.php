@@ -973,6 +973,7 @@ function flyToLocation(lat, lng, id) {
         dangerZone.setLatLng([lat, lng]);
     }
     if (prevId !== id && typeof fetchDataOutdoor === 'function') {
+        scheduleNextUpdate();
         fetchDataOutdoor();
     }
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
@@ -1236,19 +1237,24 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= DATA DARI DATABASE =================
+// ================= DATA DARI DATABASE (IKUTI INTERVAL ADMIN OUTDOOR) =================
+var autoUpdateTimer = null;
+var currentMainDeviceIntervalMs = 30000;
+
 function fetchDataOutdoor() {
-    fetch('api_get_data.php?device=outdoor')
+    fetch('get_latest_data.php')
     .then(response => {
         if (!response.ok) throw new Error("Gagal mengambil data dari server");
         return response.json();
     })
     .then(data => {
+        if (data.interval_detik && parseInt(data.interval_detik) >= 3) {
+            currentMainDeviceIntervalMs = parseInt(data.interval_detik) * 1000;
+        }
         updateUI(data); // Tampilkan data asli dari database
     })
     .catch(error => {
         console.warn("API tidak merespons, menggunakan data dummy/fallback:", error);
-        // Jika API error / belum dibuat, dasbor otomatis memakai data simulasi
         updateUI(generateDummyData());
     });
 }
@@ -1345,10 +1351,21 @@ function generateDummyData() {
     };
 }
 
-// ================= JALANKAN FUNGSI =================
-// Jalankan pertama kali & refresh setiap 3 detik
+function scheduleNextUpdate() {
+    if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+
+    var isMainDevice = (activeSelectedLocationId === 1 || activeSelectedLocationId === '1' || activeSelectedLocationId === 'out_1' || activeSelectedLocationId === 'out_def_1');
+    var intervalMs = isMainDevice ? currentMainDeviceIntervalMs : 15000;
+
+    autoUpdateTimer = setTimeout(function() {
+        fetchDataOutdoor();
+        scheduleNextUpdate();
+    }, intervalMs);
+}
+
+// ================= JALANKAN FUNGSI (IKUTI INTERVAL ADMIN OUTDOOR) =================
 fetchDataOutdoor();
-setInterval(fetchDataOutdoor, 3000);
+scheduleNextUpdate();
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
