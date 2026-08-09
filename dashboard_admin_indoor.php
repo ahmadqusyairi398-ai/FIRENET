@@ -1416,11 +1416,11 @@ async function updateDashboard() {
 
     // 2. Tentukan apakah ini LOK-002 (Live) atau bukan
     const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
-    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || lokasiAktif.id === 2);
+    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || rawIdAlat === '002' || rawIdAlat.includes('002') || rawIdAlat.includes('UTAMA') || lokasiAktif.id === 2);
 
     let data;
     if (isLive) {
-        // Jika yang diklik adalah LOK-002, JANGAN gunakan dummy! Ambil dari Database.
+        // Jika yang diklik adalah LOK-002 (Alat Asli), JANGAN gunakan dummy! Ambil dari Database.
         data = await fetchSensorData();
     } else {
         // Jika yang diklik adalah lokasi lain (LOK-001, LOK-003, dll), hasilkan DUMMY.
@@ -1479,21 +1479,39 @@ async function updateDashboard() {
     let statusText = "Aman";
     let isDangerDetected = false;
 
-    if (isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0)) {
-        statusText = "Kebakaran";
-        isDangerDetected = true;
-    } else if (isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2)) {
-        statusText = "lingkungan tidak normal";
-        isDangerDetected = true;
-    } else if (isTeganganOver || isArusOver || (data.isWarning && dummyState === 3)) {
-        statusText = "Gangguan listrik";
-        isDangerDetected = true;
-    } else if (data.isDanger) {
-        statusText = "Kebakaran";
-        isDangerDetected = true;
+    if (isLive) {
+        // Untuk LOK-002 / Live Real-Time: Hanya gunakan data murni dari alat tanpa terpengaruh dummyState
+        if (isApiDanger || isAsapDanger || data.isDanger) {
+            statusText = "Kebakaran";
+            isDangerDetected = true;
+        } else if (isSuhuAbnormal || isKelembapanAbnormal) {
+            statusText = "lingkungan tidak normal";
+            isDangerDetected = true;
+        } else if (isTeganganOver || isArusOver) {
+            statusText = "Gangguan listrik";
+            isDangerDetected = true;
+        } else {
+            statusText = "Aman";
+            isDangerDetected = false;
+        }
     } else {
-        statusText = "Aman";
-        isDangerDetected = false;
+        // Untuk lokasi lain (Dummy/Simulasi): Gunakan perputaran dummyState
+        if (isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0)) {
+            statusText = "Kebakaran";
+            isDangerDetected = true;
+        } else if (isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2)) {
+            statusText = "lingkungan tidak normal";
+            isDangerDetected = true;
+        } else if (isTeganganOver || isArusOver || (data.isWarning && dummyState === 3)) {
+            statusText = "Gangguan listrik";
+            isDangerDetected = true;
+        } else if (data.isDanger) {
+            statusText = "Kebakaran";
+            isDangerDetected = true;
+        } else {
+            statusText = "Aman";
+            isDangerDetected = false;
+        }
     }
 
     // Fungsi bantuan untuk mengganti warna kotak sensor
@@ -1520,8 +1538,13 @@ async function updateDashboard() {
     if(data.asap === "Tinggi" || data.asap === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
     document.getElementById("asap").innerHTML = asapIcon;
 
-    setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-    setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+    if (isLive) {
+        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
+        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
+    } else {
+        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+    }
 
     // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna berubah setelah JEDA 1 detik)
     setTimeout(() => {
@@ -1532,8 +1555,13 @@ async function updateDashboard() {
         }
         document.getElementById("kelembapan").innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
 
-        setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
-        setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+        if (isLive) {
+            setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal);
+            setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal);
+        } else {
+            setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+            setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+        }
     }, 1000);
 
     // Grup 3: Tegangan & Arus (Nilai Teks & Warna berubah setelah JEDA 2 detik)
@@ -1541,8 +1569,13 @@ async function updateDashboard() {
         document.getElementById("tegangan").innerHTML = `${data.tegangan} V <i class="fas fa-bolt"></i>`;
         document.getElementById("arus").innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
 
-        setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
-        setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+        if (isLive) {
+            setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver);
+            setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver);
+        } else {
+            setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+            setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+        }
     }, 2000);
 
     // Peta & Animasi + Status Lokasi
