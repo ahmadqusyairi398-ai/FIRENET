@@ -497,6 +497,18 @@ body::before {
     50% { opacity: 0.6; }
 }
 
+/* Memastikan teks dalam kotak sensor berlatar warna memiliki kontras tinggi & putih terang */
+.box .status-aman,
+.box .status-waspada,
+.box .status-bahaya,
+.box b,
+.box .sensor-label,
+.box i,
+.box small {
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
 /* ========== MAP ========== */
 .map-container {
     margin-top: 10px;

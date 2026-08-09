@@ -368,10 +368,23 @@ body::before {
 }
 .pulse-animation { animation: pulse 1s ease-in-out infinite; }
 .status-aman { color: #28a745; font-weight: bold; }
+.status-waspada { color: #f59e0b; font-weight: bold; }
 .status-bahaya { color: #dc3545; font-weight: bold; animation: blink 1s infinite; }
 @keyframes blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
+}
+
+/* Memastikan teks dalam kotak sensor berlatar warna memiliki kontras tinggi & putih terang */
+.box .status-aman,
+.box .status-waspada,
+.box .status-bahaya,
+.box b,
+.box .sensor-label,
+.box i,
+.box small {
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* ========== MAP ========== */

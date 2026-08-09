@@ -322,11 +322,22 @@ body::before {
 .box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
 .box.angin-box { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
 
-@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.02); opacity: 0.9; box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); } }
-.pulse-animation { animation: pulse 1s ease-in-out infinite; }
 .status-aman { color: #28a745; font-weight: bold; }
+.status-waspada { color: #f59e0b; font-weight: bold; }
 .status-bahaya { color: #dc3545; font-weight: bold; animation: blink 1s infinite; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* Memastikan teks dalam kotak sensor berlatar warna memiliki kontras tinggi & putih terang */
+.box .status-aman,
+.box .status-waspada,
+.box .status-bahaya,
+.box b,
+.box .sensor-label,
+.box i,
+.box small {
+    color: #ffffff !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
 
 /* ========== MAP ========== */
 .map-container { margin-top: 10px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(224, 224, 224, 0.5); }
