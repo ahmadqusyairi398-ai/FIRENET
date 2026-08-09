@@ -626,7 +626,7 @@ canvas {
         <div class="header-right">
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
-                <span><?= htmlspecialchars($user) ?><span class="user-tag">User</span></span>
+                <span>User</span>
             </div>
         </div>
     </div>
