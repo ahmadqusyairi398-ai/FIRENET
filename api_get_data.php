@@ -52,15 +52,26 @@ if ($device_id === 'indoor') {
         exit();
     }
 
-    // Query Ambil Data Sensor Terbaru dari tabel data_sensor
-    $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
-    $result = @mysqli_query($conn, $sql);
+        // Cek parameter is_dummy dari URL (Frontend)
+        $is_dummy_filter = isset($_GET['is_dummy']) ? $_GET['is_dummy'] : null;
 
-    if ($result && mysqli_num_rows($result) > 0) {
-        $row = mysqli_fetch_assoc($result);
-        
-        $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
-        $timeout_seconds = 15;
+        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
+        if ($is_dummy_filter !== null) {
+            $is_dummy_filter = (int)$is_dummy_filter;
+            $sql = "SELECT * FROM data_sensor WHERE is_dummy = $is_dummy_filter ORDER BY id DESC LIMIT 1";
+        } else {
+            $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
+        }
+
+        $result = @mysqli_query($conn, $sql);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            $row = mysqli_fetch_assoc($result);
+
+            $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
+
+            // PERBAIKAN: Ubah batas toleransi mati/offline menjadi 45 detik agar tidak kedap-kedip
+            $timeout_seconds = 45;
         $is_online = false;
         if ($waktu_raw) {
             $last_time = strtotime($waktu_raw);
