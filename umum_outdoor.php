@@ -603,7 +603,7 @@ canvas {
     <!-- ========== 4 SENSOR UTAMA ========== -->
     <!-- ============================================================ -->
     <div class="card">
-        <h3><i class="fas fa-microchip"></i> Sensor Monitoring Outdoor <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
+        <h3><i class="fas fa-microchip"></i> Data Sensor <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
         <div class="grid">
             <!-- Sensor Daya Panel Surya -->
             <div class="box daya-box">
@@ -1360,6 +1360,18 @@ function scheduleNextUpdate() {
 // ================= JALANKAN FUNGSI (IKUTI INTERVAL ADMIN OUTDOOR) =================
 fetchDataOutdoor();
 scheduleNextUpdate();
+
+// Restore lokasi aktif dari localStorage jika ada
+try {
+    var savedLocId = localStorage.getItem('activeLocationId');
+    if (savedLocId) {
+        var numSavedId = parseInt(savedLocId) || 1;
+        var foundLoc = allLocations.find(function(l) { return l.id === numSavedId; });
+        if (foundLoc) {
+            flyToLocation(foundLoc.lat, foundLoc.lng, foundLoc.id);
+        }
+    }
+} catch(e) {}
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
