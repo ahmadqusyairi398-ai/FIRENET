@@ -1117,10 +1117,14 @@ function generateData() {
         isDanger: isDanger,
         isWarning: isWarning,
         apiValue: apiStatus === "Terdeteksi Api" ? 1 : 0,
-        limit_suhu: 40,
-        limit_kelembapan: 20,
-        limit_tegangan: 240,
-        limit_arus: 5
+        limit_suhu: 45,
+        limit_kelembapan: 85,
+        limit_tegangan: 250,
+        limit_arus: 15,
+        batas_suhu: 45,
+        batas_kelembapan: 85,
+        batas_tegangan: 250,
+        batas_arus: 15
     };
 }
 
@@ -1195,15 +1199,15 @@ async function fetchDataFromDB() {
         const isApiDanger = (data.api === "Terdeteksi Api");
         const isAsapDanger = (data.asap === "Tinggi" || data.asap === "Bahaya");
 
-        const limitSuhu = data.limit_suhu !== undefined ? parseFloat(data.limit_suhu) : 40;
-        const limitKelembapan = data.limit_kelembapan !== undefined ? parseFloat(data.limit_kelembapan) : 20;
-        const isSuhuAbnormal = (data.suhu !== undefined && parseFloat(data.suhu) > limitSuhu);
-        const isKelembapanAbnormal = (data.kelembapan !== undefined && parseFloat(data.kelembapan) < limitKelembapan);
+        let batasSuhu = data.batas_suhu || data.limit_suhu || 45;
+        let batasKelembapan = data.batas_kelembapan || data.limit_kelembapan || 85;
+        let batasTegangan = data.batas_tegangan || data.limit_tegangan || 250;
+        let batasArus = data.batas_arus || data.limit_arus || 15;
 
-        const limitTegangan = data.limit_tegangan !== undefined ? parseFloat(data.limit_tegangan) : 240;
-        const limitArus = data.limit_arus !== undefined ? parseFloat(data.limit_arus) : 5;
-        const isTeganganOver = (data.tegangan !== undefined && parseFloat(data.tegangan) > limitTegangan);
-        const isArusOver = (data.arus !== undefined && parseFloat(data.arus) > limitArus);
+        const isSuhuAbnormal = (data.suhu !== undefined && parseFloat(data.suhu) > batasSuhu);
+        const isKelembapanAbnormal = (data.kelembapan !== undefined && parseFloat(data.kelembapan) > batasKelembapan);
+        const isTeganganOver = (data.tegangan !== undefined && parseFloat(data.tegangan) > batasTegangan);
+        const isArusOver = (data.arus !== undefined && parseFloat(data.arus) > batasArus);
 
         let statusText = "Aman";
         let isDangerDetected = false;

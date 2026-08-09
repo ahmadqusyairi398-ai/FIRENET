@@ -14,27 +14,30 @@ if ($device_id === 'indoor') {
     }
 
     // Default set points (batas sensor)
-    $limit_suhu = 40.0;
-    $limit_kelembapan = 20.0;
-    $limit_tegangan = 240.0;
-    $limit_arus = 5.0;
+    $limit_suhu = 45.0;
+    $limit_kelembapan = 85.0;
+    $limit_tegangan = 250.0;
+    $limit_arus = 15.0;
 
     if ($conn) {
-        $q_batas = @mysqli_query($conn, "SELECT nama_sensor, batas_max, batas_min FROM batas_sensor");
+        $q_batas = @mysqli_query($conn, "SELECT nama_sensor, nilai_alarm, batas_max, batas_min FROM batas_sensor");
         if ($q_batas && mysqli_num_rows($q_batas) > 0) {
             while ($row = mysqli_fetch_assoc($q_batas)) {
-                $nama = strtolower(trim($row['nama_sensor']));
-                if ($nama == 'suhu') {
-                    $limit_suhu = (float)$row['batas_max'];
-                }
-                if ($nama == 'kelembapan') {
-                    $limit_kelembapan = (float)$row['batas_min'];
-                }
-                if ($nama == 'tegangan listrik' || $nama == 'tegangan') {
-                    $limit_tegangan = (float)$row['batas_max'];
-                }
-                if ($nama == 'arus listrik' || $nama == 'arus') {
-                    $limit_arus = (float)$row['batas_max'];
+                $nama = strtoupper(trim($row['nama_sensor']));
+                $val = isset($row['nilai_alarm']) && $row['nilai_alarm'] !== null && $row['nilai_alarm'] != 0 ? (float)$row['nilai_alarm'] : (float)($row['batas_max'] ?? 0);
+                if ($val > 0) {
+                    if ($nama === 'SUHU') {
+                        $limit_suhu = $val;
+                    }
+                    if ($nama === 'KELEMBAPAN') {
+                        $limit_kelembapan = $val;
+                    }
+                    if ($nama === 'TEGANGAN' || $nama === 'TEGANGAN LISTRIK') {
+                        $limit_tegangan = $val;
+                    }
+                    if ($nama === 'ARUS' || $nama === 'ARUS LISTRIK') {
+                        $limit_arus = $val;
+                    }
                 }
             }
         }
@@ -47,7 +50,11 @@ if ($device_id === 'indoor') {
             "limit_suhu" => $limit_suhu,
             "limit_kelembapan" => $limit_kelembapan,
             "limit_tegangan" => $limit_tegangan,
-            "limit_arus" => $limit_arus
+            "limit_arus" => $limit_arus,
+            "batas_suhu" => $limit_suhu,
+            "batas_kelembapan" => $limit_kelembapan,
+            "batas_tegangan" => $limit_tegangan,
+            "batas_arus" => $limit_arus
         ]);
         exit();
     }
@@ -146,7 +153,11 @@ if ($device_id === 'indoor') {
                 "limit_suhu"       => $limit_suhu,
                 "limit_kelembapan" => $limit_kelembapan,
                 "limit_tegangan"   => $limit_tegangan,
-                "limit_arus"       => $limit_arus
+                "limit_arus"       => $limit_arus,
+                "batas_suhu"       => $limit_suhu,
+                "batas_kelembapan" => $limit_kelembapan,
+                "batas_tegangan"   => $limit_tegangan,
+                "batas_arus"       => $limit_arus
             ]);
             exit();
         }
@@ -170,7 +181,11 @@ if ($device_id === 'indoor') {
         "limit_suhu"       => $limit_suhu,
         "limit_kelembapan" => $limit_kelembapan,
         "limit_tegangan"   => $limit_tegangan,
-        "limit_arus"       => $limit_arus
+        "limit_arus"       => $limit_arus,
+        "batas_suhu"       => $limit_suhu,
+        "batas_kelembapan" => $limit_kelembapan,
+        "batas_tegangan"   => $limit_tegangan,
+        "batas_arus"       => $limit_arus
     ]);
     exit();
 } else {
