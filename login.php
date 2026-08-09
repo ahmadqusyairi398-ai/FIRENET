@@ -308,7 +308,7 @@ body::before {
     position: relative;
 }
 
-.input-group i {
+.input-group > i {
     position: absolute;
     left: 15px;
     top: 50%;
@@ -316,12 +316,13 @@ body::before {
     color: #999;
     font-size: 16px;
     transition: all 0.3s;
-    z-index: 1;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .input-group input {
     width: 100%;
-    padding: 14px 15px 14px 45px;
+    padding: 14px 45px 14px 45px;
     border: 2px solid #e0e0e0;
     border-radius: 12px;
     font-size: 15px;
@@ -336,7 +337,7 @@ body::before {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.input-group input:focus + i {
+.input-group input:focus ~ i {
     color: #667eea;
 }
 
@@ -349,10 +350,23 @@ body::before {
     cursor: pointer;
     color: #999;
     transition: color 0.3s;
-    z-index: 1;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.password-toggle:hover {
+.password-toggle i {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    font-size: 16px;
+    color: #999;
+    transition: color 0.3s;
+}
+
+.password-toggle:hover i {
     color: #667eea;
 }
 
