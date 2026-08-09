@@ -894,7 +894,7 @@ function initDatasets() {
             fill: true,
             pointRadius: 4,
             pointHoverRadius: 8,
-            hidden: sensor.group !== 'all',
+            hidden: currentMode === 'all' ? false : sensor.group !== currentMode,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' || sensor.id === 'daya' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 
                      (sensor.id === 'kecepatan_angin' ? 'y-angin' :
