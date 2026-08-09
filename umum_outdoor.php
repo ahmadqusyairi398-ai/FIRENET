@@ -349,18 +349,10 @@ body::before {
 .box small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; }
 
 /* Warna khusus untuk masing-masing sensor */
-.box.daya-box { 
-    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); 
-}
-.box.suhu-box { 
-    background: linear-gradient(135deg, rgba(255, 99, 132, 0.9), rgba(255, 59, 48, 0.9)); 
-}
-.box.asap-box { 
-    background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); 
-}
-.box.kelembapan-box { 
-    background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(52, 152, 219, 0.9)); 
-}
+.box.solar-box { background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); }
+.box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
+.box.co-box { background: linear-gradient(135deg, rgba(156, 39, 176, 0.9), rgba(103, 58, 183, 0.9)); }
+.box.angin-box { background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(25, 118, 210, 0.9)); }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -613,23 +605,16 @@ canvas {
     <div class="card">
         <h3><i class="fas fa-microchip"></i> Sensor Monitoring Outdoor <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span></h3>
         <div class="grid">
-            <!-- Sensor Daya Panel Surya -->
-            <div class="box daya-box">
-                <i class="fas fa-solar-panel"></i>
-                <div class="sensor-label">Daya Panel Surya</div>
-                <b id="daya"><?= htmlspecialchars($latest_sensor['daya']) ?> W</b>
-                <small>Watt</small>
-            </div>
+            <!-- Solar Panel Sensors -->
+            <div class="box solar-box"><i class="fas fa-bolt"></i><div class="sensor-label">Tegangan Panel Surya</div><b id="tegangan"><?= htmlspecialchars($latest_sensor['tegangan']) ?> V</b><small>V DC</small></div>
+            <div class="box solar-box"><i class="fas fa-charging-station"></i><div class="sensor-label">Arus Panel Surya</div><b id="arus"><?= htmlspecialchars($latest_sensor['arus']) ?> A</b><small>A DC</small></div>
+            <div class="box solar-box"><i class="fas fa-solar-panel"></i><div class="sensor-label">Daya Panel Surya</div><b id="daya"><?= htmlspecialchars($latest_sensor['daya']) ?> W</b><small>Watt</small></div>
             
-            <!-- Sensor Suhu -->
-            <div class="box suhu-box">
-                <i class="fas fa-temperature-high"></i>
-                <div class="sensor-label">Suhu</div>
-                <b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?> °C</b>
-                <small>°C</small>
-            </div>
+            <!-- Wind Sensors -->
+            <div class="box angin-box"><i class="fas fa-compass"></i><div class="sensor-label">Arah Angin</div><b id="arah"><i class="fas fa-arrow-right"></i> <?= htmlspecialchars($latest_sensor['arah']) ?></b></div>
+            <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin"><?= htmlspecialchars($latest_sensor['angin']) ?> m/s <i class="fas fa-wind"></i></b></div>
             
-            <!-- Sensor Asap -->
+            <!-- Asap Sensor -->
             <?php 
                 $asap_status = $latest_sensor['asap'] ?? 'Normal';
                 $asap_bg = 'background: linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95));';
@@ -650,17 +635,35 @@ canvas {
                 <b id="asap"><?= $asap_icon ?></b>
             </div>
             
-            <!-- Sensor Kelembapan -->
-            <div class="box kelembapan-box">
-                <i class="fas fa-tint"></i>
-                <div class="sensor-label">Kelembapan</div>
-                <b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?> %</b>
-                <small>%</small>
+            <!-- Environment Sensors -->
+            <div class="box"><i class="fas fa-temperature-high"></i><div class="sensor-label">Suhu</div><b id="suhu"><?= htmlspecialchars($latest_sensor['suhu']) ?> °C <i class="fas fa-thermometer-half"></i></b></div>
+            <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?> % <i class="fas fa-tint"></i></b></div>
+            
+            <!-- Gas Sensor -->
+            <?php 
+                $co_val = (float)($latest_sensor['co'] ?? 0);
+                $co_str = (string)($latest_sensor['co'] ?? '');
+                $co_bg = 'background: linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95));';
+                $co_icon = '<i class="fas fa-check-circle"></i> ' . htmlspecialchars($co_val) . ' ppm (Aman)';
+                $co_pulse = '';
+                if ($co_val > 50 || $co_str === 'Tinggi' || $co_str === 'Bahaya') {
+                    $co_bg = 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));';
+                    $co_icon = '<i class="fas fa-exclamation-triangle"></i> ' . htmlspecialchars($co_val) . ' ppm (Bahaya)';
+                    $co_pulse = 'pulse-animation';
+                } else if ($co_val > 25 || $co_str === 'Sedang' || $co_str === 'Waspada') {
+                    $co_bg = 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));';
+                    $co_icon = '<i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($co_val) . ' ppm (Waspada)';
+                }
+            ?>
+            <div class="box co-box <?= $co_pulse ?>" id="co-box" style="<?= $co_bg ?>">
+                <i class="fas fa-industry"></i>
+                <div class="sensor-label">Gas CO</div>
+                <b id="co"><?= $co_icon ?></b>
             </div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-tree" style="color: #0083b0;"></i>
-            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - 4 sensor utama untuk deteksi dini kebakaran hutan/lahan.</span>
+            <span style="color: #1e3c72; font-size: 13px;"><strong>Monitoring Outdoor</strong> - Sensor utama & simulasi untuk deteksi dini kebakaran hutan/lahan.</span>
         </div>
     </div>
 
@@ -1057,11 +1060,28 @@ function updateUI(rawRealData) {
     document.getElementById("ip").innerHTML = data.ip || '-';
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
     
-    // Update Sensor Daya
-    document.getElementById("daya").innerHTML = `${data.daya} W`;
-    
-    // Update Suhu
-    document.getElementById("suhu").innerHTML = `${data.suhu} °C`;
+    // Update Sensor Cards (7 Sensor)
+    var teg = document.getElementById("tegangan");
+    if (teg) teg.innerHTML = `${data.tegangan || 0} V`;
+    var arus = document.getElementById("arus");
+    if (arus) arus.innerHTML = `${data.arus || 0} A`;
+    var daya = document.getElementById("daya");
+    if (daya) daya.innerHTML = `${data.daya || 0} W`;
+
+    var arahIcon = {
+        'Utara': 'up', 'Selatan': 'down', 'Timur': 'right', 'Barat': 'left',
+        'Timur Laut': 'up-right', 'Barat Daya': 'down-left', 'Tenggara': 'down-right', 'Barat Laut': 'up-left'
+    };
+    var arahValue = data.arah || 'Timur';
+    var arahElem = document.getElementById("arah");
+    if (arahElem) arahElem.innerHTML = `<i class="fas fa-arrow-${arahIcon[arahValue] || 'right'}"></i> ${arahValue}`;
+    var anginElem = document.getElementById("kecepatan_angin");
+    if (anginElem) anginElem.innerHTML = `${data.angin || 0} m/s <i class="fas fa-wind"></i>`;
+
+    var suhuElem = document.getElementById("suhu");
+    if (suhuElem) suhuElem.innerHTML = `${data.suhu || 0} °C <i class="fas fa-thermometer-half"></i>`;
+    var humiElem = document.getElementById("kelembapan");
+    if (humiElem) humiElem.innerHTML = `${data.kelembapan || 0} % <i class="fas fa-tint"></i>`;
     
     // Update Asap status
     var asapElement = document.getElementById("asap");
@@ -1085,9 +1105,31 @@ function updateUI(rawRealData) {
             asapBox.style.background = "linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95))";
         }
     }
+
+    // Update Gas CO status
+    var coElement = document.getElementById("co");
+    var coBox = document.getElementById('co-box');
+    if (coElement && coBox) {
+        var coValue = parseFloat(data.co) || 0;
+        var coRawStr = String(data.co || '');
+        if (coValue > 50 || coRawStr === "Tinggi" || coRawStr === "Bahaya") {
+            coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Bahaya)`;
+            coElement.className = 'status-bahaya';
+            coBox.classList.add('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (coValue > 25 || coRawStr === "Sedang" || coRawStr === "Waspada") {
+            coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
+            coElement.className = 'status-waspada';
+            coBox.classList.remove('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+        } else {
+            coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Aman)`;
+            coElement.className = 'status-aman';
+            coBox.classList.remove('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95))";
+        }
+    }
     
-    // Update Kelembapan & Suhu Lokasi
-    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
     if (data.suhu !== undefined) {
         currentSuhu = `${data.suhu} °C`;
         document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
