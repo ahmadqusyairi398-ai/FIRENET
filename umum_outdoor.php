@@ -948,6 +948,9 @@ function getDummyDataForLocation(locId, realData) {
 function flyToLocation(lat, lng, id) {
     var prevId = activeSelectedLocationId;
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
+    if (dangerZone) {
+        dangerZone.setLatLng([lat, lng]);
+    }
     if (prevId !== id && typeof fetchDataOutdoor === 'function') {
         fetchDataOutdoor();
     }
@@ -979,21 +982,44 @@ function flyToLocation(lat, lng, id) {
 }
 
 // ================= FUNGSI UPDATE LOCATION STATUS =================
-function updateLocationStatus(isDanger, lat, lng) {
+function updateLocationStatus(activeData, lat, lng) {
     var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
 
+    var asapVal = activeData ? activeData.asap : 'Normal';
+    var coVal = activeData ? (parseFloat(activeData.co) || 0) : 0;
+    var isDanger = (asapVal === "Tinggi" || asapVal === "Bahaya" || coVal > 50 || (activeData && activeData.isDanger));
+    var isWaspada = (!isDanger && (asapVal === "Sedang" || asapVal === "Waspada" || coVal > 25));
+
     if (isDanger) {
-        dangerZone.setStyle({ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.3 });
+        if (dangerZone) {
+            dangerZone.setStyle({ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.3 });
+        }
         document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
-        sensorMarker.setIcon(dangerIcon);
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(dangerIcon);
+        }
+    } else if (isWaspada) {
+        if (dangerZone) {
+            dangerZone.setStyle({ color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.2 });
+        }
+        document.getElementById('location-status').innerHTML = '⚠️ WASPADA - Indikasi Asap/Gas';
+        document.getElementById('location-status').style.color = '#f59e0b';
+        document.getElementById('zone').innerHTML = 'Zona Oranye (Waspada)';
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(safeIcon);
+        }
     } else {
-        dangerZone.setStyle({ color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1 });
+        if (dangerZone) {
+            dangerZone.setStyle({ color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1 });
+        }
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Outdoor (Area Terbuka)';
-        sensorMarker.setIcon(safeIcon);
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(safeIcon);
+        }
     }
 }
 
@@ -1037,20 +1063,21 @@ function updateUI(rawRealData) {
         document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
     }
     
-    // Update Peta (Zona Merah / Hijau)
-    var isDanger = data.isDanger || data.asap === "Tinggi";
-    var lat = rawRealData.lat || fixedLat;
-    var lng = rawRealData.lng || fixedLng;
+    // Update Peta
+    var activeLoc = allLocations.find(l => l.id === activeSelectedLocationId);
+    var curLat = activeLoc ? activeLoc.lat : (rawRealData.lat || fixedLat);
+    var curLng = activeLoc ? activeLoc.lng : (rawRealData.lng || fixedLng);
     
-    sensorMarker.setLatLng([lat, lng]);
-    dangerZone.setLatLng([lat, lng]);
-    
-    if (activeSelectedLocationId === 1) {
-        document.getElementById('coordinates').innerHTML = `${lat}, ${lng}`;
-        map.panTo(new L.LatLng(lat, lng));
+    if (dangerZone) {
+        dangerZone.setLatLng([curLat, curLng]);
+    }
+    if (activeSelectedLocationId === 1 && sensorMarker && rawRealData.lat && rawRealData.lng) {
+        sensorMarker.setLatLng([rawRealData.lat, rawRealData.lng]);
+        document.getElementById('coordinates').innerHTML = `${rawRealData.lat}, ${rawRealData.lng}`;
+        map.panTo(new L.LatLng(rawRealData.lat, rawRealData.lng));
     }
     
-    updateLocationStatus(isDanger, lat, lng);
+    updateLocationStatus(data, curLat, curLng);
     
     // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;

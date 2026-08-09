@@ -1315,6 +1315,9 @@ function flyToLocation(lat, lng, id) {
     try {
         localStorage.setItem('activeLocationId', id);
     } catch(e) {}
+    if (dangerZone) {
+        dangerZone.setLatLng([lat, lng]);
+    }
 
     if (prevId !== id) {
         switchLocationChartData(id);
@@ -1351,63 +1354,58 @@ function flyToLocation(lat, lng, id) {
 }
 
 // ================= FUNGSI UPDATE LOCATION STATUS =================
-function updateLocationStatus(isDanger, lat, lng) {
-    // Ambil data lokasi utama (ID 1) dari array allLocations untuk mendapatkan nama & ID alatnya
-    var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
+function updateLocationStatus(activeData, lat, lng) {
+    var currentLoc = allLocations.find(l => l.id === activeSelectedLocationId) || { nama_lokasi: 'Lokasi Alat', id_alat: 'OUT-001' };
+
+    var asapVal = activeData ? activeData.asap : 'Normal';
+    var coVal = activeData ? (parseFloat(activeData.co) || 0) : 0;
+    var isDanger = (asapVal === "Tinggi" || asapVal === "Bahaya" || coVal > 50 || (activeData && activeData.isDanger));
+    var isWaspada = (!isDanger && (asapVal === "Sedang" || asapVal === "Waspada" || coVal > 25));
 
     if (isDanger) {
-        dangerZone.setStyle({ 
-            color: '#dc2626', 
-            fillColor: '#dc2626', 
-            fillOpacity: 0.3 
-        });
+        if (dangerZone) {
+            dangerZone.setStyle({ 
+                color: '#dc2626', 
+                fillColor: '#dc2626', 
+                fillOpacity: 0.3 
+            });
+        }
         document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
         
-        sensorMarker.setIcon(dangerIcon);
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(dangerIcon);
+        }
+    } else if (isWaspada) {
+        if (dangerZone) {
+            dangerZone.setStyle({ 
+                color: '#f59e0b', 
+                fillColor: '#f59e0b', 
+                fillOpacity: 0.2 
+            });
+        }
+        document.getElementById('location-status').innerHTML = '⚠️ WASPADA - Indikasi Asap/Gas';
+        document.getElementById('location-status').style.color = '#f59e0b';
+        document.getElementById('zone').innerHTML = 'Zona Oranye (Waspada)';
         
-        // Format popup diubah agar mirip seperti Gambar 1 (Nama Tempat, ID, dan Koordinat)
-        sensorMarker.bindPopup(`
-            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
-                <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 20px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 700; font-size: 14px; color: #dc2626;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #dc2626; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span> (BAHAYA!)</div>
-                <div style="font-size: 12px; background: rgba(220,38,38,0.1); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
-                    <i class="fas fa-globe"></i> ${lat}, ${lng}
-                </div>
-            </div>
-        `);
-        
-        if (activeSelectedLocationId === 1) {
-            sensorMarker.openPopup();
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(safeIcon);
         }
     } else {
-        dangerZone.setStyle({ 
-            color: '#28a745', 
-            fillColor: '#28a745', 
-            fillOpacity: 0.1 
-        });
+        if (dangerZone) {
+            dangerZone.setStyle({ 
+                color: '#28a745', 
+                fillColor: '#28a745', 
+                fillOpacity: 0.1 
+            });
+        }
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Hijau (Aman)';
         
-        sensorMarker.setIcon(safeIcon);
-        
-        // Format popup normal (aman) juga disamakan strukturnya
-        sensorMarker.bindPopup(`
-            <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 4px;">
-                <i class="fas fa-map-marker-alt" style="color: #e85d04; font-size: 20px; margin-bottom: 5px;"></i>
-                <div style="font-weight: 700; font-size: 14px; color: #1e3c72;">${mainLoc.nama_lokasi}</div>
-                <div style="font-size: 12px; color: #e85d04; font-weight: 600; margin-top: 2px;">ID: ${mainLoc.id_alat} &nbsp;|&nbsp; <i class="fas fa-temperature-high" style="color:#ff6b6b;"></i> Suhu: <span class="loc-suhu-val">${currentSuhu}</span></div>
-                <div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 8px; margin-top: 6px; color: #333;">
-                    <i class="fas fa-globe"></i> ${lat}, ${lng}
-                </div>
-            </div>
-        `);
-        
-        if (activeSelectedLocationId === 1) {
-            sensorMarker.openPopup();
+        if (activeSelectedLocationId === 1 && sensorMarker) {
+            sensorMarker.setIcon(safeIcon);
         }
     }
 }
@@ -1607,18 +1605,21 @@ function fetchDataFromDB() {
             updateSensorDisplayCards(activeData);
 
             // 3. Update Peta & Koordinat
-            if(data.lat && data.lng) {
-                if (activeSelectedLocationId === 1) {
-                    document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
-                    sensorMarker.setLatLng([data.lat, data.lng]);
-                    dangerZone.setLatLng([data.lat, data.lng]);
-                    map.panTo(new L.LatLng(data.lat, data.lng));
-                }
+            var activeLoc = allLocations.find(l => l.id === activeSelectedLocationId);
+            var curLat = activeLoc ? activeLoc.lat : (data.lat || fixedLat);
+            var curLng = activeLoc ? activeLoc.lng : (data.lng || fixedLng);
+
+            if (dangerZone) {
+                dangerZone.setLatLng([curLat, curLng]);
+            }
+            if (activeSelectedLocationId === 1 && sensorMarker && data.lat && data.lng) {
+                sensorMarker.setLatLng([data.lat, data.lng]);
+                document.getElementById('coordinates').innerHTML = `${data.lat}, ${data.lng}`;
+                map.panTo(new L.LatLng(data.lat, data.lng));
             }
 
-            // 4. Deteksi Bahaya
-            var isDanger = (activeData.asap === "Tinggi" || parseFloat(activeData.co) > 50 || activeData.isDanger);
-            updateLocationStatus(isDanger, data.lat, data.lng);
+            // 4. Deteksi Bahaya untuk lokasi yang sedang aktif
+            updateLocationStatus(activeData, curLat, curLng);
 
             // 5. Update Grafik dengan data lokasi aktif
             var todayDateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
