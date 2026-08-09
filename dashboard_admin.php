@@ -141,7 +141,7 @@ if ($conn) {
     $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 20) Var1 ORDER BY timestamp ASC");
     if ($q_chart) {
         while ($row = mysqli_fetch_assoc($q_chart)) {
-            $chart_labels[] = date('H:i:s', strtotime($row['timestamp']));
+            $chart_labels[] = date('d/m/Y H:i:s', strtotime($row['timestamp']));
             $chart_tegangan[] = (float)($row['tegangan'] ?? 0);
             $chart_arus[] = (float)($row['arus'] ?? 0);
             $chart_daya[] = (float)($row['daya'] ?? 0);
@@ -1460,7 +1460,7 @@ function switchLocationChartData(id) {
 
         for (var i = 10; i >= 0; i--) {
             var t = new Date(now.getTime() - i * 15000); // 15 detik per siklus
-            var tStr = t.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            var tStr = t.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + t.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             labels.push(tStr);
 
             var stepIndex = Math.floor(t.getTime() / 15000);
@@ -1529,6 +1529,10 @@ const myChart = new Chart(ctx, {
                 mode: 'index', 
                 intersect: false,
                 callbacks: {
+                    title: function(tooltipItems) {
+                        let rawTitle = tooltipItems[0].label || '';
+                        return '📅 ' + rawTitle;
+                    },
                     label: function(context) {
                         let label = context.dataset.label || '';
                         let value = context.raw;
@@ -1553,7 +1557,17 @@ const myChart = new Chart(ctx, {
             }, 
             x: { 
                 grid: { display: false }, 
-                title: { display: true, text: 'Waktu' } 
+                title: { display: true, text: 'Waktu' },
+                ticks: {
+                    callback: function(val, index) {
+                        let label = this.getLabelForValue(val) || '';
+                        if (typeof label === 'string' && label.includes(' ')) {
+                            let parts = label.split(' ');
+                            return parts[1] || label;
+                        }
+                        return label;
+                    }
+                }
             } 
         } 
     } 
@@ -1607,8 +1621,9 @@ function fetchDataFromDB() {
             updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 5. Update Grafik dengan data lokasi aktif
-            var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            dataChart.labels.push(chartTimeStr);
+            var todayDateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            var labelWithDate = data.waktu ? (todayDateStr + ' ' + data.waktu) : new Date().toLocaleString('id-ID');
+            dataChart.labels.push(labelWithDate);
             dataChart.datasets[0].data.push(parseFloat(activeData.tegangan) || 0);
             dataChart.datasets[1].data.push(parseFloat(activeData.arus) || 0);
             dataChart.datasets[2].data.push(parseFloat(activeData.daya) || 0);

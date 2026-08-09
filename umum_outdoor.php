@@ -84,7 +84,7 @@ if ($conn) {
     $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 20) Var1 ORDER BY timestamp ASC");
     if ($q_chart) {
         while ($row = mysqli_fetch_assoc($q_chart)) {
-            $chart_labels[] = date('H:i:s', strtotime($row['timestamp']));
+            $chart_labels[] = date('d/m/Y H:i:s', strtotime($row['timestamp']));
             $chart_daya[] = (float)($row['daya'] ?? 0);
             $chart_suhu[] = (float)($row['suhu'] ?? 0);
             $chart_kelembapan[] = (float)($row['kelembapan'] ?? 0);
@@ -1054,7 +1054,8 @@ function updateUI(rawRealData) {
     
     // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;
-    var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    var todayDateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    var chartTimeStr = todayDateStr + ' ' + new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     dataChart.labels.push(chartTimeStr);
     dataChart.datasets[0].data.push(parseFloat(data.daya));
     dataChart.datasets[1].data.push(parseFloat(data.suhu));
@@ -1135,6 +1136,10 @@ const myChart = new Chart(ctx, {
                 mode: 'index', 
                 intersect: false,
                 callbacks: {
+                    title: function(tooltipItems) {
+                        let rawTitle = tooltipItems[0].label || '';
+                        return '📅 ' + rawTitle;
+                    },
                     label: function(context) {
                         let label = context.dataset.label || '';
                         let value = context.raw;
@@ -1159,7 +1164,17 @@ const myChart = new Chart(ctx, {
             }, 
             x: { 
                 grid: { display: false }, 
-                title: { display: true, text: 'Waktu' } 
+                title: { display: true, text: 'Waktu' },
+                ticks: {
+                    callback: function(val, index) {
+                        let label = this.getLabelForValue(val) || '';
+                        if (typeof label === 'string' && label.includes(' ')) {
+                            let parts = label.split(' ');
+                            return parts[1] || label;
+                        }
+                        return label;
+                    }
+                }
             } 
         } 
     } 
