@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 session_start();
 
 // Jika tipe dashboard adalah indoor, alihkan ke chart_indoor.php

@@ -18,15 +18,18 @@ $raw_asap = $data_sensor['asap'] ?? 0;
 $status_asap = "Normal";
 
 if (is_numeric($raw_asap)) {
-    // JIKA Kolom 'asap' berupa ANGKA (Threshold bisa Anda ubah sesuai kebutuhan, misal > 50 atau > 100)
-    $threshold = 50; 
-    if ((float)$raw_asap > $threshold) {
+    $f_asap = (float)$raw_asap;
+    if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) {
         $status_asap = "Tinggi";
+    } else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) {
+        $status_asap = "Sedang";
     }
 } else {
-    // JIKA Kolom 'asap' berupa TEKS STRING (misal 'Tinggi' atau 'Normal')
-    if (strcasecmp(trim($raw_asap), 'Tinggi') === 0) {
+    $str_asap = trim((string)$raw_asap);
+    if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) {
         $status_asap = "Tinggi";
+    } else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) {
+        $status_asap = "Sedang";
     }
 }
 

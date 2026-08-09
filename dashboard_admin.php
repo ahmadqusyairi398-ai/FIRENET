@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 // Mulai session untuk user (simulasi login)
 session_start();
 
@@ -42,11 +43,50 @@ if ($conn) {
     $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
     if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
         $s = mysqli_fetch_assoc($q_sensor);
-        $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
+        $raw_asap = $s['asap'] ?? 'Normal';
+        if (is_numeric($raw_asap)) {
+            $f_asap = (float)$raw_asap;
+            if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) {
+                $asap_val = "Tinggi";
+            } else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) {
+                $asap_val = "Sedang";
+            } else {
+                $asap_val = "Normal";
+            }
+        } else {
+            $str_asap = trim((string)$raw_asap);
+            if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) {
+                $asap_val = "Tinggi";
+            } else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) {
+                $asap_val = "Sedang";
+            } else {
+                $asap_val = "Normal";
+            }
+        }
+
         $co_val = isset($s['co']) ? (float)$s['co'] : 0;
+        $co_status = "Normal";
+        if (is_numeric($s['co'] ?? null)) {
+            if ($co_val > 50) {
+                $co_status = "Tinggi";
+            } else if ($co_val > 35) {
+                $co_status = "Sedang";
+            } else {
+                $co_status = "Normal";
+            }
+        } else if (isset($s['co'])) {
+            $str_co = trim((string)$s['co']);
+            if (strcasecmp($str_co, 'Tinggi') === 0 || strcasecmp($str_co, 'Bahaya') === 0) {
+                $co_status = "Tinggi";
+            } else if (strcasecmp($str_co, 'Sedang') === 0 || strcasecmp($str_co, 'Waspada') === 0) {
+                $co_status = "Sedang";
+            } else {
+                $co_status = "Normal";
+            }
+        }
         
         $latest_sensor = [
-            'waktu' => date('H:i:s', strtotime($s['timestamp'])),
+            'waktu' => date('H:i:s'),
             'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
             'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
             'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
@@ -56,6 +96,7 @@ if ($conn) {
             'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
             'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
             'co' => $co_val,
+            'co_status' => $co_status,
             'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
             'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
             'status' => 'Online'
@@ -383,6 +424,7 @@ body::before {
 }
 .pulse-animation { animation: pulse 1s ease-in-out infinite; }
 .status-aman { color: #28a745; font-weight: bold; }
+.status-waspada { color: #f59e0b; font-weight: bold; }
 .status-bahaya { color: #dc3545; font-weight: bold; animation: blink 1s infinite; }
 @keyframes blink {
     0%, 100% { opacity: 1; }
@@ -632,12 +674,14 @@ canvas {
             <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin"><?= htmlspecialchars($latest_sensor['angin']) ?> m/s <i class="fas fa-wind"></i></b></div>
             
             <!-- Asap Sensor -->
-            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>">
+            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
                 <i class="fas fa-smog"></i>
                 <div class="sensor-label">Asap</div>
                 <b id="asap">
                     <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
                         <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
+                    <?php elseif ($latest_sensor['asap'] === 'Sedang'): ?>
+                        <i class="fas fa-exclamation-circle"></i> Sedang (Waspada)
                     <?php else: ?>
                         <i class="fas fa-check"></i> Normal
                     <?php endif; ?>
@@ -649,7 +693,19 @@ canvas {
             <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?> % <i class="fas fa-tint"></i></b></div>
             
             <!-- Gas Sensor -->
-            <div class="box co-box" id="co-box"><i class="fas fa-industry"></i><div class="sensor-label">Gas CO</div><b id="co"><?= htmlspecialchars($latest_sensor['co']) ?> ppm <i class="fas fa-industry"></i></b></div>
+            <div class="box co-box <?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'pulse-animation' : '' ?>" id="co-box" style="<?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ((($latest_sensor['co_status'] ?? '') === 'Sedang') ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
+                <i class="fas fa-industry"></i>
+                <div class="sensor-label">Gas CO</div>
+                <b id="co">
+                    <?php if (($latest_sensor['co_status'] ?? '') === 'Tinggi'): ?>
+                        <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Tinggi / Berbahaya)
+                    <?php elseif (($latest_sensor['co_status'] ?? '') === 'Sedang'): ?>
+                        <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Sedang / Waspada)
+                    <?php else: ?>
+                        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Normal)
+                    <?php endif; ?>
+                </b>
+            </div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-info-circle" style="color: #0083b0;"></i>
@@ -1073,10 +1129,11 @@ function fetchDataFromDB() {
             }
 
             // 1. Update status header
+            var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
             document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
             document.getElementById("ip").innerHTML = data.ip || '-';
-            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
+            document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
 
             // 2. Update sensor panel surya
             document.getElementById("tegangan").innerHTML = `${data.tegangan || 0} V`;
@@ -1101,11 +1158,25 @@ function fetchDataFromDB() {
             // 4. Update status Asap
             var asapElement = document.getElementById("asap");
             var asapBox = document.getElementById('asap-box');
-            if (data.asap === "Tinggi") {
+            var asapVal = data.asap;
+            if (typeof asapVal === 'number' || (!isNaN(asapVal) && asapVal !== null && asapVal !== '')) {
+                var numAsap = parseFloat(asapVal);
+                if (!isNaN(numAsap)) {
+                    if (numAsap > (numAsap > 1 ? 50 : 0.5)) asapVal = "Tinggi";
+                    else if (numAsap > (numAsap > 1 ? 25 : 0.25)) asapVal = "Sedang";
+                    else asapVal = "Normal";
+                }
+            }
+            if (asapVal === "Tinggi" || asapVal === "Bahaya") {
                 asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
                 asapElement.className = 'status-bahaya';
                 asapBox.classList.add('pulse-animation');
                 asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+            } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+                asapElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+                asapElement.className = 'status-waspada';
+                asapBox.classList.remove('pulse-animation');
+                asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
             } else {
                 asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
                 asapElement.className = 'status-aman';
@@ -1116,19 +1187,34 @@ function fetchDataFromDB() {
             // 5. Update CO, Suhu, Kelembapan
             var coElement = document.getElementById("co");
             var coBox = document.getElementById('co-box');
-            var coValue = parseFloat(data.co) || 0;
-            if (coValue > 50) {
-                coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (BAHAYA!)`;
+            var coRaw = data.co;
+            var coValue = parseFloat(coRaw) || 0;
+            var coStatus = "Normal";
+
+            if (typeof coRaw === 'string' && (coRaw === 'Tinggi' || coRaw === 'Bahaya')) {
+                coStatus = "Tinggi";
+            } else if (typeof coRaw === 'string' && (coRaw === 'Sedang' || coRaw === 'Waspada')) {
+                coStatus = "Sedang";
+            } else if (coValue > 50) {
+                coStatus = "Tinggi";
+            } else if (coValue > 35) {
+                coStatus = "Sedang";
+            } else {
+                coStatus = "Normal";
+            }
+
+            if (coStatus === "Tinggi") {
+                coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Tinggi / Berbahaya)`;
                 coElement.className = 'status-bahaya';
                 coBox.classList.add('pulse-animation');
                 coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-            } else if (coValue > 35) {
-                coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
-                coElement.className = 'status-bahaya';
+            } else if (coStatus === "Sedang") {
+                coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Sedang / Waspada)`;
+                coElement.className = 'status-waspada';
                 coBox.classList.remove('pulse-animation');
-                coBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+                coBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
             } else {
-                coElement.innerHTML = `${coValue} ppm <i class="fas fa-industry"></i>`;
+                coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Normal)`;
                 coElement.className = 'status-aman';
                 coBox.classList.remove('pulse-animation');
                 coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
@@ -1158,7 +1244,8 @@ function fetchDataFromDB() {
             updateLocationStatus(isDanger, data.lat, data.lng);
 
             // 8. Update Grafik
-            dataChart.labels.push(data.waktu || new Date().toLocaleTimeString());
+            var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            dataChart.labels.push(chartTimeStr);
             dataChart.datasets[0].data.push(parseFloat(data.tegangan) || 0);
             dataChart.datasets[1].data.push(parseFloat(data.arus) || 0);
             dataChart.datasets[2].data.push(parseFloat(data.daya) || 0);

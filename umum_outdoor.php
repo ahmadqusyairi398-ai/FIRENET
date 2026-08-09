@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 session_start();
 
 // Set tipe dashboard sebagai outdoor
@@ -52,7 +53,7 @@ if ($conn) {
         $co_val = isset($s['co']) ? (float)$s['co'] : 0;
         
         $latest_sensor = [
-            'waktu' => date('H:i:s', strtotime($s['timestamp'])),
+            'waktu' => date('H:i:s'),
             'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
             'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
             'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
@@ -1088,10 +1089,11 @@ function fetchDataOutdoor() {
 // ================= FUNGSI UPDATE UI =================
 function updateUI(data) {
     // Update status node di header
+    var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status}`;
     document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
     document.getElementById("ip").innerHTML = data.ip;
-    document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
+    document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
     
     // Update Sensor Daya
     document.getElementById("daya").innerHTML = `${data.daya} W`;
@@ -1140,7 +1142,8 @@ function updateUI(data) {
     // Update Chart Grafik
     var asapValue = data.asap === "Tinggi" ? 1 : 0;
     
-    dataChart.labels.push(data.waktu);
+    var chartTimeStr = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    dataChart.labels.push(chartTimeStr);
     dataChart.datasets[0].data.push(parseFloat(data.daya));
     dataChart.datasets[1].data.push(parseFloat(data.suhu));
     dataChart.datasets[2].data.push(parseFloat(data.kelembapan));

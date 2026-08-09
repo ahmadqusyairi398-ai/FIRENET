@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Makassar');
 // Mulai session untuk user (simulasi login)
 session_start();
 
@@ -912,7 +913,7 @@ function updateDataTable(data) {
     if (dataTable) {
         dataTable.clear();
         if (rows.length > 0) dataTable.rows.add(rows);
-        dataTable.draw();
+        dataTable.draw(false);
     }
 }
 
@@ -1029,6 +1030,49 @@ $(document).ready(function() {
         });
         console.log('Tidak ada data yang ditemukan di database.');
     }
+
+    // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database indoor
+    function fetchTableDataRealtime() {
+        fetch('get_table_data.php?device=indoor')
+            .then(response => response.json())
+            .then(data => {
+                if (!Array.isArray(data)) return;
+                
+                const startDate = document.getElementById('start_date').value;
+                const endDate = document.getElementById('end_date').value;
+                
+                let newData = data.map((item, index) => {
+                    let formattedDate = item.tanggal_waktu || '-';
+                    let dateOnly = formattedDate !== '-' ? formattedDate.split(' ')[0] : '';
+                    return {
+                        id: item.id,
+                        no: index + 1,
+                        tanggal_waktu: formattedDate,
+                        tanggal: dateOnly,
+                        api: item.api_raw !== undefined ? parseFloat(item.api_raw).toFixed(2) : '0',
+                        asap: item.asap_raw !== undefined ? parseFloat(item.asap_raw).toFixed(2) : '0',
+                        suhu: item.suhu,
+                        kelembapan: item.kelembapan,
+                        tegangan: item.tegangan,
+                        arus: item.arus,
+                        rssi: item.rssi
+                    };
+                });
+
+                sensorData = newData;
+                
+                if (startDate || endDate) {
+                    applyFilter();
+                } else {
+                    currentData = [...sensorData];
+                    updateDataTable(currentData);
+                }
+            })
+            .catch(err => console.error("Error updating indoor table data:", err));
+    }
+
+    // Jalankan pembaruan tabel indoor otomatis setiap 3 detik
+    setInterval(fetchTableDataRealtime, 3000);
 });
 </script>
 
