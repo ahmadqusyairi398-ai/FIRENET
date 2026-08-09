@@ -45,7 +45,7 @@ try {
     $kecepatan_angin = floatval($input['angin'] ?? ($input['kecepatan_angin'] ?? 0));
     $arah_angin = $input['arah'] ?? ($input['arah_angin'] ?? 'Utara');
     $co = floatval($input['co'] ?? 0);
-    $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 1;
+    $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 0;
     $waktu = date('Y-m-d H:i:s');
 
     // 3. Tentukan nama kolom tanggal/waktu yang tersedia di tabel
