@@ -617,16 +617,24 @@ canvas {
             </div>
             
             <!-- Sensor Asap -->
-            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : '' ?>">
+            <?php 
+                $asap_status = $latest_sensor['asap'] ?? 'Normal';
+                $asap_bg = 'background: linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95));';
+                $asap_icon = '<i class="fas fa-check-circle"></i> Normal (Aman)';
+                $asap_pulse = '';
+                if ($asap_status === 'Tinggi' || $asap_status === 'Bahaya') {
+                    $asap_bg = 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));';
+                    $asap_icon = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Bahaya)';
+                    $asap_pulse = 'pulse-animation';
+                } else if ($asap_status === 'Sedang' || $asap_status === 'Waspada') {
+                    $asap_bg = 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));';
+                    $asap_icon = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+                }
+            ?>
+            <div class="box asap-box <?= $asap_pulse ?>" id="asap-box" style="<?= $asap_bg ?>">
                 <i class="fas fa-smog"></i>
                 <div class="sensor-label">Asap</div>
-                <b id="asap">
-                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
-                        <i class="fas fa-exclamation-triangle"></i> Tinggi
-                    <?php else: ?>
-                        <i class="fas fa-check"></i> Normal
-                    <?php endif; ?>
-                </b>
+                <b id="asap"><?= $asap_icon ?></b>
             </div>
             
             <!-- Sensor Kelembapan -->
@@ -1044,16 +1052,24 @@ function updateUI(rawRealData) {
     // Update Asap status
     var asapElement = document.getElementById("asap");
     var asapBox = document.getElementById('asap-box');
-    if (data.asap === "Tinggi") {
-        asapElement.innerHTML = '⚠️ Tinggi';
-        asapElement.className = 'status-bahaya';
-        asapBox.classList.add('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
-    } else {
-        asapElement.innerHTML = '✅ Normal';
-        asapElement.className = 'status-aman';
-        asapBox.classList.remove('pulse-animation');
-        asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+    if (asapElement && asapBox) {
+        var asapVal = data.asap;
+        if (asapVal === "Tinggi" || asapVal === "Bahaya") {
+            asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Bahaya)';
+            asapElement.className = 'status-bahaya';
+            asapBox.classList.add('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+            asapElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+            asapElement.className = 'status-waspada';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
+        } else {
+            asapElement.innerHTML = '<i class="fas fa-check-circle"></i> Normal (Aman)';
+            asapElement.className = 'status-aman';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95))";
+        }
     }
     
     // Update Kelembapan & Suhu Lokasi

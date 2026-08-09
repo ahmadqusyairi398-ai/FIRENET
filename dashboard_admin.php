@@ -826,18 +826,24 @@ canvas {
             <div class="box angin-box"><i class="fas fa-wind"></i><div class="sensor-label">Kecepatan Angin</div><b id="kecepatan_angin"><?= htmlspecialchars($latest_sensor['angin']) ?> m/s <i class="fas fa-wind"></i></b></div>
             
             <!-- Asap Sensor -->
-            <div class="box asap-box <?= ($latest_sensor['asap'] === 'Tinggi') ? 'pulse-animation' : '' ?>" id="asap-box" style="<?= ($latest_sensor['asap'] === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ($latest_sensor['asap'] === 'Sedang' ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
+            <?php 
+                $asap_status = $latest_sensor['asap'] ?? 'Normal';
+                $asap_bg = 'background: linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95));';
+                $asap_icon = '<i class="fas fa-check-circle"></i> Normal (Aman)';
+                $asap_pulse = '';
+                if ($asap_status === 'Tinggi' || $asap_status === 'Bahaya') {
+                    $asap_bg = 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));';
+                    $asap_icon = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Bahaya)';
+                    $asap_pulse = 'pulse-animation';
+                } else if ($asap_status === 'Sedang' || $asap_status === 'Waspada') {
+                    $asap_bg = 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));';
+                    $asap_icon = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+                }
+            ?>
+            <div class="box asap-box <?= $asap_pulse ?>" id="asap-box" style="<?= $asap_bg ?>">
                 <i class="fas fa-smog"></i>
                 <div class="sensor-label">Asap</div>
-                <b id="asap">
-                    <?php if ($latest_sensor['asap'] === 'Tinggi'): ?>
-                        <i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)
-                    <?php elseif ($latest_sensor['asap'] === 'Sedang'): ?>
-                        <i class="fas fa-exclamation-circle"></i> Sedang (Waspada)
-                    <?php else: ?>
-                        <i class="fas fa-check"></i> Normal
-                    <?php endif; ?>
-                </b>
+                <b id="asap"><?= $asap_icon ?></b>
             </div>
             
             <!-- Environment Sensors -->
@@ -845,18 +851,25 @@ canvas {
             <div class="box"><i class="fas fa-tint"></i><div class="sensor-label">Kelembapan</div><b id="kelembapan"><?= htmlspecialchars($latest_sensor['kelembapan']) ?> % <i class="fas fa-tint"></i></b></div>
             
             <!-- Gas Sensor -->
-            <div class="box co-box <?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'pulse-animation' : '' ?>" id="co-box" style="<?= (($latest_sensor['co_status'] ?? '') === 'Tinggi') ? 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));' : ((($latest_sensor['co_status'] ?? '') === 'Sedang') ? 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));' : '') ?>">
+            <?php 
+                $co_val = (float)($latest_sensor['co'] ?? 0);
+                $co_str = (string)($latest_sensor['co'] ?? '');
+                $co_bg = 'background: linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95));';
+                $co_icon = '<i class="fas fa-check-circle"></i> ' . htmlspecialchars($co_val) . ' ppm (Aman)';
+                $co_pulse = '';
+                if ($co_val > 50 || $co_str === 'Tinggi' || $co_str === 'Bahaya') {
+                    $co_bg = 'background: linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95));';
+                    $co_icon = '<i class="fas fa-exclamation-triangle"></i> ' . htmlspecialchars($co_val) . ' ppm (Bahaya)';
+                    $co_pulse = 'pulse-animation';
+                } else if ($co_val > 25 || $co_str === 'Sedang' || $co_str === 'Waspada') {
+                    $co_bg = 'background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));';
+                    $co_icon = '<i class="fas fa-exclamation-circle"></i> ' . htmlspecialchars($co_val) . ' ppm (Waspada)';
+                }
+            ?>
+            <div class="box co-box <?= $co_pulse ?>" id="co-box" style="<?= $co_bg ?>">
                 <i class="fas fa-industry"></i>
                 <div class="sensor-label">Gas CO</div>
-                <b id="co">
-                    <?php if (($latest_sensor['co_status'] ?? '') === 'Tinggi'): ?>
-                        <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Tinggi / Berbahaya)
-                    <?php elseif (($latest_sensor['co_status'] ?? '') === 'Sedang'): ?>
-                        <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Sedang / Waspada)
-                    <?php else: ?>
-                        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($latest_sensor['co']) ?> ppm (Normal)
-                    <?php endif; ?>
-                </b>
+                <b id="co"><?= $co_icon ?></b>
             </div>
         </div>
         <div style="margin-top: 15px; padding: 10px; background: rgba(40, 167, 69, 0.1); border-radius: 10px; display: flex; align-items: center; gap: 10px;">
@@ -1254,15 +1267,20 @@ function updateSensorDisplayCards(displayData) {
     if (asapElement && asapBox) {
         var asapVal = displayData.asap;
         if (asapVal === "Tinggi" || asapVal === "Bahaya") {
-            asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Berbahaya)';
+            asapElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tinggi (Bahaya)';
             asapElement.className = 'status-bahaya';
             asapBox.classList.add('pulse-animation');
             asapBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (asapVal === "Sedang" || asapVal === "Waspada") {
+            asapElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> Sedang (Waspada)';
+            asapElement.className = 'status-waspada';
+            asapBox.classList.remove('pulse-animation');
+            asapBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
         } else {
-            asapElement.innerHTML = '<i class="fas fa-check"></i> Normal';
+            asapElement.innerHTML = '<i class="fas fa-check-circle"></i> Normal (Aman)';
             asapElement.className = 'status-aman';
             asapBox.classList.remove('pulse-animation');
-            asapBox.style.background = "linear-gradient(135deg, rgba(255,165,2,0.9), rgba(255,99,72,0.9))";
+            asapBox.style.background = "linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95))";
         }
     }
 
@@ -1270,16 +1288,22 @@ function updateSensorDisplayCards(displayData) {
     var coBox = document.getElementById('co-box');
     if (coElement && coBox) {
         var coValue = parseFloat(displayData.co) || 0;
-        if (coValue > 50 || displayData.co === "Tinggi") {
-            coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Tinggi / Berbahaya)`;
+        var coRawStr = String(displayData.co || '');
+        if (coValue > 50 || coRawStr === "Tinggi" || coRawStr === "Bahaya") {
+            coElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${coValue} ppm (Bahaya)`;
             coElement.className = 'status-bahaya';
             coBox.classList.add('pulse-animation');
             coBox.style.background = "linear-gradient(135deg, rgba(220,38,38,0.95), rgba(185,28,28,0.95))";
+        } else if (coValue > 25 || coRawStr === "Sedang" || coRawStr === "Waspada") {
+            coElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${coValue} ppm (Waspada)`;
+            coElement.className = 'status-waspada';
+            coBox.classList.remove('pulse-animation');
+            coBox.style.background = "linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95))";
         } else {
-            coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Normal)`;
+            coElement.innerHTML = `<i class="fas fa-check-circle"></i> ${coValue} ppm (Aman)`;
             coElement.className = 'status-aman';
             coBox.classList.remove('pulse-animation');
-            coBox.style.background = "linear-gradient(135deg, rgba(156,39,176,0.9), rgba(103,58,183,0.9))";
+            coBox.style.background = "linear-gradient(135deg, rgba(40,167,69,0.95), rgba(32,201,151,0.95))";
         }
     }
 
