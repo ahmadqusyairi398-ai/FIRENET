@@ -347,7 +347,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         }
 
-        // UPDATE INTERVAL PENGIRIMAN DATA ALAT
+        // UPDATE INTERVAL PENGIRIMAN DATA ALAT (KONSEP B: Real-Time HTTP cURL ke Node-RED)
         if (isset($_POST['update_device_interval'])) {
             $loc_id = intval($_POST['interval_location_id']);
             $new_interval = intval($_POST['interval_detik']);
@@ -361,6 +361,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $sql = "UPDATE lokasi_alat SET interval_detik = $new_interval WHERE id = $loc_id";
             if (mysqli_query($conn, $sql)) {
                 $success_message = "Interval pengiriman data alat berhasil diubah menjadi $new_interval detik!";
+
+                // Ambil id_alat dari database untuk payload
+                $qTool = mysqli_query($conn, "SELECT id_alat FROM lokasi_alat WHERE id = $loc_id LIMIT 1");
+                $id_alat_val = "OUT-001";
+                if ($qTool && $rTool = mysqli_fetch_assoc($qTool)) {
+                    $id_alat_val = !empty($rTool['id_alat']) ? $rTool['id_alat'] : 'OUT-001';
+                }
+
+                // Kirim perintah real-time (HTTP cURL) ke Node-RED (Port 1881) -> Konsep B
+                $url_nodered = "http://localhost:1881/set_interval_outdoor";
+                $payload_nodered = json_encode(array("id_alat" => $id_alat_val, "interval" => $new_interval));
+                $ch = curl_init($url_nodered);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $payload_nodered);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+                @curl_exec($ch);
+                @curl_close($ch);
             } else {
                 $error_message = "Gagal mengubah interval: " . mysqli_error($conn);
             }
