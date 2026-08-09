@@ -614,13 +614,15 @@ function togglePassword() {
     }
 }
 
-// Loading effect on submit
+// Loading effect and validation on submit
 const form = document.getElementById('loginForm');
 const submitBtn = document.getElementById('submitBtn');
 
 form.addEventListener('submit', function(e) {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
     
     if (!username || !password) {
         e.preventDefault();
@@ -631,12 +633,17 @@ form.addEventListener('submit', function(e) {
             confirmButtonColor: '#667eea',
             confirmButtonText: 'OK'
         });
+        if (!username) usernameInput.focus();
+        else passwordInput.focus();
         return;
     }
     
-    // Tampilkan loading
+    // Tampilkan loading tanpa mematikan proses submit form browser
     submitBtn.innerHTML = '<div class="loading"></div> Memproses...';
-    submitBtn.disabled = true;
+    submitBtn.style.pointerEvents = 'none';
+    setTimeout(function() {
+        submitBtn.disabled = true;
+    }, 10);
 });
 
 // Animasi input focus
@@ -651,10 +658,20 @@ document.querySelectorAll('.input-group input').forEach(input => {
     });
 });
 
-// Enter key submit
-document.getElementById('password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        form.dispatchEvent(new Event('submit'));
+// Support Tekan Enter pada input Username & Password
+['username', 'password'].forEach(id => {
+    const inputElem = document.getElementById(id);
+    if (inputElem) {
+        inputElem.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    submitBtn.click();
+                }
+            }
+        });
     }
 });
 
