@@ -543,9 +543,9 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* ========== CHART ========== */
-.chart-container { margin-top: 10px; }
+.chart-container { margin-top: 10px; max-height: 240px; }
 canvas {
-    max-height: 400px;
+    max-height: 240px;
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;

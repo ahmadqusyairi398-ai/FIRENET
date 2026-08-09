@@ -409,7 +409,7 @@ body::before {
 }
 
 canvas {
-    max-height: 450px;
+    max-height: 260px;
     width: 100%;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 10px;

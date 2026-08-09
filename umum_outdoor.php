@@ -348,19 +348,11 @@ body::before {
 .box b { display: block; font-size: 16px; margin-top: 3px; }
 .box small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; }
 
-/* Warna khusus untuk masing-masing sensor */
-.box.daya-box { 
-    background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); 
-}
-.box.suhu-box { 
-    background: linear-gradient(135deg, rgba(255, 99, 132, 0.9), rgba(255, 59, 48, 0.9)); 
-}
-.box.asap-box { 
-    background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); 
-}
-.box.kelembapan-box { 
-    background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(52, 152, 219, 0.9)); 
-}
+/* Warna khusus untuk masing-masing sensor (4 Sensor Utama) */
+.box.daya-box, .box.solar-box { background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 107, 0, 0.9)); }
+.box.suhu-box { background: linear-gradient(135deg, rgba(255, 99, 132, 0.9), rgba(255, 59, 48, 0.9)); }
+.box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); }
+.box.kelembapan-box { background: linear-gradient(135deg, rgba(78, 205, 196, 0.9), rgba(52, 152, 219, 0.9)); }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
@@ -421,9 +413,9 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* ========== CHART ========== */
-.chart-container { margin-top: 10px; }
+.chart-container { margin-top: 10px; max-height: 240px; }
 canvas {
-    max-height: 400px;
+    max-height: 240px;
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
@@ -973,6 +965,7 @@ function flyToLocation(lat, lng, id) {
         dangerZone.setLatLng([lat, lng]);
     }
     if (prevId !== id && typeof fetchDataOutdoor === 'function') {
+        scheduleNextUpdate();
         fetchDataOutdoor();
     }
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
@@ -1055,13 +1048,17 @@ function updateUI(rawRealData) {
     document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
     document.getElementById("ip").innerHTML = data.ip || '-';
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
+
+    // Update Sensor Cards (4 Sensor Utama)
+    var dayaElem = document.getElementById("daya");
+    if (dayaElem) dayaElem.innerHTML = `${data.daya || 0} W`;
+
+    var suhuElem = document.getElementById("suhu");
+    if (suhuElem) suhuElem.innerHTML = `${data.suhu || 0} °C`;
     
-    // Update Sensor Daya
-    document.getElementById("daya").innerHTML = `${data.daya} W`;
-    
-    // Update Suhu
-    document.getElementById("suhu").innerHTML = `${data.suhu} °C`;
-    
+    var humiElem = document.getElementById("kelembapan");
+    if (humiElem) humiElem.innerHTML = `${data.kelembapan || 0} %`;
+
     // Update Asap status
     var asapElement = document.getElementById("asap");
     var asapBox = document.getElementById('asap-box');
@@ -1085,8 +1082,6 @@ function updateUI(rawRealData) {
         }
     }
     
-    // Update Kelembapan & Suhu Lokasi
-    document.getElementById("kelembapan").innerHTML = `${data.kelembapan} %`;
     if (data.suhu !== undefined) {
         currentSuhu = `${data.suhu} °C`;
         document.querySelectorAll('.loc-suhu-val').forEach(el => el.innerHTML = currentSuhu);
@@ -1236,19 +1231,24 @@ const myChart = new Chart(ctx, {
     } 
 });
 
-// ================= DATA DARI DATABASE =================
+// ================= DATA DARI DATABASE (IKUTI INTERVAL ADMIN OUTDOOR) =================
+var autoUpdateTimer = null;
+var currentMainDeviceIntervalMs = 30000;
+
 function fetchDataOutdoor() {
-    fetch('api_get_data.php?device=outdoor')
+    fetch('get_latest_data.php')
     .then(response => {
         if (!response.ok) throw new Error("Gagal mengambil data dari server");
         return response.json();
     })
     .then(data => {
+        if (data.interval_detik && parseInt(data.interval_detik) >= 3) {
+            currentMainDeviceIntervalMs = parseInt(data.interval_detik) * 1000;
+        }
         updateUI(data); // Tampilkan data asli dari database
     })
     .catch(error => {
         console.warn("API tidak merespons, menggunakan data dummy/fallback:", error);
-        // Jika API error / belum dibuat, dasbor otomatis memakai data simulasi
         updateUI(generateDummyData());
     });
 }
@@ -1345,10 +1345,21 @@ function generateDummyData() {
     };
 }
 
-// ================= JALANKAN FUNGSI =================
-// Jalankan pertama kali & refresh setiap 3 detik
+function scheduleNextUpdate() {
+    if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+
+    var isMainDevice = (activeSelectedLocationId === 1 || activeSelectedLocationId === '1' || activeSelectedLocationId === 'out_1' || activeSelectedLocationId === 'out_def_1');
+    var intervalMs = isMainDevice ? currentMainDeviceIntervalMs : 15000;
+
+    autoUpdateTimer = setTimeout(function() {
+        fetchDataOutdoor();
+        scheduleNextUpdate();
+    }, intervalMs);
+}
+
+// ================= JALANKAN FUNGSI (IKUTI INTERVAL ADMIN OUTDOOR) =================
 fetchDataOutdoor();
-setInterval(fetchDataOutdoor, 3000);
+scheduleNextUpdate();
 
 // Update koordinat awal dari database
 document.getElementById('coordinates').innerHTML = `${fixedLat}, ${fixedLng}`;
