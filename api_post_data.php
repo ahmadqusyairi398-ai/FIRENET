@@ -35,6 +35,8 @@ try {
     }
 
     $asap = $input['asap'] ?? 'Normal';
+    $api = $input['api'] ?? 'Aman'; // Penangkap sensor api
+    $interval_dari_alat = isset($input['interval_dari_alat']) ? intval($input['interval_dari_alat']) : null; // Penangkap sinkronisasi interval
     $suhu = floatval($input['suhu'] ?? 0);
     $kelembapan = floatval($input['kelembapan'] ?? 0);
     $tegangan = floatval($input['tegangan'] ?? 0);
@@ -54,23 +56,49 @@ try {
     }
 
     // 4. Simpan data sensor dummy ke database MySQL
-    $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, is_dummy) 
-            VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :is_dummy)";
-    
-    $stmt = $targetPdo->prepare($sql);
-    $stmt->execute([
-        ':waktu' => $waktu,
-        ':asap' => $asap,
-        ':suhu' => $suhu,
-        ':kelembapan' => $kelembapan,
-        ':tegangan' => $tegangan,
-        ':arus' => $arus,
-        ':daya' => $daya,
-        ':kecepatan_angin' => $kecepatan_angin,
-        ':arah_angin' => $arah_angin,
-        ':co' => $co,
-        ':is_dummy' => $is_dummy
-    ]);
+    if ($device === 'indoor') {
+        // A. Update sinkronisasi interval JIKA ada kiriman dari alat
+        if ($interval_dari_alat !== null && $interval_dari_alat > 0) {
+            $sql_interval = "UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id = 1";
+            $stmt_intv = $targetPdo->prepare($sql_interval);
+            $stmt_intv->execute([':intv' => $interval_dari_alat]);
+        }
+
+        // B. Query khusus Indoor (memakai api, tanpa daya/angin/co)
+        $sql = "INSERT INTO data_sensor ($dateCol, api, asap, suhu, kelembapan, tegangan, arus, is_dummy)
+                VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :is_dummy)";
+
+        $stmt = $targetPdo->prepare($sql);
+        $stmt->execute([
+            ':waktu' => $waktu,
+            ':api' => $api,
+            ':asap' => $asap,
+            ':suhu' => $suhu,
+            ':kelembapan' => $kelembapan,
+            ':tegangan' => $tegangan,
+            ':arus' => $arus,
+            ':is_dummy' => $is_dummy
+        ]);
+    } else {
+        // Query aslinya untuk Outdoor
+        $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, is_dummy)
+                VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :is_dummy)";
+
+        $stmt = $targetPdo->prepare($sql);
+        $stmt->execute([
+            ':waktu' => $waktu,
+            ':asap' => $asap,
+            ':suhu' => $suhu,
+            ':kelembapan' => $kelembapan,
+            ':tegangan' => $tegangan,
+            ':arus' => $arus,
+            ':daya' => $daya,
+            ':kecepatan_angin' => $kecepatan_angin,
+            ':arah_angin' => $arah_angin,
+            ':co' => $co,
+            ':is_dummy' => $is_dummy
+        ]);
+    }
 
     $insertedId = $targetPdo->lastInsertId();
 
