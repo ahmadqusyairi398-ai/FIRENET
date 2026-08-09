@@ -2,8 +2,14 @@
 header('Content-Type: application/json');
 include 'koneksi.php'; // Sesuaikan dengan file koneksi Anda
 
-// 1. Ambil data sensor terbaru
-$query_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+// 1. Ambil data sensor terbaru (prioritaskan data real-time alat utama: is_dummy = 0)
+$query_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL ORDER BY timestamp DESC LIMIT 1");
+if (!$query_sensor || mysqli_num_rows($query_sensor) == 0) {
+    $query_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL ORDER BY id DESC LIMIT 1");
+}
+if (!$query_sensor || mysqli_num_rows($query_sensor) == 0) {
+    $query_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+}
 if (!$query_sensor || mysqli_num_rows($query_sensor) == 0) {
     $query_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
 }

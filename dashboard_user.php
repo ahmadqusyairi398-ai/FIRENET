@@ -55,7 +55,13 @@ $latest_sensor = [
 ];
 
 if ($conn) {
-    $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL ORDER BY timestamp DESC LIMIT 1");
+    if (!$q_sensor || mysqli_num_rows($q_sensor) == 0) {
+        $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL ORDER BY id DESC LIMIT 1");
+    }
+    if (!$q_sensor || mysqli_num_rows($q_sensor) == 0) {
+        $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    }
     if (!$q_sensor || mysqli_num_rows($q_sensor) == 0) {
         $q_sensor = @mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
     }
@@ -963,6 +969,7 @@ function flyToLocation(lat, lng, id) {
     } catch(e) {}
     if (prevId !== id) {
         scheduleNextUpdate();
+        fetchDataFromDB();
     }
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     if (locationMarkers[id]) {

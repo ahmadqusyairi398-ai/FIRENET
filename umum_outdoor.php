@@ -46,7 +46,10 @@ $latest_sensor = [
 ];
 
 if ($conn) {
-    $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL ORDER BY timestamp DESC LIMIT 1");
+    if (!$q_sensor || mysqli_num_rows($q_sensor) == 0) {
+        $q_sensor = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY timestamp DESC LIMIT 1");
+    }
     if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
         $s = mysqli_fetch_assoc($q_sensor);
         $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
@@ -943,7 +946,11 @@ function getDummyDataForLocation(locId, realData) {
 
 // ================= FUNGSI FLY TO LOCATION =================
 function flyToLocation(lat, lng, id) {
+    var prevId = activeSelectedLocationId;
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
+    if (prevId !== id && typeof fetchDataOutdoor === 'function') {
+        fetchDataOutdoor();
+    }
     map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
