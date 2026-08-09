@@ -697,7 +697,7 @@ canvas {
     <!-- ============================================================ -->
     <div class="card">
         <h3>
-            <i class="fas fa-chart-line"></i> Grafik Real Time Sensor 
+            <i class="fas fa-chart-line"></i> Grafik Sensor 
             <span id="chart-data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
                 <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
             </span>
