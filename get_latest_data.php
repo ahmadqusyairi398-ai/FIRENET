@@ -95,7 +95,7 @@ if ($is_online && $data_sensor) {
         'status'         => 'Offline',
         'lat'            => $data_lokasi['latitude'] ?? -1.20249,
         'lng'            => $data_lokasi['longitude'] ?? 116.88708,
-        'is_dummy'       => (int)($data_sensor['is_dummy'] ?? 0),
+        'is_dummy'       => 0,
         'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30)
     ];
 }
