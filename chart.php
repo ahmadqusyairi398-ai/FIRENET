@@ -439,15 +439,21 @@ canvas {
     opacity: 0.7;
 }
 
-.legend-color {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
+.legend-color, .legend-key-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
 }
 
 .legend-text {
     color: #333;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .legend-item.disabled .legend-text {
@@ -828,14 +834,14 @@ console.log('Data dari database:', rawData);
 
 // Konfigurasi sensor
 const sensorConfig = [
-    { id: 'co', label: 'Karbon Monoksida (CO)', color: '#9c27b0', unit: 'ppm', group: 'bahaya', min: 0, max: 100, yMax: 120 },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
-    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
-    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
-    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
-    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 },
-    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200 },
-    { id: 'kecepatan_angin', label: 'Kecepatan Angin', color: '#2196F3', unit: 'm/s', group: 'angin', min: 0, max: 30, yMax: 35 }
+    { id: 'co', label: 'Karbon Monoksida (CO)', color: '#9c27b0', unit: 'ppm', group: 'bahaya', min: 0, max: 100, yMax: 120, icon: 'fas fa-industry' },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100, icon: 'fas fa-smog' },
+    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70, icon: 'fas fa-temperature-high' },
+    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100, icon: 'fas fa-tint' },
+    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250, icon: 'fas fa-bolt' },
+    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10, icon: 'fas fa-charging-station' },
+    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200, icon: 'fas fa-solar-panel' },
+    { id: 'kecepatan_angin', label: 'Kecepatan Angin', color: '#2196F3', unit: 'm/s', group: 'angin', min: 0, max: 30, yMax: 35, icon: 'fas fa-wind' }
 ];
 
 let currentMode = "all";
@@ -1058,7 +1064,9 @@ function updateLegend() {
         legendItem.className = 'legend-item';
         legendItem.onclick = () => toggleDataset(idx);
         legendItem.innerHTML = `
-            <div class="legend-color" style="background: ${sensor.color}"></div>
+            <div class="legend-key-icon" style="color: ${sensor.color}; background: ${sensor.color}20; border: 1.5px solid ${sensor.color};" title="Kunci Simbol Legenda: ${sensor.label}">
+                <i class="${sensor.icon}"></i>
+            </div>
             <span class="legend-text">${sensor.label}</span>
         `;
         container.appendChild(legendItem);

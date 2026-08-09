@@ -1114,7 +1114,16 @@ const myChart = new Chart(ctx, {
         maintainAspectRatio: true, 
         animation: { duration: 500 }, 
         plugins: { 
-            legend: { position: 'top' }, 
+            legend: { 
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'line',
+                    boxWidth: 30,
+                    padding: 15,
+                    font: { size: 12, weight: '600' }
+                }
+            }, 
             tooltip: { 
                 mode: 'index', 
                 intersect: false,
