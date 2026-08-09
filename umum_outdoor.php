@@ -715,7 +715,7 @@ canvas {
             <div class="location-info-item">
                 <i class="fas fa-tree"></i>
                 <span class="label">Zona:</span>
-                <span class="value" id="zone">Zona Outdoor (Area Terbuka)</span>
+                <span class="value" id="zone">Zona Monitoring</span>
             </div>
             <div class="location-info-item">
                 <i class="fas fa-flag-checkered"></i>
@@ -847,9 +847,9 @@ var safeIcon = L.divIcon({
     className: 'safe-marker'
 });
 
-// Icon marker - BAHAYA (Merah) - Outdoor
+// Icon marker - BAHAYA (Merah)
 var dangerIcon = L.divIcon({
-    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-fire" style="color: white; font-size: 18px;"></i></div>',
+    html: '<div style="background: linear-gradient(135deg, #dc3545, #b91c1c); width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; animation: blink 1s infinite;"><i class="fas fa-exclamation-triangle" style="color: white; font-size: 20px;"></i></div>',
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -20],
@@ -915,7 +915,9 @@ if (allLocations.length > 0) {
 if (!sensorMarker) {
     sensorMarker = L.marker([fixedLat, fixedLng], { icon: safeIcon, draggable: false }).addTo(map);
     dangerZone = L.circle([fixedLat, fixedLng], { color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1, radius: 500 }).addTo(map);
-}var latestRealSensorData = null;
+}
+
+var latestRealSensorData = null;
 
 function getDummyDataForLocation(locId, realData) {
     if (!realData) {
@@ -987,6 +989,9 @@ function getDummyDataForLocation(locId, realData) {
 function flyToLocation(lat, lng, id) {
     var prevId = activeSelectedLocationId;
     activeSelectedLocationId = id; // Simpan ID lokasi yang sedang diklik user
+    try {
+        localStorage.setItem('activeLocationId', id);
+    } catch(e) {}
     if (dangerZone) {
         dangerZone.setLatLng([lat, lng]);
     }
@@ -1023,7 +1028,7 @@ function flyToLocation(lat, lng, id) {
 
 // ================= FUNGSI UPDATE LOCATION STATUS =================
 function updateLocationStatus(activeData, lat, lng) {
-    var mainLoc = allLocations.find(l => l.id === 1) || { nama_lokasi: 'Lokasi Utama', id_alat: 'OUT-001' };
+    var currentLoc = allLocations.find(l => l.id === activeSelectedLocationId) || { nama_lokasi: 'Lokasi Alat', id_alat: 'OUT-001' };
 
     var asapVal = activeData ? activeData.asap : 'Normal';
     var coVal = activeData ? (parseFloat(activeData.co) || 0) : 0;
@@ -1032,31 +1037,46 @@ function updateLocationStatus(activeData, lat, lng) {
 
     if (isDanger) {
         if (dangerZone) {
-            dangerZone.setStyle({ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.3 });
+            dangerZone.setStyle({ 
+                color: '#dc2626', 
+                fillColor: '#dc2626', 
+                fillOpacity: 0.3 
+            });
         }
         document.getElementById('location-status').innerHTML = '⚠️ BAHAYA - Deteksi Kebakaran!';
         document.getElementById('location-status').style.color = '#dc2626';
         document.getElementById('zone').innerHTML = 'Zona Merah (Peringatan Bahaya)';
+        
         if (activeSelectedLocationId === 1 && sensorMarker) {
             sensorMarker.setIcon(dangerIcon);
         }
     } else if (isWaspada) {
         if (dangerZone) {
-            dangerZone.setStyle({ color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.2 });
+            dangerZone.setStyle({ 
+                color: '#f59e0b', 
+                fillColor: '#f59e0b', 
+                fillOpacity: 0.2 
+            });
         }
         document.getElementById('location-status').innerHTML = '⚠️ WASPADA - Indikasi Asap/Gas';
         document.getElementById('location-status').style.color = '#f59e0b';
         document.getElementById('zone').innerHTML = 'Zona Oranye (Waspada)';
+        
         if (activeSelectedLocationId === 1 && sensorMarker) {
             sensorMarker.setIcon(safeIcon);
         }
     } else {
         if (dangerZone) {
-            dangerZone.setStyle({ color: '#28a745', fillColor: '#28a745', fillOpacity: 0.1 });
+            dangerZone.setStyle({ 
+                color: '#28a745', 
+                fillColor: '#28a745', 
+                fillOpacity: 0.1 
+            });
         }
         document.getElementById('location-status').innerHTML = 'Aman';
         document.getElementById('location-status').style.color = '#28a745';
         document.getElementById('zone').innerHTML = 'Zona Hijau (Aman)';
+        
         if (activeSelectedLocationId === 1 && sensorMarker) {
             sensorMarker.setIcon(safeIcon);
         }
