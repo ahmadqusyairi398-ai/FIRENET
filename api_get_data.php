@@ -1,129 +1,184 @@
 <?php
-require_once 'koneksi.php';
+// Tentukan header agar output dibaca sebagai JSON
 header('Content-Type: application/json');
 
-$device = isset($_GET['device']) ? strtolower($_GET['device']) : 'outdoor';
-if ($device === 'indoor' && isset($pdo_indoor)) {
-    $current_pdo = $pdo_indoor;
-} else {
-    $current_pdo = isset($pdo_outdoor) ? $pdo_outdoor : null;
-}
+// 1. Load koneksi database dari koneksi.php
+require_once 'koneksi.php';
 
-if (!$current_pdo) {
+$device_id = isset($_GET['device']) ? strtolower($_GET['device']) : 'indoor';
+
+if ($device_id === 'indoor') {
+    $conn = isset($conn_indoor) && $conn_indoor ? $conn_indoor : null;
+    if (!$conn) {
+        $conn = @mysqli_connect("localhost", "root", "", "indoor");
+    }
+
+    // Default set points (batas sensor)
+    $limit_suhu = 40.0;
+    $limit_kelembapan = 20.0;
+    $limit_tegangan = 240.0;
+    $limit_arus = 5.0;
+
+    if ($conn) {
+        $q_batas = @mysqli_query($conn, "SELECT nama_sensor, batas_max, batas_min FROM batas_sensor");
+        if ($q_batas && mysqli_num_rows($q_batas) > 0) {
+            while ($row = mysqli_fetch_assoc($q_batas)) {
+                $nama = strtolower(trim($row['nama_sensor']));
+                if ($nama == 'suhu') {
+                    $limit_suhu = (float)$row['batas_max'];
+                }
+                if ($nama == 'kelembapan') {
+                    $limit_kelembapan = (float)$row['batas_min'];
+                }
+                if ($nama == 'tegangan listrik' || $nama == 'tegangan') {
+                    $limit_tegangan = (float)$row['batas_max'];
+                }
+                if ($nama == 'arus listrik' || $nama == 'arus') {
+                    $limit_arus = (float)$row['batas_max'];
+                }
+            }
+        }
+    }
+
+    if (!$conn || mysqli_connect_errno()) {
+        echo json_encode([
+            "error" => true,
+            "message" => "Koneksi database indoor gagal: " . (mysqli_connect_error() ?: 'Unknown error'),
+            "limit_suhu" => $limit_suhu,
+            "limit_kelembapan" => $limit_kelembapan,
+            "limit_tegangan" => $limit_tegangan,
+            "limit_arus" => $limit_arus
+        ]);
+        exit();
+    }
+
+        // Cek parameter is_dummy dari URL (Frontend)
+        $is_dummy_filter = isset($_GET['is_dummy']) ? $_GET['is_dummy'] : null;
+
+        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
+        if ($is_dummy_filter !== null) {
+            $is_dummy_filter = (int)$is_dummy_filter;
+            $sql = "SELECT * FROM data_sensor WHERE is_dummy = $is_dummy_filter ORDER BY id DESC LIMIT 1";
+        } else {
+            $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
+        }
+
+        $result = @mysqli_query($conn, $sql);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            $row = mysqli_fetch_assoc($result);
+
+            $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
+
+            // PERBAIKAN: Ubah batas toleransi mati/offline menjadi 45 detik agar tidak kedap-kedip
+            $timeout_seconds = 45;
+        $is_online = false;
+        if ($waktu_raw) {
+            $last_time = strtotime($waktu_raw);
+            if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+                $is_online = true;
+            }
+        }
+
+        if ($is_online) {
+            $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
+            $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
+            
+            $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+            if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiValue > 0.5) {
+                $apiStatus = "Terdeteksi Api";
+            } else {
+                $apiStatus = "Aman";
+            }
+            
+            if (is_numeric($rawAsap)) {
+                $fAsap = (float)$rawAsap;
+                if ($fAsap > ($fAsap > 1 ? 750 : 0.5)) {
+                    $asapStatus = "Tinggi";
+                } else if ($fAsap > ($fAsap > 1 ? 350 : 0.25)) {
+                    $asapStatus = "Sedang";
+                } else {
+                    $asapStatus = "Normal";
+                }
+                $asapNum = $fAsap;
+            } else {
+                $strAsap = trim((string)$rawAsap);
+                if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
+                    $asapStatus = "Tinggi";
+                    $asapNum = 1;
+                } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
+                    $asapStatus = "Sedang";
+                    $asapNum = 0.5;
+                } else {
+                    $asapStatus = "Normal";
+                    $asapNum = 0;
+                }
+            }
+            
+            $suhuVal = isset($row['suhu']) ? (float)$row['suhu'] : 0.0;
+            $kelembapanVal = isset($row['kelembapan']) ? (float)$row['kelembapan'] : 0.0;
+            $teganganVal = isset($row['tegangan']) ? (float)$row['tegangan'] : 0.0;
+            $arusVal = isset($row['arus']) ? (float)$row['arus'] : 0.0;
+
+            $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi" 
+                || ($suhuVal > $limit_suhu) 
+                || ($kelembapanVal < $limit_kelembapan) 
+                || ($teganganVal > $limit_tegangan) 
+                || ($arusVal > $limit_arus));
+
+            echo json_encode([
+                "error"            => false,
+                "waktu"            => date('H:i:s', strtotime($waktu_raw)),
+                "api"              => $apiStatus,
+                "asap"             => $asapStatus,
+                "asap_value"       => $asapNum,
+                "suhu"             => number_format($suhuVal, 1),
+                "kelembapan"       => number_format($kelembapanVal, 1),
+                "tegangan"         => number_format($teganganVal, 1),
+                "arus"             => number_format($arusVal, 2),
+                "rssi"             => $row['rssi'] ?? '-',
+                "ip"               => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+                "latitude"         => isset($row['latitude']) ? (float)$row['latitude'] : null,
+                "longitude"        => isset($row['longitude']) ? (float)$row['longitude'] : null,
+                "isDanger"         => $isDanger,
+                "apiValue"         => ($apiStatus === "Terdeteksi Api") ? 1 : 0,
+                "status"           => "Online",
+                "limit_suhu"       => $limit_suhu,
+                "limit_kelembapan" => $limit_kelembapan,
+                "limit_tegangan"   => $limit_tegangan,
+                "limit_arus"       => $limit_arus
+            ]);
+            exit();
+        }
+    }
+
     echo json_encode([
-        'waktu' => date('H:i:s'),
-        'api' => 'Aman',
-        'asap' => 'Normal',
-        'co' => 0.0,
-        'suhu' => '0.0',
-        'kelembapan' => '0.0',
-        'tegangan' => '0.0',
-        'arus' => '0.00',
-        'daya' => '0.0',
-        'angin' => '0.0',
-        'arah' => '-',
-        'status' => 'Offline (No Connection)',
-        'rssi' => '-',
-        'ip' => '-',
-        'isDanger' => false
+        "error"            => false,
+        "waktu"            => date('H:i:s'),
+        "api"              => "Aman",
+        "asap"             => "Normal",
+        "asap_value"       => 0,
+        "suhu"             => "0.0",
+        "kelembapan"       => "0.0",
+        "tegangan"         => "0.0",
+        "arus"             => "0.00",
+        "rssi"             => '-',
+        "ip"               => '-',
+        "isDanger"         => false,
+        "apiValue"         => 0,
+        "status"           => "Offline",
+        "limit_suhu"       => $limit_suhu,
+        "limit_kelembapan" => $limit_kelembapan,
+        "limit_tegangan"   => $limit_tegangan,
+        "limit_arus"       => $limit_arus
     ]);
     exit();
-}
-
-$sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
-
-try {
-    $stmt = $current_pdo->prepare($sql);
-    $stmt->execute();
-    $data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($data) {
-        $co = isset($data['co']) ? (float)$data['co'] : 0.0;
-        $raw_asap = isset($data['asap']) ? $data['asap'] : "Normal";
-        $asap = "Normal";
-
-        if (is_numeric($raw_asap)) {
-            $f_asap = (float)$raw_asap;
-            if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) {
-                $asap = "Tinggi";
-            } else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) {
-                $asap = "Sedang";
-            } else {
-                $asap = "Normal";
-            }
-        } else {
-            $str_asap = trim((string)$raw_asap);
-            if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) {
-                $asap = "Tinggi";
-            } else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) {
-                $asap = "Sedang";
-            } else {
-                $asap = "Normal";
-            }
-        }
-
-        $api_val = isset($data['api']) ? $data['api'] : 'Aman';
-        if (is_numeric($api_val)) {
-            $apiStatus = ((float)$api_val > 0.5) ? "Terdeteksi Api" : "Aman";
-        } else {
-            $apiStatus = (strcasecmp(trim($api_val), 'Terdeteksi Api') === 0 || strcasecmp(trim($api_val), 'Bahaya') === 0) ? "Terdeteksi Api" : "Aman";
-        }
-
-        $isDanger = ($apiStatus === "Terdeteksi Api" || $asap === "Tinggi" || $co > 50);
-
-        echo json_encode([
-            'waktu'      => isset($data['timestamp']) ? date('H:i:s', strtotime($data['timestamp'])) : date('H:i:s'),
-            'api'        => $apiStatus,
-            'asap'       => $asap,
-            'suhu'       => isset($data['suhu']) ? number_format((float)$data['suhu'], 1) : "0.0",
-            'kelembapan' => isset($data['kelembapan']) ? number_format((float)$data['kelembapan'], 1) : "0.0",
-            'tegangan'   => isset($data['tegangan']) ? number_format((float)$data['tegangan'], 1) : "0.0",
-            'arus'       => isset($data['arus']) ? number_format((float)$data['arus'], 2) : "0.00",
-            'daya'       => isset($data['daya']) ? number_format((float)$data['daya'], 1) : "0.0",
-            'angin'      => isset($data['kecepatan_angin']) ? number_format((float)$data['kecepatan_angin'], 1) : "0.0",
-            'arah'       => isset($data['arah_angin']) ? $data['arah_angin'] : "-",
-            'co'         => $co,
-            'status'     => 'Online',
-            'rssi'       => isset($data['rssi']) ? $data['rssi'] : "-",
-            'ip'         => !empty($data['ip_address']) ? $data['ip_address'] : "-",
-            'isDanger'   => $isDanger
-        ]);
-        } else {
-            // Jika tabel ada tapi belum ada datanya
-            echo json_encode([
-                'waktu'      => date('H:i:s'),
-                'asap'       => 'Normal',
-                'suhu'       => '0.0',
-                'kelembapan' => '0.0',
-                'tegangan'   => '0.0',
-                'arus'       => '0.0',
-                'daya'       => '0.0',
-                'angin'      => '0.0',
-                'arah'       => '-',
-                'co'         => 0.0,
-                'status'     => 'Offline (No Data)',
-                'rssi'       => 0,
-                'ip'         => '-',
-                'isDanger'   => false
-            ]);
-        }
-    } catch (PDOException $e) {
-        // Jika tabel tidak ditemukan, return error gracefully
-        echo json_encode([
-            'waktu'      => date('H:i:s'),
-            'asap'       => 'Normal',
-            'suhu'       => '0.0',
-            'kelembapan' => '0.0',
-            'tegangan'   => '0.0',
-            'arus'       => '0.0',
-            'daya'       => '0.0',
-            'angin'      => '0.0',
-            'arah'       => '-',
-            'co'         => 0.0,
-            'status'     => 'Error: Tabel Belum Ada',
-            'rssi'       => 0,
-            'ip'         => '-',
-            'isDanger'   => false
-        ]);
+} else {
+    // Fallback device outdoor jika dipanggil
+    if (file_exists('get_latest_data.php')) {
+        include 'get_latest_data.php';
+        exit();
     }
-    ?>
+    echo json_encode(["error" => true, "message" => "Device tidak dikenal."]);
+}
+?>

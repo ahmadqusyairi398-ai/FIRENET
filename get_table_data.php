@@ -26,8 +26,8 @@ if ($q) {
         $raw_asap = $r['asap'] ?? 'Normal';
         if (is_numeric($raw_asap)) {
             $f_asap = (float)$raw_asap;
-            if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) $asap_val = "Tinggi";
-            else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) $asap_val = "Sedang";
+            if ($f_asap > ($f_asap > 1 ? 750 : 0.5)) $asap_val = "Tinggi";
+            else if ($f_asap > ($f_asap > 1 ? 350 : 0.25)) $asap_val = "Sedang";
             else $asap_val = "Normal";
         } else {
             $str_asap = trim((string)$raw_asap);
@@ -36,7 +36,11 @@ if ($q) {
             else $asap_val = "Normal";
         }
 
-        $co_raw = isset($r['co']) ? $r['co'] : 0;
+        $raw_api = $r['api'] ?? 0;
+        $str_api = trim(strtolower((string)$raw_api));
+        $api_val = ($str_api === 'terdeteksi api' || $str_api === 'dekat' || $str_api === 'sedang' || $str_api === 'bahaya' || $str_api === 'tinggi' || (float)$raw_api > 0.5) ? 'Terdeteksi Api' : 'Aman';
+
+        $co_raw = $r['co'] ?? 0;
 
         $rows[] = [
             'id' => $r['id'],
@@ -51,9 +55,10 @@ if ($q) {
             'kecepatan_angin' => isset($r['kecepatan_angin']) ? number_format((float)$r['kecepatan_angin'], 1) : '0.0',
             'arah_angin' => !empty($r['arah_angin']) ? $r['arah_angin'] : '-',
             'co' => is_numeric($co_raw) ? number_format((float)$co_raw, 1) : $co_raw,
-            'api' => (isset($r['api']) && ((float)$r['api'] > 0.5 || strcasecmp(trim($r['api']), 'Terdeteksi Api') === 0)) ? 'Terdeteksi Api' : 'Aman',
+            'api' => $api_val,
             'api_raw' => $r['api'] ?? 0,
-            'rssi' => $r['rssi'] ?? '-'
+            'rssi' => $r['rssi'] ?? '-',
+            'is_dummy' => (int)($r['is_dummy'] ?? 0)
         ];
     }
 }

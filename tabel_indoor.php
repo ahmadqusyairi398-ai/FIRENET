@@ -23,6 +23,14 @@ if (!$pdo_indoor) {
     </div>");
 }
 
+// --- TAMBAHAN BARU: Ambil daftar lokasi dari database ---
+$db_locations = [];
+try {
+    $stmt_loc = $pdo_indoor->query("SELECT * FROM lokasi_monitoring ORDER BY id ASC");
+    $db_locations = $stmt_loc->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
+// ---------------------------------------------------------
+
 // ============================================================
 // AMBIL DATA DARI TABEL data_sensor SESUAI DENGAN indoor.sql
 // ============================================================
@@ -42,7 +50,7 @@ try {
                 latitude,
                 longitude
               FROM data_sensor 
-              ORDER BY timestamp DESC";
+              ORDER BY timestamp DESC LIMIT 5000";
               
     $stmt = $pdo_indoor->prepare($query);
     $stmt->execute();
@@ -669,7 +677,12 @@ body::before {
 <!-- MAIN CONTENT -->
 <div class="main">
     <div class="header">
-        <h2><i class="fas fa-table"></i> Tabel Data Sensor Indoor</h2>
+        <h2>
+            <i class="fas fa-table"></i> Tabel Data Sensor Indoor
+            <span id="table-badge" style="font-size: 13px; padding: 5px 12px; border-radius: 20px; font-weight: bold; margin-left: 15px; color: white; background: #28a745; transition: all 0.3s;">
+                <i class="fas fa-bolt"></i> Live (Real-Time)
+            </span>
+        </h2>
         <div class="header-right">
             <!-- Tombol HOME dengan onclick untuk membuka modal -->
             <button class="btn-home-header" onclick="openHomeModal()">
@@ -685,7 +698,28 @@ body::before {
     <div class="card">
         <h3><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
 
-        <div class="filter-section">
+        <div class="filter-section" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+
+            <div class="filter-group">
+                <label><i class="fas fa-map-marker-alt"></i> Lokasi Alat</label>
+                <select id="locationSelect" onchange="applyFilter()" style="padding: 8px 12px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; cursor: pointer; min-width: 200px;">
+                    <?php foreach ($db_locations as $loc):
+                        $idAlat = !empty($loc['id_alat']) ? $loc['id_alat'] : "LOK-".$loc['id'];
+                        $namaLokasi = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : $idAlat;
+                        $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2);
+                        $labelStatus = $isLive ? "(Live)" : "(Dummy)";
+                    ?>
+                        <option value="<?= htmlspecialchars($idAlat) ?>">
+                            <?= htmlspecialchars($idAlat) ?> - <?= htmlspecialchars($namaLokasi) ?> <?= $labelStatus ?>
+                        </option>
+                    <?php endforeach; ?>
+                    <?php if (empty($db_locations)): ?>
+                        <option value="LOK-002">LOK-002 (Alat Utama / Live)</option>
+                        <option value="LOK-001">LOK-001 (Dummy)</option>
+                    <?php endif; ?>
+                </select>
+            </div>
+
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Mulai</label>
                 <input type="date" id="start_date" class="date-filter">
@@ -694,11 +728,11 @@ body::before {
                 <label><i class="fas fa-calendar"></i> Tanggal Akhir</label>
                 <input type="date" id="end_date" class="date-filter">
             </div>
-            <div class="filter-group">
+            <div class="filter-group" style="display: flex; gap: 8px; margin-top: 22px;">
                 <button class="btn-filter" onclick="applyFilter()">
                     <i class="fas fa-filter"></i> Filter
                 </button>
-                <button class="btn-reset" onclick="resetFilter()">
+                <button class="btn-reset" onclick="resetFilter()" style="background: #6c757d; color: white;">
                     <i class="fas fa-undo"></i> Reset
                 </button>
                 <button class="btn-excel" onclick="exportToExcel()">
@@ -835,7 +869,7 @@ let sensorData = sensorDataPHP.map((item, index) => {
         no: index + 1,
         tanggal_waktu: formattedDate,
         tanggal: dateOnly,
-        api: item.api !== null && item.api !== undefined ? parseFloat(item.api).toFixed(2) : '0',
+        api: item.api !== null && item.api !== undefined ? item.api : '0',
         asap: item.asap !== null && item.asap !== undefined ? parseFloat(item.asap).toFixed(2) : '0',
         suhu: item.suhu !== null && item.suhu !== undefined ? parseFloat(item.suhu).toFixed(1) : '0',
         kelembapan: item.kelembapan !== null && item.kelembapan !== undefined ? parseFloat(item.kelembapan).toFixed(1) : '0',
@@ -848,17 +882,17 @@ let sensorData = sensorDataPHP.map((item, index) => {
 let currentData = [...sensorData];
 let dataTable;
 
-// Fungsi untuk menentukan status berdasarkan nilai angka (float)
+// Fungsi untuk menentukan status berdasarkan nilai angka (float) / string
 function getStatusClass(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return 'status-bahaya';
-        if (num > 40) return 'status-waspada';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return 'status-bahaya';
         return 'status-aman';
     }
     if (type === 'asap') {
-        if (num > 70) return 'status-bahaya';
-        if (num > 40) return 'status-waspada';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return 'status-bahaya';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return 'status-waspada';
         return 'status-aman';
     }
     return '';
@@ -866,14 +900,14 @@ function getStatusClass(value, type) {
 
 function getStatusIcon(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return '<i class="fas fa-exclamation-triangle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     if (type === 'asap') {
-        if (num > 70) return '<i class="fas fa-exclamation-triangle"></i>';
-        if (num > 40) return '<i class="fas fa-exclamation-circle"></i>';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return '<i class="fas fa-exclamation-triangle"></i>';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return '<i class="fas fa-exclamation-circle"></i>';
         return '<i class="fas fa-check-circle"></i>';
     }
     return '';
@@ -881,24 +915,34 @@ function getStatusIcon(value, type) {
 
 function getStatusText(value, type) {
     let num = parseFloat(value);
+    let strVal = String(value || '').trim().toLowerCase();
     if (type === 'api') {
-        if (num > 70) return 'Terdeteksi Api';
-        if (num > 40) return 'Potensi Api';
+        if ((!isNaN(num) && num > 0.5) || strVal === 'terdeteksi api' || strVal === 'dekat' || strVal === 'sedang' || strVal === 'bahaya' || strVal === 'tinggi') return 'Terdeteksi Api';
         return 'Aman';
     }
     if (type === 'asap') {
-        if (num > 70) return 'Tinggi';
-        if (num > 40) return 'Sedang';
+        if ((!isNaN(num) && num > 750) || strVal === 'tinggi' || strVal === 'bahaya') return 'Tinggi';
+        if ((!isNaN(num) && num > 350) || strVal === 'sedang' || strVal === 'waspada') return 'Sedang';
         return 'Normal';
     }
     return '';
 }
 
 function createRow(item) {
+    // 1. Dapatkan teks status Api ("Aman" atau "Terdeteksi Api")
+    let apiText = getStatusText(item.api, 'api');
+
+    // 2. Paksa angka di dalam kurung: Jika Aman = 0, Jika Terdeteksi = 100
+    // Ini mengabaikan teks mentah dari Node-RED agar tabel selalu tampil konsisten
+    let apiNumber = (apiText === "Aman") ? "0" : "100";
+
+    // 3. Gabungkan Ikon, Teks, dan Angka Paksaan tadi
+    let apiDisplay = `${getStatusIcon(item.api, 'api')} ${apiText} (${apiNumber})`;
+
     return [
         item.no,
         item.tanggal_waktu,
-        `<span class="${getStatusClass(item.api, 'api')}">${getStatusIcon(item.api, 'api')} ${getStatusText(item.api, 'api')} (${item.api})</span>`,
+        `<span class="${getStatusClass(item.api, 'api')}">${apiDisplay}</span>`,
         `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${getStatusText(item.asap, 'asap')} (${item.asap})</span>`,
         `${item.suhu} °C`,
         `${item.kelembapan} %`,
@@ -958,24 +1002,92 @@ function initDataTable(data) {
     });
 }
 
+// =======================================================
+// FUNGSI BARU: Menghasilkan 50 Baris Tabel Dummy
+// =======================================================
+function generateDummyTable(count) {
+    let dummyTable = [];
+    let now = new Date();
+    for (let i = 0; i < count; i++) {
+        let timeObj = new Date(now.getTime() - ((count - 1 - i) * 10000));
+        let timeStr = timeObj.getFullYear() + "-" +
+                      String(timeObj.getMonth()+1).padStart(2,'0') + "-" +
+                      String(timeObj.getDate()).padStart(2,'0') + " " +
+                      String(timeObj.getHours()).padStart(2,'0') + ":" +
+                      String(timeObj.getMinutes()).padStart(2,'0') + ":" +
+                      String(timeObj.getSeconds()).padStart(2,'0');
+        let dateOnly = timeStr.split(' ')[0];
+
+        let api = Math.random() > 0.9 ? 100 : 0;
+        let asap = Math.floor(Math.random() * 80 + 10);
+        let suhu = Math.floor(Math.random() * 20 + 25);
+        let kelembapan = Math.floor(Math.random() * 40 + 30);
+        let tegangan = (Math.random() * 15 + 215).toFixed(1);
+        let arus = (Math.random() * 5 + 2).toFixed(2);
+
+        if (api > 0) { suhu += 20; kelembapan -= 15; asap += 40; }
+
+        dummyTable.push({
+            tanggal_waktu: timeStr,
+            tanggal: dateOnly,
+            api: api.toString(),
+            asap: asap.toFixed(2),
+            suhu: suhu.toFixed(1),
+            kelembapan: kelembapan.toFixed(1),
+            tegangan: tegangan,
+            arus: arus,
+            rssi: Math.floor(Math.random() * 20 - 70).toString()
+        });
+    }
+    // Urutkan terbalik (paling baru di atas)
+    return dummyTable.reverse();
+}
+
+// =======================================================
+// FUNGSI UPDATE FILTER
+// =======================================================
 function applyFilter() {
-    let filteredData = [...sensorData];
+    const locSelect = document.getElementById('locationSelect');
+    const locationVal = locSelect ? locSelect.value : 'LOK-002';
+
+    // UPDATE BADGE LIVE/DUMMY
+    const tableBadge = document.getElementById('table-badge');
+    if (tableBadge) {
+        if (locationVal === 'LOK-002') {
+            tableBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+            tableBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+        } else {
+            tableBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
+            tableBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        }
+    }
+
+    // CEK SUMBER DATA
+    let sourceData = sensorData; // Data asli dari DB (LOK-002)
+    if (locationVal !== 'LOK-002') {
+        sourceData = generateDummyTable(50); // Hasilkan 50 riwayat dummy
+    }
+
+    let filteredData = [...sourceData];
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
+
     if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
     if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
+
+    // Beri ulang nomor urut untuk tabel
     filteredData.forEach((item, idx) => item.no = idx + 1);
+
     currentData = filteredData;
     updateDataTable(currentData);
+
     if (filteredData.length === 0) alert('Tidak ada data yang sesuai dengan filter!');
 }
 
 function resetFilter() {
     document.getElementById('start_date').value = '';
     document.getElementById('end_date').value = '';
-    sensorData.forEach((item, idx) => item.no = idx + 1);
-    currentData = [...sensorData];
-    updateDataTable(currentData);
+    applyFilter(); // Panggil ulang logika Dummy/Live
 }
 
 function exportToExcel() {
@@ -1006,6 +1118,7 @@ function exportToExcel() {
 $(document).ready(function() {
     if (sensorData && sensorData.length > 0) {
         initDataTable(sensorData);
+        applyFilter();
         console.log(`Data berhasil dimuat: ${sensorData.length} record`);
     } else {
         // Inisialisasi tabel kosong
@@ -1029,6 +1142,7 @@ $(document).ready(function() {
             scrollX: true
         });
         console.log('Tidak ada data yang ditemukan di database.');
+        applyFilter();
     }
 
     // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database indoor
@@ -1040,6 +1154,8 @@ $(document).ready(function() {
                 
                 const startDate = document.getElementById('start_date').value;
                 const endDate = document.getElementById('end_date').value;
+                const locSelect = document.getElementById('locationSelect');
+                const locationVal = locSelect ? locSelect.value : 'LOK-002';
                 
                 let newData = data.map((item, index) => {
                     let formattedDate = item.tanggal_waktu || '-';
@@ -1049,8 +1165,8 @@ $(document).ready(function() {
                         no: index + 1,
                         tanggal_waktu: formattedDate,
                         tanggal: dateOnly,
-                        api: item.api_raw !== undefined ? parseFloat(item.api_raw).toFixed(2) : '0',
-                        asap: item.asap_raw !== undefined ? parseFloat(item.asap_raw).toFixed(2) : '0',
+                        api: item.api !== undefined ? item.api : '0',
+                        asap: item.asap_raw !== undefined && !isNaN(parseFloat(item.asap_raw)) ? parseFloat(item.asap_raw).toFixed(2) : (item.asap !== undefined ? item.asap : '0'),
                         suhu: item.suhu,
                         kelembapan: item.kelembapan,
                         tegangan: item.tegangan,
@@ -1061,7 +1177,7 @@ $(document).ready(function() {
 
                 sensorData = newData;
                 
-                if (startDate || endDate) {
+                if (startDate || endDate || locationVal !== 'LOK-002') {
                     applyFilter();
                 } else {
                     currentData = [...sensorData];
@@ -1071,8 +1187,18 @@ $(document).ready(function() {
             .catch(err => console.error("Error updating indoor table data:", err));
     }
 
-    // Jalankan pembaruan tabel indoor otomatis setiap 3 detik
-    setInterval(fetchTableDataRealtime, 3000);
+    let indoorTableTimer = null;
+    function scheduleNextIndoorTableUpdate() {
+        if (indoorTableTimer) clearTimeout(indoorTableTimer);
+        const intervalMs = 30000;
+        indoorTableTimer = setTimeout(function() {
+            fetchTableDataRealtime();
+            scheduleNextIndoorTableUpdate();
+        }, intervalMs);
+    }
+
+    // Jalankan pembaruan tabel indoor otomatis (30s Alat Utama, 15s Dummy)
+    scheduleNextIndoorTableUpdate();
 });
 </script>
 

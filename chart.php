@@ -14,9 +14,29 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
 
 // Koneksi database
 require_once 'koneksi.php';
-
-$columns = [];
 $rows = [];
+
+// Ambil lokasi alat dari database outdoor
+$all_locations = [];
+if (isset($conn_outdoor) && $conn_outdoor) {
+    $q_loc = @mysqli_query($conn_outdoor, "SELECT id, nama_lokasi, id_alat FROM lokasi_alat ORDER BY id ASC");
+    if ($q_loc && mysqli_num_rows($q_loc) > 0) {
+        while ($row = mysqli_fetch_assoc($q_loc)) {
+            $all_locations[] = $row;
+        }
+    }
+}
+if (empty($all_locations)) {
+    $all_locations = [
+        ['id' => 1, 'nama_lokasi' => 'Politeknik Negeri Balikpapan', 'id_alat' => 'OUT-001'],
+        ['id' => 2, 'nama_lokasi' => 'Area Hutan Sektor A', 'id_alat' => 'OUT-002'],
+        ['id' => 3, 'nama_lokasi' => 'Area Hutan Sektor B', 'id_alat' => 'OUT-003'],
+        ['id' => 4, 'nama_lokasi' => 'Bukit Rawan Kebakaran', 'id_alat' => 'OUT-004'],
+        ['id' => 5, 'nama_lokasi' => 'Pos Pantau Karhutla 1', 'id_alat' => 'OUT-005'],
+        ['id' => 6, 'nama_lokasi' => 'Kawasan Hutan Lindung', 'id_alat' => 'OUT-006'],
+        ['id' => 7, 'nama_lokasi' => 'Zona Merah Perkebunan', 'id_alat' => 'OUT-007']
+    ];
+}
 
 try {
     $colQuery = $pdo->query("SHOW COLUMNS FROM data_sensor");
@@ -419,15 +439,21 @@ canvas {
     opacity: 0.7;
 }
 
-.legend-color {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
+.legend-color, .legend-key-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
 }
 
 .legend-text {
     color: #333;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .legend-item.disabled .legend-text {
@@ -582,6 +608,42 @@ canvas {
         justify-content: center;
     }
 }
+/* ========== DATA TYPE BADGE & LOCATION SELECT ========== */
+.data-type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.realtime-badge {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.dummy-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.location-select {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3c72;
+    background: white;
+    cursor: pointer;
+    margin-right: 10px;
+}
 </style>
 </head>
 <body>
@@ -630,8 +692,16 @@ canvas {
         </div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <div class="filter-form">
+            <label><i class="fas fa-map-marker-alt"></i> Lokasi:</label>
+            <select id="locationSelect" class="location-select" onchange="changeChartLocation(this.value)">
+                <?php foreach ($all_locations as $loc): ?>
+                    <option value="<?= $loc['id'] ?>">
+                        <?= htmlspecialchars($loc['nama_lokasi']) ?> (<?= (int)$loc['id'] === 1 ? 'Real-Time IoT' : 'Dummy' ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
             <label>Dari:</label>
             <input type="date" id="dateFrom">
             <label>Sampai:</label>
@@ -639,6 +709,11 @@ canvas {
             <button id="btnFilter" onclick="filterData()">
                 <i class="fas fa-search"></i> Tampilkan
             </button>
+        </div>
+        <div>
+            <span id="data-type-tag" class="data-type-badge realtime-badge">
+                <i class="fas fa-satellite-dish"></i> Data Real Time
+            </span>
         </div>
     </div>
 
@@ -759,14 +834,14 @@ console.log('Data dari database:', rawData);
 
 // Konfigurasi sensor
 const sensorConfig = [
-    { id: 'co', label: 'Karbon Monoksida (CO)', color: '#9c27b0', unit: 'ppm', group: 'bahaya', min: 0, max: 100, yMax: 120 },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100 },
-    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
-    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
-    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
-    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 },
-    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200 },
-    { id: 'kecepatan_angin', label: 'Kecepatan Angin', color: '#2196F3', unit: 'm/s', group: 'angin', min: 0, max: 30, yMax: 35 }
+    { id: 'co', label: 'Karbon Monoksida (CO)', color: '#9c27b0', unit: 'ppm', group: 'bahaya', min: 0, max: 100, yMax: 120, icon: 'fas fa-industry' },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 100, icon: 'fas fa-smog' },
+    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70, icon: 'fas fa-temperature-high' },
+    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100, icon: 'fas fa-tint' },
+    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250, icon: 'fas fa-bolt' },
+    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10, icon: 'fas fa-charging-station' },
+    { id: 'daya', label: 'Daya', color: '#ff9800', unit: 'W', group: 'listrik', min: 0, max: 1000, yMax: 1200, icon: 'fas fa-solar-panel' },
+    { id: 'kecepatan_angin', label: 'Kecepatan Angin', color: '#2196F3', unit: 'm/s', group: 'angin', min: 0, max: 30, yMax: 35, icon: 'fas fa-wind' }
 ];
 
 let currentMode = "all";
@@ -819,7 +894,7 @@ function initDatasets() {
             fill: true,
             pointRadius: 4,
             pointHoverRadius: 8,
-            hidden: sensor.group !== 'all',
+            hidden: currentMode === 'all' ? false : sensor.group !== currentMode,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' || sensor.id === 'daya' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 
                      (sensor.id === 'kecepatan_angin' ? 'y-angin' :
@@ -989,7 +1064,9 @@ function updateLegend() {
         legendItem.className = 'legend-item';
         legendItem.onclick = () => toggleDataset(idx);
         legendItem.innerHTML = `
-            <div class="legend-color" style="background: ${sensor.color}"></div>
+            <div class="legend-key-icon" style="color: ${sensor.color}; background: ${sensor.color}20; border: 1.5px solid ${sensor.color};" title="Kunci Simbol Legenda: ${sensor.label}">
+                <i class="${sensor.icon}"></i>
+            </div>
             <span class="legend-text">${sensor.label}</span>
         `;
         container.appendChild(legendItem);
@@ -1049,8 +1126,96 @@ function filterData() {
     createChart(labels, filteredData);
 }
 
+let realDataOriginal = [];
+let activeLocationId = 1;
+
+function changeChartLocation(locId) {
+    activeLocationId = parseInt(locId) || 1;
+    try {
+        localStorage.setItem('activeLocationId', activeLocationId);
+    } catch(e) {}
+    const isDummy = (activeLocationId !== 1);
+    
+    // Update Badge
+    const tag = document.getElementById('data-type-tag');
+    if (tag) {
+        if (isDummy) {
+            tag.className = 'data-type-badge dummy-badge';
+            tag.innerHTML = '<i class="fas fa-flask"></i> Data Dummy';
+        } else {
+            tag.className = 'data-type-badge realtime-badge';
+            tag.innerHTML = '<i class="fas fa-satellite-dish"></i> Data Real Time';
+        }
+    }
+
+    if (activeLocationId === 1) {
+        fullData = [...realDataOriginal];
+    } else {
+        fullData = generateDummyChartData(activeLocationId);
+    }
+    filteredData = [...fullData];
+    const labels = filteredData.map(d => d.waktu);
+    createChart(labels, filteredData);
+}
+
+function generateDummyChartData(locId) {
+    const numId = typeof locId === 'number' ? locId : 2;
+    const now = new Date();
+    const result = [];
+
+    for (let i = 20; i >= 0; i--) {
+        const t = new Date(now.getTime() - i * 15000);
+        const tStr = t.getFullYear() + '-' +
+                     String(t.getMonth() + 1).padStart(2, '0') + '-' +
+                     String(t.getDate()).padStart(2, '0') + ' ' +
+                     String(t.getHours()).padStart(2, '0') + ':' +
+                     String(t.getMinutes()).padStart(2, '0') + ':' +
+                     String(t.getSeconds()).padStart(2, '0');
+
+        const stepIndex = Math.floor(t.getTime() / 15000);
+        const conditionStep = (stepIndex + numId) % 3;
+
+        let suhuVal, humiVal, asapVal, coVal;
+        if (conditionStep === 0) { // Aman
+            suhuVal = parseFloat((26.0 + (numId % 3)).toFixed(1));
+            humiVal = 68;
+            asapVal = 10;
+            coVal = 15;
+        } else if (conditionStep === 1) { // Waspada
+            suhuVal = parseFloat((42.0 + (numId % 3)).toFixed(1));
+            humiVal = 48;
+            asapVal = 45;
+            coVal = 42;
+        } else { // Bahaya
+            suhuVal = parseFloat((65.0 + (numId % 3)).toFixed(1));
+            humiVal = 28;
+            asapVal = 85;
+            coVal = 85;
+        }
+
+        const windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
+        const tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
+        const arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
+        const dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+
+        result.push({
+            waktu: tStr,
+            asap: asapVal,
+            suhu: suhuVal,
+            kelembapan: humiVal,
+            tegangan: tegVal,
+            arus: arusVal,
+            daya: dayaVal,
+            kecepatan_angin: windVal,
+            arah_angin: (numId % 2 === 0) ? 'Utara' : 'Timur',
+            co: coVal
+        });
+    }
+    return result;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    fullData = rawData.map(row => ({
+    realDataOriginal = rawData.map(row => ({
         waktu: row.waktu || '',
         asap: typeof row.asap === 'number' ? row.asap : 0,
         suhu: typeof row.suhu === 'number' ? row.suhu : 0,
@@ -1063,6 +1228,22 @@ document.addEventListener('DOMContentLoaded', () => {
         co: typeof row.co === 'number' ? row.co : 0
     }));
     
+    fullData = [...realDataOriginal];
+    
+    // Restore lokasi dari localStorage jika pernah dipilih di Dashboard/Tabel
+    try {
+        const savedLocId = localStorage.getItem('activeLocationId');
+        if (savedLocId) {
+            const numSavedId = parseInt(savedLocId) || 1;
+            const locSelect = document.getElementById('locationSelect');
+            if (locSelect) {
+                locSelect.value = numSavedId;
+            }
+            changeChartLocation(numSavedId);
+            return;
+        }
+    } catch(e) {}
+
     if (fullData.length === 0) {
         createChart([], []);
         console.warn('Tidak ada data sensor di database. Grafik akan kosong.');

@@ -32,6 +32,28 @@ if (!$pdo) {
 
 echo "<script>console.log('Koneksi database berhasil (Outdoor)');</script>";
 
+// Ambil lokasi alat dari database outdoor
+$all_locations = [];
+if (isset($conn_outdoor) && $conn_outdoor) {
+    $q_loc = @mysqli_query($conn_outdoor, "SELECT id, nama_lokasi, id_alat FROM lokasi_alat ORDER BY id ASC");
+    if ($q_loc && mysqli_num_rows($q_loc) > 0) {
+        while ($row = mysqli_fetch_assoc($q_loc)) {
+            $all_locations[] = $row;
+        }
+    }
+}
+if (empty($all_locations)) {
+    $all_locations = [
+        ['id' => 1, 'nama_lokasi' => 'Politeknik Negeri Balikpapan', 'id_alat' => 'OUT-001'],
+        ['id' => 2, 'nama_lokasi' => 'Area Hutan Sektor A', 'id_alat' => 'OUT-002'],
+        ['id' => 3, 'nama_lokasi' => 'Area Hutan Sektor B', 'id_alat' => 'OUT-003'],
+        ['id' => 4, 'nama_lokasi' => 'Bukit Rawan Kebakaran', 'id_alat' => 'OUT-004'],
+        ['id' => 5, 'nama_lokasi' => 'Pos Pantau Karhutla 1', 'id_alat' => 'OUT-005'],
+        ['id' => 6, 'nama_lokasi' => 'Kawasan Hutan Lindung', 'id_alat' => 'OUT-006'],
+        ['id' => 7, 'nama_lokasi' => 'Zona Merah Perkebunan', 'id_alat' => 'OUT-007']
+    ];
+}
+
 // ========== AMBIL DATA DARI TABEL DATA_SENSOR ==========
 try {
     // Cek apakah tabel data_sensor ada
@@ -652,6 +674,41 @@ body::before {
 .dataTables_paginate .paginate_button:hover {
     background: rgba(255,255,255,0.9);
 }
+/* ========== DATA TYPE BADGE & LOCATION SELECT ========== */
+.data-type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.realtime-badge {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.dummy-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.location-select {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3c72;
+    background: white;
+    cursor: pointer;
+}
 </style>
 </head>
 
@@ -703,9 +760,24 @@ body::before {
     </div>
 
     <div class="card">
-        <h3><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
+        <h3>
+            <i class="fas fa-database"></i> Riwayat Data Sensor Lengkap
+            <span id="data-type-tag" class="data-type-badge realtime-badge">
+                <i class="fas fa-satellite-dish"></i> Data Real Time
+            </span>
+        </h3>
 
         <div class="filter-section">
+            <div class="filter-group">
+                <label><i class="fas fa-map-marker-alt"></i> Lokasi</label>
+                <select id="locationSelect" class="location-select" onchange="changeTableLocation(this.value)">
+                    <?php foreach ($all_locations as $loc): ?>
+                        <option value="<?= $loc['id'] ?>">
+                            <?= htmlspecialchars($loc['nama_lokasi']) ?> (<?= (int)$loc['id'] === 1 ? 'Real-Time IoT' : 'Dummy' ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Mulai</label>
                 <input type="date" id="start_date" class="date-filter">
@@ -1042,8 +1114,117 @@ $(document).ready(function() {
         console.log('Tidak ada data yang ditemukan di database.');
     }
 
+    let activeTableLocationId = 1;
+    let tableUpdateTimer = null;
+
+    function scheduleNextTableUpdate() {
+        if (tableUpdateTimer) clearTimeout(tableUpdateTimer);
+        var isMainDevice = (activeTableLocationId === 1);
+        var intervalMs = isMainDevice ? 30000 : 15000;
+
+        tableUpdateTimer = setTimeout(function() {
+            fetchTableDataRealtime();
+            scheduleNextTableUpdate();
+        }, intervalMs);
+    }
+
+    window.changeTableLocation = function(locId) {
+        activeTableLocationId = parseInt(locId) || 1;
+        try {
+            localStorage.setItem('activeLocationId', activeTableLocationId);
+        } catch(e) {}
+        const isDummy = (activeTableLocationId !== 1);
+
+        const tag = document.getElementById('data-type-tag');
+        if (tag) {
+            if (isDummy) {
+                tag.className = 'data-type-badge dummy-badge';
+                tag.innerHTML = '<i class="fas fa-flask"></i> Data Dummy';
+            } else {
+                tag.className = 'data-type-badge realtime-badge';
+                tag.innerHTML = '<i class="fas fa-satellite-dish"></i> Data Real Time';
+            }
+        }
+        fetchTableDataRealtime();
+        scheduleNextTableUpdate();
+    };
+
+    function generateDummyTableRows(locId) {
+        const numId = typeof locId === 'number' ? locId : 2;
+        const now = new Date();
+        const rows = [];
+
+        for (let i = 0; i < 20; i++) {
+            const t = new Date(now.getTime() - i * 15000);
+            const dateStr = t.getFullYear() + '-' +
+                            String(t.getMonth() + 1).padStart(2, '0') + '-' +
+                            String(t.getDate()).padStart(2, '0');
+            const timeStr = String(t.getHours()).padStart(2, '0') + ':' +
+                            String(t.getMinutes()).padStart(2, '0') + ':' +
+                            String(t.getSeconds()).padStart(2, '0');
+            const fullStr = dateStr + ' ' + timeStr;
+
+            const stepIndex = Math.floor(t.getTime() / 15000);
+            const conditionStep = (stepIndex + numId) % 3;
+
+            let suhuVal, humiVal, asapVal, coVal;
+            if (conditionStep === 0) { // Aman
+                suhuVal = (26.0 + (numId % 3)).toFixed(1);
+                humiVal = '68.0';
+                asapVal = 'Normal';
+                coVal = '15.0';
+            } else if (conditionStep === 1) { // Waspada
+                suhuVal = (42.0 + (numId % 3)).toFixed(1);
+                humiVal = '48.0';
+                asapVal = 'Sedang';
+                coVal = '42.0';
+            } else { // Bahaya
+                suhuVal = (65.0 + (numId % 3)).toFixed(1);
+                humiVal = '28.0';
+                asapVal = 'Tinggi';
+                coVal = '85.0';
+            }
+
+            const windVal = (2.0 + (numId % 4) * 0.9).toFixed(1);
+            const tegVal = (219 + (numId % 3)).toFixed(1);
+            const arusVal = (1.2 + (numId % 4) * 0.1).toFixed(2);
+            const dayaVal = (250 + (numId % 6) * 20).toFixed(1);
+
+            rows.push({
+                id: i + 1,
+                no: i + 1,
+                tanggal_waktu: fullStr,
+                tanggal: dateStr,
+                asap: asapVal,
+                suhu: suhuVal,
+                kelembapan: humiVal,
+                tegangan: tegVal,
+                arus: arusVal,
+                daya: dayaVal,
+                kecepatan_angin: windVal,
+                arah_angin: (numId % 2 === 0) ? 'Utara' : 'Timur',
+                co: coVal
+            });
+        }
+        return rows;
+    }
+
     // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database
     function fetchTableDataRealtime() {
+        if (activeTableLocationId !== 1) {
+            const dummyRows = generateDummyTableRows(activeTableLocationId);
+            sensorData = dummyRows;
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            if (startDate || endDate) {
+                applyFilter();
+            } else {
+                currentData = [...sensorData];
+                updateDataTable(currentData);
+            }
+            return;
+        }
+
         fetch('get_table_data.php?device=outdoor')
             .then(response => response.json())
             .then(data => {
@@ -1084,8 +1265,22 @@ $(document).ready(function() {
             .catch(err => console.error("Error updating table data:", err));
     }
 
-    // Jalankan pembaruan tabel otomatis setiap 3 detik
-    setInterval(fetchTableDataRealtime, 3000);
+    // Restore lokasi dari localStorage jika pernah dipilih di Dashboard/Chart
+    try {
+        const savedLocId = localStorage.getItem('activeLocationId');
+        if (savedLocId) {
+            const numSavedId = parseInt(savedLocId) || 1;
+            const locSelect = document.getElementById('locationSelect');
+            if (locSelect) {
+                locSelect.value = numSavedId;
+            }
+            changeTableLocation(numSavedId);
+        } else {
+            scheduleNextTableUpdate();
+        }
+    } catch(e) {
+        scheduleNextTableUpdate();
+    }
 });
 </script>
 
