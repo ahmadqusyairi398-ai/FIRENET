@@ -1136,10 +1136,9 @@ async function fetchSensorData() {
 var batasSensorConfig = <?= json_encode($batas_sensor); ?>;
 
 async function fetchDataFromDB() {
-    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
-    const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
+    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData     const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
     const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
-    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || lokasiAktif.id === 2);
+    const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || rawIdAlat === '002' || rawIdAlat.includes('002') || rawIdAlat.includes('UTAMA') || lokasiAktif.id === 2);
 
     let data;
     if (isLive) {
@@ -1203,21 +1202,39 @@ async function fetchDataFromDB() {
         let statusText = "Aman";
         let isDangerDetected = false;
 
-        if (isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0)) {
-            statusText = "Kebakaran";
-            isDangerDetected = true;
-        } else if (isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2)) {
-            statusText = "lingkungan tidak normal";
-            isDangerDetected = true;
-        } else if (isTeganganOver || isArusOver || (data.isWarning && dummyState === 3)) {
-            statusText = "Gangguan listrik";
-            isDangerDetected = true;
-        } else if (data.isDanger) {
-            statusText = "Kebakaran";
-            isDangerDetected = true;
+        if (isLive) {
+            // Untuk LOK-002 / Live Real-Time: Hanya gunakan data murni dari alat tanpa terpengaruh dummyState
+            if (isApiDanger || isAsapDanger || data.isDanger) {
+                statusText = "Kebakaran";
+                isDangerDetected = true;
+            } else if (isSuhuAbnormal || isKelembapanAbnormal) {
+                statusText = "lingkungan tidak normal";
+                isDangerDetected = true;
+            } else if (isTeganganOver || isArusOver) {
+                statusText = "Gangguan listrik";
+                isDangerDetected = true;
+            } else {
+                statusText = "Aman";
+                isDangerDetected = false;
+            }
         } else {
-            statusText = "Aman";
-            isDangerDetected = false;
+            // Untuk lokasi lain (Dummy/Simulasi): Gunakan perputaran dummyState
+            if (isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0)) {
+                statusText = "Kebakaran";
+                isDangerDetected = true;
+            } else if (isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2)) {
+                statusText = "lingkungan tidak normal";
+                isDangerDetected = true;
+            } else if (isTeganganOver || isArusOver || (data.isWarning && dummyState === 3)) {
+                statusText = "Gangguan listrik";
+                isDangerDetected = true;
+            } else if (data.isDanger) {
+                statusText = "Kebakaran";
+                isDangerDetected = true;
+            } else {
+                statusText = "Aman";
+                isDangerDetected = false;
+            }
         }
 
         function setBoxColor(box, index, danger, warning) {
@@ -1257,8 +1274,13 @@ async function fetchDataFromDB() {
             asapElem.innerHTML = asapIcon;
         }
 
-        if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-        if(boxes.length > 1) setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+        if (isLive) {
+            if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
+            if(boxes.length > 1) setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
+        } else {
+            if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+            if(boxes.length > 1) setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
+        }
 
         // Grup 2: Suhu & Kelembapan (Setelah 1 detik / Jeda 1000ms)
         setTimeout(() => {
@@ -1272,8 +1294,13 @@ async function fetchDataFromDB() {
             var kelembapanElem = document.getElementById("kelembapan");
             if (kelembapanElem && data.kelembapan !== undefined) kelembapanElem.innerHTML = `${data.kelembapan} % <i class="fas fa-tint"></i>`;
 
-            if(boxes.length > 2) setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
-            if(boxes.length > 3) setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+            if (isLive) {
+                if(boxes.length > 2) setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal);
+                if(boxes.length > 3) setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal);
+            } else {
+                if(boxes.length > 2) setBoxColor(boxes[2], 2, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+                if(boxes.length > 3) setBoxColor(boxes[3], 3, false, isSuhuAbnormal || isKelembapanAbnormal || (data.isWarning && dummyState === 2));
+            }
         }, 1000);
 
         // Grup 3: Tegangan & Arus (Setelah 2 detik / Jeda 2000ms, jika ada)
@@ -1284,8 +1311,13 @@ async function fetchDataFromDB() {
             var arusElem = document.getElementById("arus");
             if (arusElem && data.arus !== undefined) arusElem.innerHTML = `${data.arus} A <i class="fas fa-charging-station"></i>`;
 
-            if(boxes.length > 4) setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
-            if(boxes.length > 5) setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+            if (isLive) {
+                if(boxes.length > 4) setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver);
+                if(boxes.length > 5) setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver);
+            } else {
+                if(boxes.length > 4) setBoxColor(boxes[4], 4, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+                if(boxes.length > 5) setBoxColor(boxes[5], 5, false, isTeganganOver || isArusOver || (data.isWarning && dummyState === 3));
+            }
         }, 2000);
 
         if (typeof updateLocationStatus === 'function') {
