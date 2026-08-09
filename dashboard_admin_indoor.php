@@ -1052,6 +1052,13 @@ async function fetchLocationsFromDB() {
 
 function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
+    const rawIdAlat = String(idAlat || locId || '').toUpperCase();
+    const isLiveLoc = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || rawIdAlat === '002' || rawIdAlat.includes('002') || rawIdAlat.includes('UTAMA') || locId === 2);
+    const selectedType = isLiveLoc ? 'utama' : 'dummy';
+    if (currentType !== selectedType) {
+        currentType = selectedType;
+        loadChartHistory(currentType);
+    }
     scheduleNextIndoorUpdate();
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
@@ -1316,6 +1323,54 @@ const myChart = new Chart(ctx, {
         } 
     } 
 });
+
+let currentType = 'utama'; // Saat web dimuat, tampilkan alat fisik
+
+function loadChartHistory(type) {
+    if (!myChart || !dataChart) return;
+
+    fetch('api_get_data.php?device=indoor&history=1&type=' + type)
+    .then(res => res.json())
+    .then(historyData => {
+        if (!Array.isArray(historyData)) return;
+
+        dataChart.labels = [];
+        dataChart.datasets.forEach(ds => {
+            ds.data = [];
+            if (ds.pointBackgroundColor) ds.pointBackgroundColor = [];
+            if (ds.pointRadius) ds.pointRadius = [];
+        });
+
+        historyData.forEach(data => {
+            let labelWaktu = data.is_dummy ? data.waktu + " (Dummy)" : data.waktu;
+            dataChart.labels.push(labelWaktu);
+
+            dataChart.datasets.forEach(ds => {
+                if (data.is_dummy) {
+                    if (!ds.pointBackgroundColor) ds.pointBackgroundColor = [];
+                    if (!ds.pointRadius) ds.pointRadius = [];
+                    ds.pointBackgroundColor.push('#ff0000');
+                    ds.pointRadius.push(4);
+                } else {
+                    if (ds.pointBackgroundColor) ds.pointBackgroundColor.push(ds.borderColor);
+                    if (ds.pointRadius) ds.pointRadius.push(0);
+                }
+            });
+
+            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(parseFloat(data.suhu));
+            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
+            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.tegangan));
+            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.arus));
+            if (dataChart.datasets[4] && data.apiValue !== undefined) dataChart.datasets[4].data.push(data.apiValue);
+        });
+
+        myChart.update();
+    })
+    .catch(err => console.error('Error loadChartHistory:', err));
+}
+
+// Panggil secara otomatis saat website pertama kali dibuka
+loadChartHistory(currentType);
 
 // ================= GENERATE DATA (SIKLUS NORMAL -> LINGKUNGAN TIDAK NORMAL -> GANGGUAN LISTRIK -> KEBAKARAN) =================
 let dummyState = 0; // 0 = Normal, 1 = Lingkungan Tidak Normal, 2 = Gangguan Listrik, 3 = Kebakaran

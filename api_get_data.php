@@ -59,16 +59,49 @@ if ($device_id === 'indoor') {
         exit();
     }
 
-        // Cek parameter is_dummy dari URL (Frontend)
+        // Tangkap request
+        $type = isset($_GET['type']) ? strtolower($_GET['type']) : 'semua';
+        $history = isset($_GET['history']) ? intval($_GET['history']) : 0;
         $is_dummy_filter = isset($_GET['is_dummy']) ? $_GET['is_dummy'] : null;
 
-        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
-        if ($is_dummy_filter !== null) {
-            $is_dummy_filter = (int)$is_dummy_filter;
-            $sql = "SELECT * FROM data_sensor WHERE is_dummy = $is_dummy_filter ORDER BY id DESC LIMIT 1";
-        } else {
-            $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
+        // Filter SQL (utama = asli, dummy = simulasi)
+        $filter_sql = "";
+        if ($type === 'utama' || ($is_dummy_filter !== null && (int)$is_dummy_filter === 0)) {
+            $filter_sql = " AND (is_dummy = 0 OR is_dummy IS NULL) ";
+        } elseif ($type === 'dummy' || ($is_dummy_filter !== null && (int)$is_dummy_filter === 1)) {
+            $filter_sql = " AND is_dummy = 1 ";
         }
+
+        // ---- KODE KHUSUS UNTUK MEMUNCULKAN GRAFIK INSTAN ----
+        if ($history == 1) {
+            $sql_hist = "SELECT * FROM (SELECT * FROM data_sensor WHERE 1=1 $filter_sql ORDER BY id DESC LIMIT 15) sub ORDER BY id ASC";
+            $res_hist = @mysqli_query($conn, $sql_hist);
+
+            $history_data = [];
+            if ($res_hist && mysqli_num_rows($res_hist) > 0) {
+                while ($row = mysqli_fetch_assoc($res_hist)) {
+                    $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
+                    $apiVal = isset($row['api']) ? (float)$row['api'] : 0;
+                    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+                    $apiValue = ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiVal > 0.5) ? 1 : 0;
+
+                    $history_data[] = [
+                        'waktu'      => $waktu_raw ? date('H:i:s', strtotime($waktu_raw)) : date('H:i:s'),
+                        'suhu'       => (float)($row['suhu'] ?? 0),
+                        'kelembapan' => (float)($row['kelembapan'] ?? 0),
+                        'tegangan'   => (float)($row['tegangan'] ?? 0),
+                        'arus'       => (float)($row['arus'] ?? 0),
+                        'apiValue'   => $apiValue,
+                        'is_dummy'   => (isset($row['is_dummy']) && $row['is_dummy'] == 1) ? true : false
+                    ];
+                }
+            }
+            echo json_encode($history_data);
+            exit();
+        }
+
+        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
+        $sql = "SELECT * FROM data_sensor WHERE 1=1 $filter_sql ORDER BY id DESC LIMIT 1";
 
         $result = @mysqli_query($conn, $sql);
 
