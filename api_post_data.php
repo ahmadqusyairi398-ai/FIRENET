@@ -4,11 +4,24 @@ session_start();
 require_once 'koneksi.php';
 header('Content-Type: application/json');
 
-$device = $_POST['device'] ?? $_GET['device'] ?? 'outdoor';
+// 1. Ekstrak data JSON terlebih dahulu
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true);
+
+if (!is_array($input) || empty($input)) {
+    $input = $_POST;
+}
+if (empty($input)) {
+    $input = $_GET;
+}
+
+// 2. Baca nama device dari data yang sudah diekstrak
+$device = $input['device'] ?? $_POST['device'] ?? $_GET['device'] ?? 'outdoor';
 
 /** @var PDO $pdo_indoor */
 /** @var PDO $pdo_outdoor */
 
+// 3. Tentukan database tujuan
 $targetPdo = ($device === 'indoor') ? $pdo_indoor : $pdo_outdoor;
 
 if (!$targetPdo) {
@@ -22,16 +35,6 @@ try {
     $colCheck = $targetPdo->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
     if (!$colCheck || $colCheck->rowCount() == 0) {
         @$targetPdo->exec("ALTER TABLE data_sensor ADD COLUMN is_dummy INT DEFAULT 0");
-    }
-
-    // 2. Ambil parameter masukan (support JSON payload, POST, atau GET)
-    $rawInput = file_get_contents('php://input');
-    $input = json_decode($rawInput, true);
-    if (!is_array($input) || empty($input)) {
-        $input = $_POST;
-    }
-    if (empty($input)) {
-        $input = $_GET;
     }
 
     $asap = $input['asap'] ?? 'Normal';
