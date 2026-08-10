@@ -1339,13 +1339,9 @@ async function fetchDataFromDB() {
             asapElem.innerHTML = asapIcon;
         }
 
-        if (isLive) {
-            if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-            if(boxes.length > 1) setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-        } else {
-            if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-            if(boxes.length > 1) setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-        }
+        const isAsapWarning = (data.asap === "Waspada" || data.asap === "Sedang");
+        if(boxes.length > 0) setBoxColor(boxes[0], 0, isApiDanger, false);
+        if(boxes.length > 1) setBoxColor(boxes[1], 1, isAsapDanger, isAsapWarning);
 
         // Grup 2: Suhu & Kelembapan (Setelah 1 detik / Jeda 1000ms)
         setTimeout(() => {

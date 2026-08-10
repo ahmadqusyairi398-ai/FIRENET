@@ -1474,13 +1474,9 @@ async function updateDashboard() {
         asapElem.innerHTML = asapIcon;
     }
 
-    if (isLive) {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-    } else {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-    }
+    const isAsapWarning = (data.asap === "Waspada" || data.asap === "Sedang");
+    setBoxColor(boxes[0], 0, isApiDanger, false);
+    setBoxColor(boxes[1], 1, isAsapDanger, isAsapWarning);
 
     // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna setelah JEDA 1 detik)
     setTimeout(() => {

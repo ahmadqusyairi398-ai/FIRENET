@@ -1603,13 +1603,9 @@ async function updateDashboard() {
     if(data.asap === "Tinggi" || data.asap === "Bahaya") asapIcon = '<i class="fas fa-chart-line"></i> Tinggi (Bahaya)';
     document.getElementById("asap").innerHTML = asapIcon;
 
-    if (isLive) {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-    } else {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-    }
+    const isAsapWarning = (data.asap === "Waspada" || data.asap === "Sedang");
+    setBoxColor(boxes[0], 0, isApiDanger, false);
+    setBoxColor(boxes[1], 1, isAsapDanger, isAsapWarning);
 
     // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna berubah setelah JEDA 1 detik)
     setTimeout(() => {
