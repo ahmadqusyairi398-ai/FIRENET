@@ -6,10 +6,11 @@
     $device = isset($_GET['device']) ? strtolower($_GET['device']) : 'indoor';
     $is_dummy = isset($_GET['is_dummy']) ? (int)$_GET['is_dummy'] : 0;
 
-    // Gunakan koneksi indoor
-    $conn = isset($conn_indoor) && $conn_indoor ? $conn_indoor : null;
-    if (!$conn) {
-        $conn = @mysqli_connect("localhost", "root", "", "indoor");
+    // Pilih koneksi secara ketat sesuai device
+    if ($device === 'outdoor') {
+        $conn = isset($conn_outdoor) && $conn_outdoor ? $conn_outdoor : null;
+    } else {
+        $conn = isset($conn_indoor) && $conn_indoor ? $conn_indoor : null;
     }
 
     if (!$conn) {

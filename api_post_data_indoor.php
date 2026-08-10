@@ -31,7 +31,6 @@ try {
     $id_alat = trim($input['id_alat'] ?? 'LOK-002');
     $asap = $input['asap'] ?? 'Normal';
     $api = $input['api'] ?? 'Aman';
-    $interval_dari_alat = isset($input['interval_dari_alat']) ? intval($input['interval_dari_alat']) : (isset($input['interval']) ? intval($input['interval']) : null);
     $suhu = floatval($input['suhu'] ?? 0);
     $kelembapan = floatval($input['kelembapan'] ?? 0);
     $tegangan = floatval($input['tegangan'] ?? 0);
@@ -40,6 +39,34 @@ try {
     $lng = floatval($input['lng'] ?? ($input['longitude'] ?? 0));
     $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 0;
     $waktu = date('Y-m-d H:i:s');
+
+    // Tangkap variasi parameter interval dari alat
+    $raw_intv = $input['interval_dari_alat'] 
+             ?? $input['interval_kirim'] 
+             ?? $input['interval_detik'] 
+             ?? $input['interval'] 
+             ?? $input['delay'] 
+             ?? $input['interval_sec'] 
+             ?? $_POST['interval_dari_alat'] 
+             ?? $_POST['interval_kirim'] 
+             ?? $_POST['interval_detik'] 
+             ?? $_POST['interval'] 
+             ?? $_GET['interval_dari_alat'] 
+             ?? $_GET['interval_kirim'] 
+             ?? $_GET['interval_detik'] 
+             ?? $_GET['interval'] 
+             ?? null;
+
+    $interval_dari_alat = null;
+    if ($raw_intv !== null && is_numeric($raw_intv)) {
+        $val = intval($raw_intv);
+        if ($val > 500) {
+            $val = intval(round($val / 1000)); // Konversi dari milidetik (ms) ke detik
+        }
+        if ($val > 0) {
+            $interval_dari_alat = $val;
+        }
+    }
 
     // Tangkap IP Address
     $ip_address = $input['ip'] ?? ($input['ip_address'] ?? null);
@@ -65,14 +92,17 @@ try {
         $dateCol = 'timestamp';
     }
 
-    // 4. Update sinkronisasi interval JIKA ada kiriman dari alat
+    // 4. Update sinkronisasi interval & updated_at ke lokasi_monitoring
     if ($interval_dari_alat !== null && $interval_dari_alat > 0) {
-        $stmt_intv = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id_alat = :id_alat");
+        $stmt_intv = $pdo_indoor->prepare("
+            UPDATE lokasi_monitoring 
+            SET interval_kirim = :intv, updated_at = NOW() 
+            WHERE id_alat = :id_alat OR id_alat = 'LOK-002' OR id_alat LIKE '%002%' OR id = 2 OR id = 1
+        ");
         $stmt_intv->execute([':intv' => $interval_dari_alat, ':id_alat' => $id_alat]);
-        if ($stmt_intv->rowCount() == 0) {
-            $stmt_intv_fb = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id = 2 OR id = 1 ORDER BY id DESC LIMIT 1");
-            $stmt_intv_fb->execute([':intv' => $interval_dari_alat]);
-        }
+    } else if ($is_dummy == 0) {
+        // Update waktu update lokasi utama bila ada data fisik masuk
+        @$pdo_indoor->exec("UPDATE lokasi_monitoring SET updated_at = NOW() WHERE id_alat = '$id_alat' OR id_alat = 'LOK-002' OR id = 2");
     }
 
     // 5. Simpan data sensor ke tabel data_sensor (Indoor)
@@ -97,19 +127,15 @@ try {
     // 6. Jika ESP32 mengirim koordinat GPS valid, update lokasi monitoring indoor
     if ($lat != 0 && $lng != 0) {
         try {
-            $stmtGps = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET latitude = :lat, longitude = :lng WHERE id_alat = :id_alat");
+            $stmtGps = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET latitude = :lat, longitude = :lng WHERE id_alat = :id_alat OR id = 2");
             $stmtGps->execute([':lat' => $lat, ':lng' => $lng, ':id_alat' => $id_alat]);
-            if ($stmtGps->rowCount() == 0) {
-                $stmtGpsFb = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET latitude = :lat, longitude = :lng WHERE id = 2 OR id = 1 LIMIT 1");
-                $stmtGpsFb->execute([':lat' => $lat, ':lng' => $lng]);
-            }
         } catch (Throwable $eGps) {}
     }
 
     // 7. Ambil setting interval_kirim alat terbaru dari tabel lokasi_monitoring
     $intervalDetik = 15;
     try {
-        $qLoc = $pdo_indoor->prepare("SELECT interval_kirim FROM lokasi_monitoring WHERE id_alat = :id_alat LIMIT 1");
+        $qLoc = $pdo_indoor->prepare("SELECT interval_kirim FROM lokasi_monitoring WHERE id_alat = :id_alat OR id_alat = 'LOK-002' OR id = 2 ORDER BY id ASC LIMIT 1");
         $qLoc->execute([':id_alat' => $id_alat]);
         $rowLoc = $qLoc->fetch(PDO::FETCH_ASSOC);
 
