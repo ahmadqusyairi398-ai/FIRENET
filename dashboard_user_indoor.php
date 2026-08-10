@@ -1207,11 +1207,12 @@ function loadChartHistory(type) {
                 }
             });
 
-            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(parseFloat(data.suhu));
-            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.arus));
-            if (dataChart.datasets[4] && data.apiValue !== undefined) dataChart.datasets[4].data.push(data.apiValue);
+            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(data.apiValue !== undefined ? data.apiValue : (data.api === "Terdeteksi Api" ? 1 : 0));
+            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(data.asap_value !== undefined ? parseFloat(data.asap_value) : (data.asap === "Tinggi" ? 1 : (data.asap === "Waspada" ? 0.5 : 0)));
+            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.suhu) || 0);
+            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.kelembapan) || 0);
+            if (dataChart.datasets[4]) dataChart.datasets[4].data.push(parseFloat(data.tegangan) || 0);
+            if (dataChart.datasets[5]) dataChart.datasets[5].data.push(parseFloat(data.arus) || 0);
         });
 
         myChart.update();

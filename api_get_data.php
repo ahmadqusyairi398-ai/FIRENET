@@ -85,8 +85,20 @@ if ($device_id === 'indoor') {
                     $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
                     $apiValue = ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiVal > 0.5) ? 1 : 0;
 
+                    $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
+                    if (is_numeric($rawAsap)) {
+                        $fAsap = (float)$rawAsap;
+                        $asapVal = ($fAsap > ($fAsap > 1 ? 750 : 0.5)) ? 1 : (($fAsap > ($fAsap > 1 ? 350 : 0.25)) ? 0.5 : 0);
+                    } else {
+                        $strAsap = trim((string)$rawAsap);
+                        $asapVal = (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) ? 1 : ((strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) ? 0.5 : 0);
+                    }
+
                     $history_data[] = [
                         'waktu'      => $waktu_raw ? date('H:i:s', strtotime($waktu_raw)) : date('H:i:s'),
+                        'api'        => ($apiValue === 1) ? 'Terdeteksi Api' : 'Aman',
+                        'asap'       => ($asapVal === 1) ? 'Tinggi' : (($asapVal === 0.5) ? 'Waspada' : 'Normal'),
+                        'asap_value' => $asapVal,
                         'suhu'       => (float)($row['suhu'] ?? 0),
                         'kelembapan' => (float)($row['kelembapan'] ?? 0),
                         'tegangan'   => (float)($row['tegangan'] ?? 0),
