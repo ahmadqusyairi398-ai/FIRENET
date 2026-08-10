@@ -82,7 +82,7 @@ try {
     if ($device === 'indoor') {
         // A. Update sinkronisasi interval JIKA ada kiriman dari alat
         if ($interval_dari_alat !== null && $interval_dari_alat > 0) {
-            $sql_interval = "UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id = 1";
+            $sql_interval = "UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id_alat = 'LOK-002' OR id = 2 OR id = 1";
             $stmt_intv = $targetPdo->prepare($sql_interval);
             $stmt_intv->execute([':intv' => $interval_dari_alat]);
         }

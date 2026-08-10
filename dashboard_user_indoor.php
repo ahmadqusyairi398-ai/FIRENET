@@ -691,7 +691,7 @@ canvas {
         </div>
         
         <div class="header-right">
-            <a href="home.php" class="btn-home-header"><i class="fas fa-home"></i> HOME</a>
+            <a href="home.php" class="btn-home-header" onclick="return confirm('Apakah Anda yakin ingin kembali ke halaman utama?');"><i class="fas fa-home"></i> HOME</a>
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span><?= htmlspecialchars($user) ?><span class="user-tag">User</span></span>
@@ -1230,19 +1230,6 @@ function loadChartHistory(type) {
 
 // Panggil secara otomatis saat website pertama kali dibuka
 loadChartHistory(currentType);
-
-// ================= GENERATE DATA (SIKLUS NORMAL -> WASPADA -> BAHAYA) =================
-let dummyState = 0; // 0 = Normal, 1 = Waspada, 2 = Bahaya
-
-function generateData() {
-    let apiStatus = "Aman";
-    let asapStatus = "Normal";
-    let suhu = 28;
-    let kelembapan = 60;
-    let tegangan = 220;
-    let arus = 2.5;
-    let isDanger = false;
-    let isWarning = false;
 
 // ================= GENERATE DATA (SIKLUS NORMAL -> LINGKUNGAN TIDAK NORMAL -> GANGGUAN LISTRIK -> KEBAKARAN) =================
 let dummyState = 0; // 0 = Normal, 1 = Lingkungan Tidak Normal, 2 = Gangguan Listrik, 3 = Kebakaran
