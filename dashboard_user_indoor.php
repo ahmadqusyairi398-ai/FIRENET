@@ -432,8 +432,8 @@ body::before {
 .box .sensor-label { font-size: 14px; opacity: 0.9; margin-bottom: 8px; }
 .box b { display: block; font-size: 20px; margin-top: 5px; }
 .box small { display: block; font-size: 11px; opacity: 0.8; margin-top: 2px; }
-.box.api-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
-.box.asap-box { background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9)); }
+/* .box.api-box { background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9)); } */
+/* .box.asap-box { background: linear-gradient(135deg, rgba(255, 165, 2, 0.9), rgba(255, 99, 72, 0.9)); } */
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
