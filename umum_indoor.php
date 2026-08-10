@@ -1100,19 +1100,6 @@ function loadChartHistory(type) {
 // Panggil secara otomatis saat website pertama kali dibuka
 loadChartHistory(currentType);
 
-// ================= GENERATE DATA (SIKLUS NORMAL -> WASPADA -> BAHAYA) =================
-let dummyState = 0; // 0 = Normal, 1 = Waspada, 2 = Bahaya
-
-function generateData() {
-    let apiStatus = "Aman";
-    let asapStatus = "Normal";
-    let suhu = 28;
-    let kelembapan = 60;
-    let tegangan = 220;
-    let arus = 2.5;
-    let isDanger = false;
-    let isWarning = false;
-
 // ================= GENERATE DATA (SIKLUS NORMAL -> LINGKUNGAN TIDAK NORMAL -> GANGGUAN LISTRIK -> KEBAKARAN) =================
 let dummyState = 0; // 0 = Normal, 1 = Lingkungan Tidak Normal, 2 = Gangguan Listrik, 3 = Kebakaran
 
@@ -1210,7 +1197,8 @@ async function fetchSensorData() {
 var batasSensorConfig = <?= json_encode($batas_sensor); ?>;
 
 async function fetchDataFromDB() {
-    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData     const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
+    const locationsList = (currentLocationsData && currentLocationsData.length > 0) ? currentLocationsData : initialLocations;
+    const lokasiAktif = locationsList.find(l => l.id === activeSelectedLocationId) || locationsList[0];
     const rawIdAlat = String(lokasiAktif.id_alat || '').toUpperCase();
     const isLive = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || rawIdAlat === '002' || rawIdAlat.includes('002') || rawIdAlat.includes('UTAMA') || lokasiAktif.id === 2);
 
