@@ -1322,10 +1322,11 @@ $totalUsers = count($users);
                                 <th>AKSI</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="location-table-body">
                             <?php if (count($locations) > 0): ?>
                                 <?php foreach ($locations as $index => $loc): ?>
                                     <?php
+                                    $loc_id = isset($loc['id']) ? (int)$loc['id'] : 0;
                                     $id_alat_display = htmlspecialchars($loc['id_alat']);
                                     $nama_lokasi_display = isset($loc['nama_lokasi']) && $loc['nama_lokasi'] !== '' ? htmlspecialchars($loc['nama_lokasi']) : '-';
 
@@ -1341,7 +1342,7 @@ $totalUsers = count($users);
                                         ? '<span style="background:#28a745; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; color:#fff;"><i class="fas fa-microchip"></i> Alat Utama (Fisik)</span>'
                                         : '<span style="background:#ffc107; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; color:#000;"><i class="fas fa-robot"></i> Simulasi (Dummy)</span>';
                                     ?>
-                                    <tr>
+                                    <tr id="loc-row-<?= $loc_id ?>">
                                         <td><?= $index + 1 ?></td>
                                         <td><strong><?= $id_alat_display ?></strong></td>
                                         <td><?= $nama_lokasi_display ?></td>
@@ -1350,8 +1351,8 @@ $totalUsers = count($users);
                                             Lat: <?= isset($loc['latitude']) ? number_format($loc['latitude'], 6) : '-' ?><br>
                                             Lng: <?= isset($loc['longitude']) ? number_format($loc['longitude'], 6) : '-' ?>
                                         </td>
-                                        <td><span style="font-weight:bold; color:#1e3c72;"><?= isset($loc['interval_kirim']) ? $loc['interval_kirim'] : '15' ?></span> detik</td>
-                                        <td><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
+                                        <td class="loc-interval-col"><span style="font-weight:bold; color:#1e3c72;"><?= isset($loc['interval_kirim']) ? $loc['interval_kirim'] : '15' ?></span> detik</td>
+                                        <td class="loc-update-col"><?= isset($loc['last_update']) ? $loc['last_update'] : date('Y-m-d H:i:s') ?></td>
                                         <td class="action-buttons">
                                             <?php
                                             $id = isset($loc['id']) ? (int)$loc['id'] : 0;
@@ -1939,6 +1940,32 @@ $totalUsers = count($users);
             document.getElementById('tab1').style.display = 'block';
             document.getElementById('tab2').style.display = 'none';
             document.getElementById('tab3').style.display = 'none';
+
+            // Auto-refresh real-time data tabel lokasi
+            function updateLocationTableData() {
+                fetch('get_locations.php')
+                    .then(function(res) { return res.json(); })
+                    .then(function(res) {
+                        if (res && !res.error && Array.isArray(res.data)) {
+                            res.data.forEach(function(loc) {
+                                var row = document.getElementById('loc-row-' + loc.id);
+                                if (row) {
+                                    var intervalElem = row.querySelector('.loc-interval-col');
+                                    var updateElem = row.querySelector('.loc-update-col');
+                                    if (intervalElem) {
+                                        var intVal = loc.interval_kirim || 15;
+                                        intervalElem.innerHTML = '<span style="font-weight:bold; color:#1e3c72;">' + intVal + '</span> detik';
+                                    }
+                                    if (updateElem && loc.last_update) {
+                                        updateElem.textContent = loc.last_update;
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    .catch(function(err) { console.error('Error fetching locations:', err); });
+            }
+            setInterval(updateLocationTableData, 4000);
         });
 
         // ========== FUNGSI MODAL LAINNYA ==========
