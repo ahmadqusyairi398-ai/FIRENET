@@ -371,7 +371,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 // Kirim perintah real-time (HTTP cURL) ke Node-RED (Port 1881) -> Konsep B
                 $url_nodered = "http://localhost:1881/set_interval_outdoor";
-                $payload_nodered = json_encode(array("id_alat" => $id_alat_val, "interval" => $new_interval));
+                $payload_nodered = json_encode(array(
+                    "id_alat"  => $id_alat_val,
+                    "interval" => $new_interval,
+                    "perintah" => "ubah_interval",
+                    "nilai"    => $new_interval
+                ));
                 $ch = curl_init($url_nodered);
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $payload_nodered);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));

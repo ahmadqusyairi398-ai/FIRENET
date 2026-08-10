@@ -44,7 +44,9 @@ try {
     $daya = floatval($input['daya'] ?? 0);
     $kecepatan_angin = floatval($input['angin'] ?? ($input['kecepatan_angin'] ?? 0));
     $arah_angin = $input['arah'] ?? ($input['arah_angin'] ?? 'Utara');
-    $co = floatval($input['co'] ?? 0);
+    $co = floatval($input['co'] ?? ($input['mq7'] ?? 0));
+    $lat = floatval($input['lat'] ?? 0);
+    $lng = floatval($input['lng'] ?? 0);
     $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 0;
     $waktu = date('Y-m-d H:i:s');
 
@@ -101,6 +103,15 @@ try {
     }
 
     $insertedId = $targetPdo->lastInsertId();
+
+    // Jika ESP32 mengirim koordinat GPS valid, update lokasi alat utama
+    if ($lat != 0 && $lng != 0) {
+        try {
+            $tableLoc = ($device === 'indoor') ? 'lokasi_monitoring' : 'lokasi_alat';
+            $stmtGps = $targetPdo->prepare("UPDATE $tableLoc SET latitude = :lat, longitude = :lng WHERE id = 1");
+            $stmtGps->execute([':lat' => $lat, ':lng' => $lng]);
+        } catch (Throwable $eGps) {}
+    }
 
     // Ambil setting interval_detik alat terbaru dari database
     $intervalDetik = 30;
