@@ -53,6 +53,24 @@ try {
     $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 0;
     $waktu = date('Y-m-d H:i:s');
 
+    // Tangkap IP Address dari payload JSON ESP32 atau dari koneksi HTTP server
+    $ip_address = $input['ip'] ?? ($input['ip_address'] ?? null);
+    if (empty($ip_address)) {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip_address = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ip_address = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        } else {
+            $ip_address = $_SERVER['REMOTE_ADDR'] ?? '-';
+        }
+    }
+
+    // Pastikan kolom ip_address ada di tabel data_sensor
+    $colCheckIp = $targetPdo->query("SHOW COLUMNS FROM data_sensor LIKE 'ip_address'");
+    if (!$colCheckIp || $colCheckIp->rowCount() == 0) {
+        @$targetPdo->exec("ALTER TABLE data_sensor ADD COLUMN ip_address VARCHAR(45) DEFAULT NULL");
+    }
+
     // 3. Tentukan nama kolom tanggal/waktu yang tersedia di tabel
     $dateCol = 'tanggal_dan_waktu';
     $colCheckWaktu = $targetPdo->query("SHOW COLUMNS FROM data_sensor LIKE 'timestamp'");
@@ -60,7 +78,7 @@ try {
         $dateCol = 'timestamp';
     }
 
-    // 4. Simpan data sensor dummy ke database MySQL
+    // 4. Simpan data sensor ke database MySQL
     if ($device === 'indoor') {
         // A. Update sinkronisasi interval JIKA ada kiriman dari alat
         if ($interval_dari_alat !== null && $interval_dari_alat > 0) {
@@ -69,9 +87,9 @@ try {
             $stmt_intv->execute([':intv' => $interval_dari_alat]);
         }
 
-        // B. Query khusus Indoor (memakai api, tanpa daya/angin/co)
-        $sql = "INSERT INTO data_sensor ($dateCol, api, asap, suhu, kelembapan, tegangan, arus, is_dummy)
-                VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :is_dummy)";
+        // B. Query khusus Indoor (memakai api, ip_address, tanpa daya/angin/co)
+        $sql = "INSERT INTO data_sensor ($dateCol, api, asap, suhu, kelembapan, tegangan, arus, ip_address, is_dummy)
+                VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :ip_address, :is_dummy)";
 
         $stmt = $targetPdo->prepare($sql);
         $stmt->execute([
@@ -82,12 +100,13 @@ try {
             ':kelembapan' => $kelembapan,
             ':tegangan' => $tegangan,
             ':arus' => $arus,
+            ':ip_address' => $ip_address,
             ':is_dummy' => $is_dummy
         ]);
     } else {
         // Query aslinya untuk Outdoor
-        $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, is_dummy)
-                VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :is_dummy)";
+        $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, ip_address, is_dummy)
+                VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :ip_address, :is_dummy)";
 
         $stmt = $targetPdo->prepare($sql);
         $stmt->execute([
@@ -101,6 +120,7 @@ try {
             ':kecepatan_angin' => $kecepatan_angin,
             ':arah_angin' => $arah_angin,
             ':co' => $co,
+            ':ip_address' => $ip_address,
             ':is_dummy' => $is_dummy
         ]);
     }
