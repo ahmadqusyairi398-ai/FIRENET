@@ -38,7 +38,7 @@ if (empty($db_locations)) {
     $db_locations = [
         [
             'id' => 1,
-            'id_alat' => 'IND-001',
+            'id_alat' => 'LOK-001',
             'nama_lokasi' => 'Gedung Elektro Poltekba',
             'latitude' => -1.202490,
             'longitude' => 116.887080,
@@ -46,7 +46,7 @@ if (empty($db_locations)) {
         ],
         [
             'id' => 2,
-            'id_alat' => 'IND-002',
+            'id_alat' => 'LOK-002',
             'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba',
             'latitude' => -1.203100,
             'longitude' => 116.887500,
@@ -54,7 +54,7 @@ if (empty($db_locations)) {
         ],
         [
             'id' => 3,
-            'id_alat' => 'IND-003',
+            'id_alat' => 'LOK-003',
             'nama_lokasi' => 'Lab Komputer Lt. 2 Gedung Elektro',
             'latitude' => -1.201800,
             'longitude' => 116.886400,
@@ -63,12 +63,20 @@ if (empty($db_locations)) {
     ];
 }
 
-// Tentukan lokasi awal yang difokuskan ke Gedung Elektro Poltekba saat pertama kali dibuka
+// Tentukan lokasi awal yang difokuskan ke LOK-002 (Alat Utama / Ruang Server Gedung Elektro Poltekba)
 $primary_loc = null;
 foreach ($db_locations as $loc) {
-    if (!empty($loc['nama_lokasi']) && (stripos($loc['nama_lokasi'], 'elektro') !== false || stripos($loc['nama_lokasi'], 'poltekba') !== false)) {
+    if (!empty($loc['id_alat']) && (strtoupper($loc['id_alat']) === 'LOK-002' || $loc['id'] == 2)) {
         $primary_loc = $loc;
         break;
+    }
+}
+if (!$primary_loc) {
+    foreach ($db_locations as $loc) {
+        if (!empty($loc['nama_lokasi']) && (stripos($loc['nama_lokasi'], 'elektro') !== false || stripos($loc['nama_lokasi'], 'poltekba') !== false)) {
+            $primary_loc = $loc;
+            break;
+        }
     }
 }
 if (!$primary_loc && !empty($db_locations)) {
@@ -76,11 +84,11 @@ if (!$primary_loc && !empty($db_locations)) {
 }
 if (!$primary_loc) {
     $primary_loc = [
-        'id' => 1,
-        'id_alat' => 'IND-001',
-        'nama_lokasi' => 'Gedung Elektro Poltekba',
-        'latitude' => -1.202490,
-        'longitude' => 116.887080,
+        'id' => 2,
+        'id_alat' => 'LOK-002',
+        'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba',
+        'latitude' => -1.203100,
+        'longitude' => 116.887500,
         'last_update' => date('Y-m-d H:i:s')
     ];
 }
