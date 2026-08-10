@@ -51,7 +51,7 @@ if (empty($db_locations)) {
     $db_locations = [
         [
             'id' => 1,
-            'id_alat' => 'IND-001',
+            'id_alat' => 'LOK-001',
             'nama_lokasi' => 'Gedung Elektro Poltekba',
             'latitude' => -1.202490,
             'longitude' => 116.887080,
@@ -59,7 +59,7 @@ if (empty($db_locations)) {
         ],
         [
             'id' => 2,
-            'id_alat' => 'IND-002',
+            'id_alat' => 'LOK-002',
             'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba',
             'latitude' => -1.203100,
             'longitude' => 116.887500,
@@ -67,7 +67,7 @@ if (empty($db_locations)) {
         ],
         [
             'id' => 3,
-            'id_alat' => 'IND-003',
+            'id_alat' => 'LOK-003',
             'nama_lokasi' => 'Lab Komputer Lt. 2 Gedung Elektro',
             'latitude' => -1.201800,
             'longitude' => 116.886400,
@@ -76,12 +76,20 @@ if (empty($db_locations)) {
     ];
 }
 
-// Tentukan lokasi awal yang difokuskan ke Gedung Elektro Poltekba saat pertama kali dibuka
+// Tentukan lokasi awal yang difokuskan ke LOK-002 (Alat Utama / Ruang Server Gedung Elektro Poltekba)
 $primary_loc = null;
 foreach ($db_locations as $loc) {
-    if (!empty($loc['nama_lokasi']) && (stripos($loc['nama_lokasi'], 'elektro') !== false || stripos($loc['nama_lokasi'], 'poltekba') !== false)) {
+    if (!empty($loc['id_alat']) && (strtoupper($loc['id_alat']) === 'LOK-002' || $loc['id'] == 2)) {
         $primary_loc = $loc;
         break;
+    }
+}
+if (!$primary_loc) {
+    foreach ($db_locations as $loc) {
+        if (!empty($loc['nama_lokasi']) && (stripos($loc['nama_lokasi'], 'elektro') !== false || stripos($loc['nama_lokasi'], 'poltekba') !== false)) {
+            $primary_loc = $loc;
+            break;
+        }
     }
 }
 if (!$primary_loc && !empty($db_locations)) {
@@ -89,11 +97,11 @@ if (!$primary_loc && !empty($db_locations)) {
 }
 if (!$primary_loc) {
     $primary_loc = [
-        'id' => 1,
-        'id_alat' => 'IND-001',
-        'nama_lokasi' => 'Gedung Elektro Poltekba',
-        'latitude' => -1.202490,
-        'longitude' => 116.887080,
+        'id' => 2,
+        'id_alat' => 'LOK-002',
+        'nama_lokasi' => 'Ruang Server Gedung Elektro Poltekba',
+        'latitude' => -1.203100,
+        'longitude' => 116.887500,
         'last_update' => date('Y-m-d H:i:s')
     ];
 }
@@ -1207,11 +1215,12 @@ function loadChartHistory(type) {
                 }
             });
 
-            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(parseFloat(data.suhu));
-            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
-            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.tegangan));
-            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.arus));
-            if (dataChart.datasets[4] && data.apiValue !== undefined) dataChart.datasets[4].data.push(data.apiValue);
+            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(data.apiValue !== undefined ? data.apiValue : (data.api === "Terdeteksi Api" ? 1 : 0));
+            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(data.asap_value !== undefined ? parseFloat(data.asap_value) : (data.asap === "Tinggi" ? 1 : (data.asap === "Waspada" ? 0.5 : 0)));
+            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.suhu) || 0);
+            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.kelembapan) || 0);
+            if (dataChart.datasets[4]) dataChart.datasets[4].data.push(parseFloat(data.tegangan) || 0);
+            if (dataChart.datasets[5]) dataChart.datasets[5].data.push(parseFloat(data.arus) || 0);
         });
 
         myChart.update();
@@ -1474,13 +1483,9 @@ async function updateDashboard() {
         asapElem.innerHTML = asapIcon;
     }
 
-    if (isLive) {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || data.isDanger, (data.asap === "Waspada" || data.asap === "Sedang"));
-    } else {
-        setBoxColor(boxes[0], 0, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-        setBoxColor(boxes[1], 1, isApiDanger || isAsapDanger || (data.isDanger && dummyState === 0), (data.asap === "Waspada"));
-    }
+    const isAsapWarning = (data.asap === "Waspada" || data.asap === "Sedang");
+    setBoxColor(boxes[0], 0, isApiDanger, false);
+    setBoxColor(boxes[1], 1, isAsapDanger, isAsapWarning);
 
     // Grup 2: Suhu & Kelembapan (Nilai Teks & Warna setelah JEDA 1 detik)
     setTimeout(() => {

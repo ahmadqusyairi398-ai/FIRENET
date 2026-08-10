@@ -41,6 +41,23 @@ try {
     $is_dummy = isset($input['is_dummy']) ? intval($input['is_dummy']) : 0;
     $waktu = date('Y-m-d H:i:s');
 
+    // Tangkap IP Address
+    $ip_address = $input['ip'] ?? ($input['ip_address'] ?? null);
+    if (empty($ip_address)) {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip_address = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ip_address = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+        } else {
+            $ip_address = $_SERVER['REMOTE_ADDR'] ?? '-';
+        }
+    }
+
+    $colCheckIp = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'ip_address'");
+    if (!$colCheckIp || $colCheckIp->rowCount() == 0) {
+        @$pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN ip_address VARCHAR(45) DEFAULT NULL");
+    }
+
     // 3. Tentukan nama kolom tanggal/waktu yang tersedia di tabel data_sensor
     $dateCol = 'tanggal_dan_waktu';
     $colCheckWaktu = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'timestamp'");
@@ -53,15 +70,14 @@ try {
         $stmt_intv = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id_alat = :id_alat");
         $stmt_intv->execute([':intv' => $interval_dari_alat, ':id_alat' => $id_alat]);
         if ($stmt_intv->rowCount() == 0) {
-            // Fallback: update id=2 (LOK-002) atau id=1 jika id_alat tidak terdeteksi persis
             $stmt_intv_fb = $pdo_indoor->prepare("UPDATE lokasi_monitoring SET interval_kirim = :intv WHERE id = 2 OR id = 1 ORDER BY id DESC LIMIT 1");
             $stmt_intv_fb->execute([':intv' => $interval_dari_alat]);
         }
     }
 
     // 5. Simpan data sensor ke tabel data_sensor (Indoor)
-    $sql = "INSERT INTO data_sensor ($dateCol, api, asap, suhu, kelembapan, tegangan, arus, is_dummy)
-            VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :is_dummy)";
+    $sql = "INSERT INTO data_sensor ($dateCol, api, asap, suhu, kelembapan, tegangan, arus, ip_address, is_dummy)
+            VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :ip_address, :is_dummy)";
 
     $stmt = $pdo_indoor->prepare($sql);
     $stmt->execute([
@@ -72,6 +88,7 @@ try {
         ':kelembapan' => $kelembapan,
         ':tegangan' => $tegangan,
         ':arus' => $arus,
+        ':ip_address' => $ip_address,
         ':is_dummy' => $is_dummy
     ]);
 
