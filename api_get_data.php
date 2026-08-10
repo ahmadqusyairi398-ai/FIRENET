@@ -162,7 +162,7 @@ if ($device_id === 'indoor') {
 
             $isDanger = ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi" 
                 || ($suhuVal > $limit_suhu) 
-                || ($kelembapanVal < $limit_kelembapan) 
+                || ($kelembapanVal > $limit_kelembapan) 
                 || ($teganganVal > $limit_tegangan) 
                 || ($arusVal > $limit_arus));
 
