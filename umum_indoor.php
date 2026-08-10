@@ -784,6 +784,13 @@ var hasFitBounds = false;
 
 function flyToLocation(lat, lng, nama, idAlat, locId, event) {
     if (locId) activeSelectedLocationId = locId;
+    const rawIdAlat = String(idAlat || locId || '').toUpperCase();
+    const isLiveLoc = (rawIdAlat === 'LOK-002' || rawIdAlat === 'IND-002' || rawIdAlat === '002' || rawIdAlat.includes('002') || rawIdAlat.includes('UTAMA') || locId === 2);
+    const selectedType = isLiveLoc ? 'utama' : 'dummy';
+    if (currentType !== selectedType) {
+        currentType = selectedType;
+        loadChartHistory(currentType);
+    }
     map.flyTo([lat, lng], 17, { duration: 1.5 });
     
     const locNameElem = document.getElementById('location-name-val');
@@ -992,7 +999,13 @@ const myChart = new Chart(ctx, {
         maintainAspectRatio: true,
         animation: { duration: 500 },
         plugins: {
-            legend: { position: 'top' },
+            legend: {
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    pointStyle: 'line'
+                }
+            },
             tooltip: {
                 mode: 'index',
                 intersect: false,
@@ -1029,6 +1042,54 @@ const myChart = new Chart(ctx, {
         }
     }
 });
+
+let currentType = 'utama'; // Saat web dimuat, tampilkan alat fisik
+
+function loadChartHistory(type) {
+    if (!myChart || !dataChart) return;
+
+    fetch('api_get_data.php?device=indoor&history=1&type=' + type)
+    .then(res => res.json())
+    .then(historyData => {
+        if (!Array.isArray(historyData)) return;
+
+        dataChart.labels = [];
+        dataChart.datasets.forEach(ds => {
+            ds.data = [];
+            if (ds.pointBackgroundColor) ds.pointBackgroundColor = [];
+            if (ds.pointRadius) ds.pointRadius = [];
+        });
+
+        historyData.forEach(data => {
+            let labelWaktu = data.is_dummy ? data.waktu + " (Dummy)" : data.waktu;
+            dataChart.labels.push(labelWaktu);
+
+            dataChart.datasets.forEach(ds => {
+                if (data.is_dummy) {
+                    if (!ds.pointBackgroundColor) ds.pointBackgroundColor = [];
+                    if (!ds.pointRadius) ds.pointRadius = [];
+                    ds.pointBackgroundColor.push('#ff0000');
+                    ds.pointRadius.push(4);
+                } else {
+                    if (ds.pointBackgroundColor) ds.pointBackgroundColor.push(ds.borderColor);
+                    if (ds.pointRadius) ds.pointRadius.push(0);
+                }
+            });
+
+            if (dataChart.datasets[0]) dataChart.datasets[0].data.push(parseFloat(data.suhu));
+            if (dataChart.datasets[1]) dataChart.datasets[1].data.push(parseFloat(data.kelembapan));
+            if (dataChart.datasets[2]) dataChart.datasets[2].data.push(parseFloat(data.tegangan));
+            if (dataChart.datasets[3]) dataChart.datasets[3].data.push(parseFloat(data.arus));
+            if (dataChart.datasets[4] && data.apiValue !== undefined) dataChart.datasets[4].data.push(data.apiValue);
+        });
+
+        myChart.update();
+    })
+    .catch(err => console.error('Error loadChartHistory:', err));
+}
+
+// Panggil secara otomatis saat website pertama kali dibuka
+loadChartHistory(currentType);
 
 // ================= GENERATE DATA (SIKLUS NORMAL -> WASPADA -> BAHAYA) =================
 let dummyState = 0; // 0 = Normal, 1 = Waspada, 2 = Bahaya
@@ -1111,10 +1172,14 @@ function generateData() {
         isDanger: isDanger,
         isWarning: isWarning,
         apiValue: apiStatus === "Terdeteksi Api" ? 1 : 0,
-        limit_suhu: 40,
-        limit_kelembapan: 20,
-        limit_tegangan: 240,
-        limit_arus: 5
+        limit_suhu: 45,
+        limit_kelembapan: 85,
+        limit_tegangan: 250,
+        limit_arus: 15,
+        batas_suhu: 45,
+        batas_kelembapan: 85,
+        batas_tegangan: 250,
+        batas_arus: 15
     };
 }
 
@@ -1189,15 +1254,15 @@ async function fetchDataFromDB() {
         const isApiDanger = (data.api === "Terdeteksi Api");
         const isAsapDanger = (data.asap === "Tinggi" || data.asap === "Bahaya");
 
-        const limitSuhu = data.limit_suhu !== undefined ? parseFloat(data.limit_suhu) : 40;
-        const limitKelembapan = data.limit_kelembapan !== undefined ? parseFloat(data.limit_kelembapan) : 20;
-        const isSuhuAbnormal = (data.suhu !== undefined && parseFloat(data.suhu) > limitSuhu);
-        const isKelembapanAbnormal = (data.kelembapan !== undefined && parseFloat(data.kelembapan) < limitKelembapan);
+        let batasSuhu = data.batas_suhu || data.limit_suhu || 45;
+        let batasKelembapan = data.batas_kelembapan || data.limit_kelembapan || 85;
+        let batasTegangan = data.batas_tegangan || data.limit_tegangan || 250;
+        let batasArus = data.batas_arus || data.limit_arus || 15;
 
-        const limitTegangan = data.limit_tegangan !== undefined ? parseFloat(data.limit_tegangan) : 240;
-        const limitArus = data.limit_arus !== undefined ? parseFloat(data.limit_arus) : 5;
-        const isTeganganOver = (data.tegangan !== undefined && parseFloat(data.tegangan) > limitTegangan);
-        const isArusOver = (data.arus !== undefined && parseFloat(data.arus) > limitArus);
+        const isSuhuAbnormal = (data.suhu !== undefined && parseFloat(data.suhu) > batasSuhu);
+        const isKelembapanAbnormal = (data.kelembapan !== undefined && parseFloat(data.kelembapan) > batasKelembapan);
+        const isTeganganOver = (data.tegangan !== undefined && parseFloat(data.tegangan) > batasTegangan);
+        const isArusOver = (data.arus !== undefined && parseFloat(data.arus) > batasArus);
 
         let statusText = "Aman";
         let isDangerDetected = false;

@@ -14,27 +14,30 @@ if ($device_id === 'indoor') {
     }
 
     // Default set points (batas sensor)
-    $limit_suhu = 40.0;
-    $limit_kelembapan = 20.0;
-    $limit_tegangan = 240.0;
-    $limit_arus = 5.0;
+    $limit_suhu = 45.0;
+    $limit_kelembapan = 85.0;
+    $limit_tegangan = 250.0;
+    $limit_arus = 15.0;
 
     if ($conn) {
-        $q_batas = @mysqli_query($conn, "SELECT nama_sensor, batas_max, batas_min FROM batas_sensor");
+        $q_batas = @mysqli_query($conn, "SELECT nama_sensor, nilai_alarm, batas_max, batas_min FROM batas_sensor");
         if ($q_batas && mysqli_num_rows($q_batas) > 0) {
             while ($row = mysqli_fetch_assoc($q_batas)) {
-                $nama = strtolower(trim($row['nama_sensor']));
-                if ($nama == 'suhu') {
-                    $limit_suhu = (float)$row['batas_max'];
-                }
-                if ($nama == 'kelembapan') {
-                    $limit_kelembapan = (float)$row['batas_min'];
-                }
-                if ($nama == 'tegangan listrik' || $nama == 'tegangan') {
-                    $limit_tegangan = (float)$row['batas_max'];
-                }
-                if ($nama == 'arus listrik' || $nama == 'arus') {
-                    $limit_arus = (float)$row['batas_max'];
+                $nama = strtoupper(trim($row['nama_sensor']));
+                $val = isset($row['nilai_alarm']) && $row['nilai_alarm'] !== null && $row['nilai_alarm'] != 0 ? (float)$row['nilai_alarm'] : (float)($row['batas_max'] ?? 0);
+                if ($val > 0) {
+                    if ($nama === 'SUHU') {
+                        $limit_suhu = $val;
+                    }
+                    if ($nama === 'KELEMBAPAN') {
+                        $limit_kelembapan = $val;
+                    }
+                    if ($nama === 'TEGANGAN' || $nama === 'TEGANGAN LISTRIK') {
+                        $limit_tegangan = $val;
+                    }
+                    if ($nama === 'ARUS' || $nama === 'ARUS LISTRIK') {
+                        $limit_arus = $val;
+                    }
                 }
             }
         }
@@ -47,21 +50,58 @@ if ($device_id === 'indoor') {
             "limit_suhu" => $limit_suhu,
             "limit_kelembapan" => $limit_kelembapan,
             "limit_tegangan" => $limit_tegangan,
-            "limit_arus" => $limit_arus
+            "limit_arus" => $limit_arus,
+            "batas_suhu" => $limit_suhu,
+            "batas_kelembapan" => $limit_kelembapan,
+            "batas_tegangan" => $limit_tegangan,
+            "batas_arus" => $limit_arus
         ]);
         exit();
     }
 
-        // Cek parameter is_dummy dari URL (Frontend)
+        // Tangkap request
+        $type = isset($_GET['type']) ? strtolower($_GET['type']) : 'semua';
+        $history = isset($_GET['history']) ? intval($_GET['history']) : 0;
         $is_dummy_filter = isset($_GET['is_dummy']) ? $_GET['is_dummy'] : null;
 
-        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
-        if ($is_dummy_filter !== null) {
-            $is_dummy_filter = (int)$is_dummy_filter;
-            $sql = "SELECT * FROM data_sensor WHERE is_dummy = $is_dummy_filter ORDER BY id DESC LIMIT 1";
-        } else {
-            $sql = "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1";
+        // Filter SQL (utama = asli, dummy = simulasi)
+        $filter_sql = "";
+        if ($type === 'utama' || ($is_dummy_filter !== null && (int)$is_dummy_filter === 0)) {
+            $filter_sql = " AND (is_dummy = 0 OR is_dummy IS NULL) ";
+        } elseif ($type === 'dummy' || ($is_dummy_filter !== null && (int)$is_dummy_filter === 1)) {
+            $filter_sql = " AND is_dummy = 1 ";
         }
+
+        // ---- KODE KHUSUS UNTUK MEMUNCULKAN GRAFIK INSTAN ----
+        if ($history == 1) {
+            $sql_hist = "SELECT * FROM (SELECT * FROM data_sensor WHERE 1=1 $filter_sql ORDER BY id DESC LIMIT 15) sub ORDER BY id ASC";
+            $res_hist = @mysqli_query($conn, $sql_hist);
+
+            $history_data = [];
+            if ($res_hist && mysqli_num_rows($res_hist) > 0) {
+                while ($row = mysqli_fetch_assoc($res_hist)) {
+                    $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
+                    $apiVal = isset($row['api']) ? (float)$row['api'] : 0;
+                    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+                    $apiValue = ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'sedang' || $strApi === 'tinggi' || $apiVal > 0.5) ? 1 : 0;
+
+                    $history_data[] = [
+                        'waktu'      => $waktu_raw ? date('H:i:s', strtotime($waktu_raw)) : date('H:i:s'),
+                        'suhu'       => (float)($row['suhu'] ?? 0),
+                        'kelembapan' => (float)($row['kelembapan'] ?? 0),
+                        'tegangan'   => (float)($row['tegangan'] ?? 0),
+                        'arus'       => (float)($row['arus'] ?? 0),
+                        'apiValue'   => $apiValue,
+                        'is_dummy'   => (isset($row['is_dummy']) && $row['is_dummy'] == 1) ? true : false
+                    ];
+                }
+            }
+            echo json_encode($history_data);
+            exit();
+        }
+
+        // Query Ambil Data Sensor Terbaru yang BISA DIFILTER
+        $sql = "SELECT * FROM data_sensor WHERE 1=1 $filter_sql ORDER BY id DESC LIMIT 1";
 
         $result = @mysqli_query($conn, $sql);
 
@@ -146,7 +186,11 @@ if ($device_id === 'indoor') {
                 "limit_suhu"       => $limit_suhu,
                 "limit_kelembapan" => $limit_kelembapan,
                 "limit_tegangan"   => $limit_tegangan,
-                "limit_arus"       => $limit_arus
+                "limit_arus"       => $limit_arus,
+                "batas_suhu"       => $limit_suhu,
+                "batas_kelembapan" => $limit_kelembapan,
+                "batas_tegangan"   => $limit_tegangan,
+                "batas_arus"       => $limit_arus
             ]);
             exit();
         }
@@ -170,7 +214,11 @@ if ($device_id === 'indoor') {
         "limit_suhu"       => $limit_suhu,
         "limit_kelembapan" => $limit_kelembapan,
         "limit_tegangan"   => $limit_tegangan,
-        "limit_arus"       => $limit_arus
+        "limit_arus"       => $limit_arus,
+        "batas_suhu"       => $limit_suhu,
+        "batas_kelembapan" => $limit_kelembapan,
+        "batas_tegangan"   => $limit_tegangan,
+        "batas_arus"       => $limit_arus
     ]);
     exit();
 } else {

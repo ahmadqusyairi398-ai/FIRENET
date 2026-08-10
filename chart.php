@@ -404,12 +404,12 @@ body::before {
 
 .chart-container {
     position: relative;
-    height: 450px;
+    height: auto;
     width: 100%;
 }
 
 canvas {
-    max-height: 260px;
+    max-height: 380px;
     width: 100%;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 10px;
@@ -588,7 +588,7 @@ canvas {
         font-size: 12px;
     }
     .chart-container {
-        height: 300px;
+        height: auto;
     }
     .header-right {
         flex-direction: column;
