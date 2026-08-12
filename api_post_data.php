@@ -18,4 +18,5 @@ if ($device === 'indoor') {
 } else {
     require __DIR__ . '/api_post_data_outdoor.php';
 }
+}
 ?>

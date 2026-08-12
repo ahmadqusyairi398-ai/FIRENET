@@ -137,8 +137,8 @@ $chart_asap = [];
 if ($conn) {
     $checkSensorTable = mysqli_query($conn, "SHOW TABLES LIKE 'data_sensor'");
     if ($checkSensorTable && mysqli_num_rows($checkSensorTable) > 0) {
-        // Ambil 1 data sensor terbaru
-        $q_latest = mysqli_query($conn, "SELECT * FROM data_sensor ORDER BY id DESC LIMIT 1");
+        // Ambil 1 data sensor terbaru (Hanya Data Asli)
+        $q_latest = mysqli_query($conn, "SELECT * FROM data_sensor WHERE (is_dummy = 0 OR is_dummy IS NULL) ORDER BY id DESC LIMIT 1");
         if ($q_latest && mysqli_num_rows($q_latest) > 0) {
             $s = mysqli_fetch_assoc($q_latest);
             $apiVal = isset($s['api']) ? (float)$s['api'] : 0;
@@ -1467,7 +1467,8 @@ function generateDummyData() {
 // ================= AMBIL DATA DARI DATABASE MENGGUNAKAN AJAX =================
 async function fetchSensorData() {
     try {
-        const response = await fetch('api_get_data.php?device=indoor');
+        // Tambahkan &type=utama agar API memfilter data dummy
+        const response = await fetch('api_get_data.php?device=indoor&type=utama');
         const data = await response.json();
         
         if (data.error) {
