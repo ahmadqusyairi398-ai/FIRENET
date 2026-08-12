@@ -982,10 +982,11 @@ function createChart(labels, dataPoints) {
                 },
                 'y-listrik': {
                     position: 'right', 
-                    grace: '5%',
+                    min: 0,
+                    max: 100,
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A) / Daya (W)', color: '#ff9800' },
-                    ticks: { callback: v => v + (v > 100 ? 'W' : (v > 10 ? 'V' : 'A')) },
+                    ticks: { callback: v => v + (v > 50 ? 'W' : (v > 10 ? 'V' : 'A')) },
                     display: false
                 },
                 'y-angin': {

@@ -1170,7 +1170,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'left',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Tegangan (V) / Daya (W)', color: '#28a745' },
                 grid: { color: 'rgba(0,0,0,0.05)' }
             }, 
@@ -1178,7 +1179,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
                 grid: { drawOnChartArea: false }
             }, 
@@ -1186,7 +1188,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Arus (A) / Angin (m/s) / CO (ppm)', color: '#ff8c00' },
                 grid: { drawOnChartArea: false }
             }, 

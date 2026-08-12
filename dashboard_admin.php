@@ -1516,7 +1516,7 @@ function switchLocationChartData(id) {
                 coVal = 65.0;
             }
 
-            var tegVal = parseFloat((218.0 + (numId % 5) * 1.5).toFixed(1));
+            var tegVal = parseFloat((12.0 + (numId % 5) * 1.5).toFixed(1));
             var arusVal = parseFloat((1.2 + (numId % 4) * 0.4).toFixed(2));
             var dayaVal = parseFloat((tegVal * arusVal).toFixed(1));
             var anginVal = parseFloat((2.0 + (numId % 5) * 1.2).toFixed(1));
@@ -1589,7 +1589,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'left',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Tegangan (V) / Daya (W)', color: '#28a745' },
                 grid: { color: 'rgba(0,0,0,0.05)' }
             }, 
@@ -1597,7 +1598,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
                 grid: { drawOnChartArea: false }
             }, 
@@ -1605,7 +1607,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Arus (A) / Angin (m/s) / CO (ppm)', color: '#ff8c00' },
                 grid: { drawOnChartArea: false }
             }, 

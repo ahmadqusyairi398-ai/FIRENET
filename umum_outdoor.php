@@ -1276,7 +1276,7 @@ function switchLocationChartData(id) {
                 asapVal = 1;
             }
 
-            var dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+            var dayaVal = parseFloat((35.0 + (numId % 6) * 8.0).toFixed(1));
 
             dayaArr.push(dayaVal);
             suhuArr.push(suhuVal);
@@ -1340,7 +1340,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'left',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Daya (W)', color: '#ffc107' },
                 grid: { color: 'rgba(0,0,0,0.05)' }
             }, 
@@ -1348,7 +1349,8 @@ const myChart = new Chart(ctx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                grace: '10%',
+                min: 0,
+                max: 100,
                 title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
                 grid: { drawOnChartArea: false }
             }, 
