@@ -965,8 +965,7 @@ function createChart(labels, dataPoints) {
                 },
                 'y-bahaya': {
                     position: 'left', 
-                    beginAtZero: true, 
-                    max: 120,
+                    grace: '10%',
                     grid: { color: 'rgba(255,107,107,0.2)', drawOnChartArea: true },
                     title: { display: true, text: 'CO (ppm) / Asap (%)', color: '#ff6b6b' },
                     ticks: { callback: function(v) { return v; } },
@@ -974,8 +973,7 @@ function createChart(labels, dataPoints) {
                 },
                 'y-env': {
                     position: 'right', 
-                    beginAtZero: true, 
-                    max: 100,
+                    grace: '5%',
                     grid: { color: 'rgba(78,205,196,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
                     ticks: { callback: v => v + (v > 50 ? '%' : '°C') },
@@ -983,9 +981,7 @@ function createChart(labels, dataPoints) {
                 },
                 'y-listrik': {
                     position: 'right', 
-                    beginAtZero: false, 
-                    min: 0, 
-                    max: 1200,
+                    grace: '5%',
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A) / Daya (W)', color: '#ff9800' },
                     ticks: { callback: v => v + (v > 100 ? 'W' : (v > 10 ? 'V' : 'A')) },
@@ -993,8 +989,7 @@ function createChart(labels, dataPoints) {
                 },
                 'y-angin': {
                     position: 'right', 
-                    beginAtZero: true, 
-                    max: 35,
+                    grace: '10%',
                     grid: { color: 'rgba(33,150,243,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Kecepatan Angin (m/s)', color: '#2196F3' },
                     ticks: { callback: v => v + ' m/s' },

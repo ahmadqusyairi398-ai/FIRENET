@@ -1200,7 +1200,8 @@ let dataChart = {
             backgroundColor: 'rgba(255,193,7,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yDaya'
         },
         { 
             label: 'Suhu (°C)', 
@@ -1209,7 +1210,8 @@ let dataChart = {
             backgroundColor: 'rgba(255,107,107,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yEnv'
         },
         { 
             label: 'Kelembapan (%)', 
@@ -1218,7 +1220,8 @@ let dataChart = {
             backgroundColor: 'rgba(78,205,196,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yEnv'
         },
         { 
             label: 'Asap', 
@@ -1228,7 +1231,8 @@ let dataChart = {
             borderWidth: 2, 
             tension: 0.4, 
             fill: true,
-            borderDash: [5, 5]
+            borderDash: [5, 5],
+            yAxisID: 'yAsap'
         }
     ] 
 };
@@ -1331,10 +1335,28 @@ const myChart = new Chart(ctx, {
             } 
         }, 
         scales: { 
-            y: { 
-                beginAtZero: true, 
-                grid: { color: 'rgba(0,0,0,0.05)' }, 
-                title: { display: true, text: 'Nilai Sensor' } 
+            yDaya: { 
+                type: 'linear',
+                display: true,
+                position: 'left',
+                grace: '10%',
+                title: { display: true, text: 'Daya (W)', color: '#ffc107' },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+            }, 
+            yEnv: { 
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grace: '10%',
+                title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
+                grid: { drawOnChartArea: false }
+            }, 
+            yAsap: { 
+                type: 'linear',
+                display: false,
+                min: 0,
+                max: 2,
+                grid: { drawOnChartArea: false }
             }, 
             x: { 
                 grid: { display: false }, 
