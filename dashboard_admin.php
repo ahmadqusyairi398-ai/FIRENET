@@ -543,9 +543,10 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* ========== CHART ========== */
-.chart-container { margin-top: 10px; max-height: 240px; }
+.chart-container { margin-top: 10px; height: 420px; min-height: 380px; }
 canvas {
-    max-height: 240px;
+    max-height: 420px;
+    height: 420px;
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
@@ -1546,7 +1547,7 @@ const myChart = new Chart(ctx, {
     data: dataChart, 
     options: { 
         responsive: true, 
-        maintainAspectRatio: true, 
+        maintainAspectRatio: false, 
         animation: { duration: 500 }, 
         plugins: { 
             legend: { 

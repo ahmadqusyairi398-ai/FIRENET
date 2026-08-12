@@ -404,12 +404,13 @@ body::before {
 
 .chart-container {
     position: relative;
-    height: auto;
+    height: 420px;
     width: 100%;
 }
 
 canvas {
-    max-height: 380px;
+    max-height: 420px;
+    height: 420px;
     width: 100%;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 10px;
@@ -920,7 +921,7 @@ function createChart(labels, dataPoints) {
         data: { labels: xLabels, datasets: datasets },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
