@@ -15,8 +15,16 @@ if (!$query_sensor || mysqli_num_rows($query_sensor) == 0) {
 }
 $data_sensor = ($query_sensor && mysqli_num_rows($query_sensor) > 0) ? mysqli_fetch_assoc($query_sensor) : null;
 
-// Batas waktu offline (detik). Jika data terakhir > 15 detik yang lalu, anggap alat mati/offline.
-$timeout_seconds = 15;
+// 2. Ambil lokasi alat utama (id=1)
+$query_lokasi = @mysqli_query($conn, "SELECT * FROM lokasi_alat WHERE id = 1 LIMIT 1");
+if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
+    $query_lokasi = @mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id ASC LIMIT 1");
+}
+$data_lokasi = ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) ? mysqli_fetch_assoc($query_lokasi) : null;
+
+// Batas waktu offline (detik). Menyesuaikan dengan interval alat (minimal 45 detik)
+$interval_setting = intval($data_lokasi['interval_detik'] ?? 30);
+$timeout_seconds = max(45, ($interval_setting * 2) + 5);
 $is_online = false;
 
 if ($data_sensor) {
@@ -28,13 +36,6 @@ if ($data_sensor) {
         }
     }
 }
-
-// 2. Ambil lokasi alat utama (id=1)
-$query_lokasi = @mysqli_query($conn, "SELECT * FROM lokasi_alat WHERE id = 1 LIMIT 1");
-if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
-    $query_lokasi = @mysqli_query($conn, "SELECT * FROM lokasi_alat ORDER BY id ASC LIMIT 1");
-}
-$data_lokasi = ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) ? mysqli_fetch_assoc($query_lokasi) : null;
 
 // 3. Logika penentuan status Asap & CO jika alat Online
 $status_asap = "Normal";

@@ -30,7 +30,7 @@ try {
 
     $id_alat = trim($input['id_alat'] ?? 'OUT-001');
     $asap = $input['asap'] ?? 'Normal';
-    $interval_dari_alat = isset($input['interval_dari_alat']) ? intval($input['interval_dari_alat']) : (isset($input['interval']) ? intval($input['interval']) : null);
+    $interval_dari_alat = isset($input['interval_dari_alat']) ? intval($input['interval_dari_alat']) : (isset($input['interval_detik']) ? intval($input['interval_detik']) : (isset($input['interval']) ? intval($input['interval']) : null));
     $suhu = floatval($input['suhu'] ?? 0);
     $kelembapan = floatval($input['kelembapan'] ?? 0);
     $tegangan = floatval($input['tegangan'] ?? 0);
