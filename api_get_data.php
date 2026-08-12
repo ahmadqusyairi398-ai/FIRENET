@@ -88,7 +88,8 @@ if ($device_id === 'indoor') {
                     $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
                     if (is_numeric($rawAsap)) {
                         $fAsap = (float)$rawAsap;
-                        $asapVal = ($fAsap > ($fAsap > 1 ? 750 : 0.5)) ? 1 : (($fAsap > ($fAsap > 1 ? 350 : 0.25)) ? 0.5 : 0);
+                        // Perbaikan: Gunakan standar analog (> 750 bahaya, > 350 sedang)
+                        $asapVal = ($fAsap > 750) ? 1 : (($fAsap > 350) ? 0.5 : 0);
                     } else {
                         $strAsap = trim((string)$rawAsap);
                         $asapVal = (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) ? 1 : ((strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) ? 0.5 : 0);
@@ -144,9 +145,10 @@ if ($device_id === 'indoor') {
         
         if (is_numeric($rawAsap)) {
             $fAsap = (float)$rawAsap;
-            if ($fAsap > ($fAsap > 1 ? 750 : 0.5)) {
+            // Perbaikan: Gunakan standar analog
+            if ($fAsap > 750) {
                 $asapStatus = "Tinggi";
-            } else if ($fAsap > ($fAsap > 1 ? 350 : 0.25)) {
+            } else if ($fAsap > 350) {
                 $asapStatus = "Sedang";
             } else {
                 $asapStatus = "Normal";
