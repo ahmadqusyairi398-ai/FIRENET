@@ -106,11 +106,21 @@ if ($conn) {
                 }
             }
             
+            $raw_tegangan = isset($s['tegangan']) ? (float)$s['tegangan'] : 0.0;
+            $raw_arus = isset($s['arus']) ? (float)$s['arus'] : 0.0;
+            $raw_daya = isset($s['daya']) ? (float)$s['daya'] : 0.0;
+            if ($raw_arus > 20) {
+                $raw_arus = $raw_arus / 1000.0;
+            }
+            if ($raw_daya <= 0 || $raw_daya > 500) {
+                $raw_daya = $raw_tegangan * $raw_arus;
+            }
+
             $latest_sensor = [
                 'waktu' => date('H:i:s', strtotime($time_str)),
-                'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "0.0",
-                'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "0.0",
-                'daya' => isset($s['daya']) ? number_format((float)$s['daya'], 1) : "0.0",
+                'tegangan' => number_format($raw_tegangan, 1),
+                'arus' => number_format($raw_arus, 2),
+                'daya' => number_format($raw_daya, 1),
                 'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
                 'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
                 'asap' => $asap_val,

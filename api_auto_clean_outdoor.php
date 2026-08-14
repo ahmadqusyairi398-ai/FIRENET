@@ -39,6 +39,10 @@ try {
     $stmtCleanReal->execute();
     $realDeleted = $stmtCleanReal->rowCount();
 
+    // Aturan 3: Perbaiki/Koreksi data lama yang memiliki arus/daya tidak realistis (misal satuan mA terbaca sebagai A)
+    @$pdo_outdoor->exec("UPDATE data_sensor SET arus = arus / 1000.0, daya = ROUND(tegangan * (arus / 1000.0), 2) WHERE arus > 20");
+    @$pdo_outdoor->exec("UPDATE data_sensor SET daya = ROUND(tegangan * arus, 2) WHERE daya > 500");
+
     // PERIKSA NOTIFIKASI H-1 (HARI KE-29)
     $sqlWarning = "SELECT COUNT(*) as total_records, MIN($dateCol) as oldest_date 
                    FROM data_sensor 

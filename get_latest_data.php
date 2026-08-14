@@ -63,11 +63,24 @@ if ($is_online && $data_sensor) {
 
 // Gabungkan response (Jika alat mati/offline, set nilai sensor ke 0)
 if ($is_online && $data_sensor) {
+    $cur_tegangan = floatval($data_sensor['tegangan'] ?? 0);
+    $cur_arus = floatval($data_sensor['arus'] ?? 0);
+    $cur_daya = floatval($data_sensor['daya'] ?? 0);
+
+    // Proteksi: jika arus > 20 (terbaca dalam mA), konversi otomatis ke A
+    if ($cur_arus > 20) {
+        $cur_arus = round($cur_arus / 1000.0, 2);
+    }
+    // Proteksi: hitung ulang daya jika tidak valid atau > 500 W
+    if ($cur_daya <= 0 || $cur_daya > 500) {
+        $cur_daya = round($cur_tegangan * $cur_arus, 2);
+    }
+
     $response = [
         'waktu'      => date('H:i:s', strtotime($data_sensor['timestamp'] ?? ($data_sensor['tanggal_dan_waktu'] ?? 'now'))),
-        'tegangan'   => $data_sensor['tegangan'] ?? 0,
-        'arus'       => $data_sensor['arus'] ?? 0,
-        'daya'       => $data_sensor['daya'] ?? 0,
+        'tegangan'   => $cur_tegangan,
+        'arus'       => $cur_arus,
+        'daya'       => $cur_daya,
         'arah'       => $data_sensor['arah_angin'] ?? 'Utara',
         'angin'      => $data_sensor['kecepatan_angin'] ?? 0,
         'asap'       => $status_asap,
