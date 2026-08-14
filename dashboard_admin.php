@@ -543,9 +543,10 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* ========== CHART ========== */
-.chart-container { margin-top: 10px; max-height: 240px; }
+.chart-container { margin-top: 10px; height: 420px; min-height: 380px; }
 canvas {
-    max-height: 240px;
+    max-height: 420px;
+    height: 420px;
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
@@ -1462,13 +1463,13 @@ const ctx = document.getElementById('myChart').getContext('2d');
 let dataChart = { 
     labels: <?= json_encode($chart_labels) ?>, 
     datasets: [
-        { label: 'Tegangan Panel Surya (V)', data: <?= json_encode($chart_tegangan) ?>, borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Arus Panel Surya (A)', data: <?= json_encode($chart_arus) ?>, borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Daya Panel Surya (W)', data: <?= json_encode($chart_daya) ?>, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu) ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan) ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Kecepatan Angin (m/s)', data: <?= json_encode($chart_angin) ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'CO (ppm)', data: <?= json_encode($chart_co) ?>, borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true }
+        { label: 'Tegangan Panel Surya (V)', data: <?= json_encode($chart_tegangan) ?>, borderColor: '#ffc107', backgroundColor: 'rgba(255,193,7,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yListrik' },
+        { label: 'Arus Panel Surya (A)', data: <?= json_encode($chart_arus) ?>, borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yKecil' },
+        { label: 'Daya Panel Surya (W)', data: <?= json_encode($chart_daya) ?>, borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yListrik' },
+        { label: 'Suhu (°C)', data: <?= json_encode($chart_suhu) ?>, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yEnv' },
+        { label: 'Kelembapan (%)', data: <?= json_encode($chart_kelembapan) ?>, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yEnv' },
+        { label: 'Kecepatan Angin (m/s)', data: <?= json_encode($chart_angin) ?>, borderColor: '#3399ff', backgroundColor: 'rgba(51,153,255,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yKecil' },
+        { label: 'CO (ppm)', data: <?= json_encode($chart_co) ?>, borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yKecil' }
     ] 
 };
 
@@ -1504,28 +1505,28 @@ function switchLocationChartData(id) {
             if (conditionStep === 0) { // Aman
                 suhuVal = parseFloat((26.0 + (numId % 3)).toFixed(1));
                 humiVal = 68;
-                coVal = 15;
+                coVal = 5.0;
             } else if (conditionStep === 1) { // Waspada
                 suhuVal = parseFloat((42.0 + (numId % 3)).toFixed(1));
                 humiVal = 48;
-                coVal = 42;
+                coVal = 30.0;
             } else { // Bahaya
                 suhuVal = parseFloat((65.0 + (numId % 3)).toFixed(1));
                 humiVal = 28;
-                coVal = 85;
+                coVal = 65.0;
             }
 
-            var windVal = parseFloat((2.0 + (numId % 4) * 0.9).toFixed(1));
-            var tegVal = parseFloat((219 + (numId % 3)).toFixed(1));
-            var arusVal = parseFloat((1.2 + (numId % 4) * 0.1).toFixed(2));
-            var dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+            var tegVal = parseFloat((12.0 + (numId % 5) * 1.5).toFixed(1));
+            var arusVal = parseFloat((1.2 + (numId % 4) * 0.4).toFixed(2));
+            var dayaVal = parseFloat((tegVal * arusVal).toFixed(1));
+            var anginVal = parseFloat((2.0 + (numId % 5) * 1.2).toFixed(1));
 
             tegArr.push(tegVal);
             arusArr.push(arusVal);
             dayaArr.push(dayaVal);
             suhuArr.push(suhuVal);
             humiArr.push(humiVal);
-            anginArr.push(windVal);
+            anginArr.push(anginVal);
             coArr.push(coVal);
         }
 
@@ -1546,7 +1547,7 @@ const myChart = new Chart(ctx, {
     data: dataChart, 
     options: { 
         responsive: true, 
-        maintainAspectRatio: true, 
+        maintainAspectRatio: false, 
         animation: { duration: 500 }, 
         plugins: { 
             legend: { 
@@ -1584,10 +1585,32 @@ const myChart = new Chart(ctx, {
             } 
         }, 
         scales: { 
-            y: { 
-                beginAtZero: true, 
-                grid: { color: 'rgba(0,0,0,0.05)' }, 
-                title: { display: true, text: 'Nilai Sensor' } 
+            yListrik: { 
+                type: 'linear',
+                display: true,
+                position: 'left',
+                min: 0,
+                max: 100,
+                title: { display: true, text: 'Tegangan (V) / Daya (W)', color: '#28a745' },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+            }, 
+            yEnv: { 
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 0,
+                max: 100,
+                title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
+                grid: { drawOnChartArea: false }
+            }, 
+            yKecil: { 
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 0,
+                max: 100,
+                title: { display: true, text: 'Arus (A) / Angin (m/s) / CO (ppm)', color: '#ff8c00' },
+                grid: { drawOnChartArea: false }
             }, 
             x: { 
                 grid: { display: false }, 

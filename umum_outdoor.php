@@ -438,9 +438,10 @@ body::before {
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
 /* ========== CHART ========== */
-.chart-container { margin-top: 10px; max-height: 240px; }
+.chart-container { margin-top: 10px; height: 420px; min-height: 380px; }
 canvas {
-    max-height: 240px;
+    max-height: 420px;
+    height: 420px;
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
@@ -1200,7 +1201,8 @@ let dataChart = {
             backgroundColor: 'rgba(255,193,7,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yDaya'
         },
         { 
             label: 'Suhu (°C)', 
@@ -1209,7 +1211,8 @@ let dataChart = {
             backgroundColor: 'rgba(255,107,107,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yEnv'
         },
         { 
             label: 'Kelembapan (%)', 
@@ -1218,7 +1221,8 @@ let dataChart = {
             backgroundColor: 'rgba(78,205,196,0.1)', 
             borderWidth: 2, 
             tension: 0.4, 
-            fill: true 
+            fill: true,
+            yAxisID: 'yEnv'
         },
         { 
             label: 'Asap', 
@@ -1228,7 +1232,8 @@ let dataChart = {
             borderWidth: 2, 
             tension: 0.4, 
             fill: true,
-            borderDash: [5, 5]
+            borderDash: [5, 5],
+            yAxisID: 'yAsap'
         }
     ] 
 };
@@ -1271,7 +1276,7 @@ function switchLocationChartData(id) {
                 asapVal = 1;
             }
 
-            var dayaVal = parseFloat((250 + (numId % 6) * 20).toFixed(1));
+            var dayaVal = parseFloat((35.0 + (numId % 6) * 8.0).toFixed(1));
 
             dayaArr.push(dayaVal);
             suhuArr.push(suhuVal);
@@ -1293,7 +1298,7 @@ const myChart = new Chart(ctx, {
     data: dataChart, 
     options: { 
         responsive: true, 
-        maintainAspectRatio: true, 
+        maintainAspectRatio: false, 
         animation: { duration: 500 }, 
         plugins: { 
             legend: { 
@@ -1331,10 +1336,30 @@ const myChart = new Chart(ctx, {
             } 
         }, 
         scales: { 
-            y: { 
-                beginAtZero: true, 
-                grid: { color: 'rgba(0,0,0,0.05)' }, 
-                title: { display: true, text: 'Nilai Sensor' } 
+            yDaya: { 
+                type: 'linear',
+                display: true,
+                position: 'left',
+                min: 0,
+                max: 100,
+                title: { display: true, text: 'Daya (W)', color: '#ffc107' },
+                grid: { color: 'rgba(0,0,0,0.05)' }
+            }, 
+            yEnv: { 
+                type: 'linear',
+                display: true,
+                position: 'right',
+                min: 0,
+                max: 100,
+                title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
+                grid: { drawOnChartArea: false }
+            }, 
+            yAsap: { 
+                type: 'linear',
+                display: false,
+                min: 0,
+                max: 2,
+                grid: { drawOnChartArea: false }
             }, 
             x: { 
                 grid: { display: false }, 
