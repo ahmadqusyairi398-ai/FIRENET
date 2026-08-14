@@ -23,42 +23,11 @@ if (!$pdo_indoor) {
     </div>");
 }
 
-// --- TAMBAHAN BARU: Hitung Estimasi Kapasitas Data (Indoor) ---
-$kapasitas_real_mb = "0.00";
-$kapasitas_dummy_mb = "0.00";
-try {
-    // 1. Dapatkan Rata-rata ukuran baris (Avg Row Length)
-    $q_info = $pdo_indoor->query("SELECT AVG_ROW_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'indoor' AND TABLE_NAME = 'data_sensor'");
-    $avg_row_length = $q_info->fetchColumn() ?: 0;
-
-    // Cek apakah kolom is_dummy ada
-    $colCheckDummy = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
-    $hasDummyCol = ($colCheckDummy && $colCheckDummy->rowCount() > 0);
-
-    $count_dummy = 0;
-    $count_real = 0;
-
-    if ($hasDummyCol) {
-        // 2. Hitung jumlah baris Data Dummy
-        $q_dummy = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 1");
-        $count_dummy = $q_dummy->fetchColumn() ?: 0;
-
-        // 3. Hitung jumlah baris Data Real
-        $q_real = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL");
-        $count_real = $q_real->fetchColumn() ?: 0;
-    } else {
-        // Jika tidak ada kolom dummy, anggap semua data adalah real
-        $q_real = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor");
-        $count_real = $q_real->fetchColumn() ?: 0;
-    }
-
-    // 4. Konversi ukuran ke MB = (Jumlah Baris * Rata-rata Ukuran) / (1024 * 1024)
-    if ($avg_row_length > 0) {
-        $kapasitas_dummy_mb = number_format(($count_dummy * $avg_row_length) / (1024 * 1024), 2);
-        $kapasitas_real_mb = number_format(($count_real * $avg_row_length) / (1024 * 1024), 2);
-    }
-} catch (Exception $e) {}
-// -----------------------------------------------------
+// --- TAMBAHAN: Hitung Estimasi Kapasitas Data Dinamis (Indoor) ---
+$indoor_storage = get_sensor_storage_info($pdo_indoor, 'indoor');
+$kapasitas_real_formatted = $indoor_storage['real_formatted'];
+$kapasitas_dummy_formatted = $indoor_storage['dummy_formatted'];
+// -----------------------------------------------------------------
 
 // --- TAMBAHAN BARU: Ambil daftar lokasi dari database ---
 $db_locations = [];
@@ -739,9 +708,9 @@ body::before {
 
             <div style="font-size: 13px; font-weight: 600; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; color: #495057;">
                 <i class="fas fa-hdd" style="color: #6c757d; margin-right: 5px;"></i> Storage:
-                <span style="color: #007bff; margin-left: 5px;">Real <?= $kapasitas_real_mb ?> MB / 25.9 MB</span>
+                <span style="color: #007bff; margin-left: 5px;">Real <span id="storageRealVal"><?= htmlspecialchars($kapasitas_real_formatted) ?></span> / 25.9 MB</span>
                 <span style="color: #ccc; margin: 0 5px;">|</span>
-                <span style="color: #dc3545;">Dummy <?= $kapasitas_dummy_mb ?> MB / 6 MB</span>
+                <span style="color: #dc3545;">Dummy <span id="storageDummyVal"><?= htmlspecialchars($kapasitas_dummy_formatted) ?></span> / 6 MB</span>
             </div>
         </div>
 
@@ -1194,9 +1163,19 @@ $(document).ready(function() {
 
     // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database indoor
     function fetchTableDataRealtime() {
-        fetch('get_table_data.php?device=indoor')
+        fetch('get_table_data.php?device=indoor&with_storage=1')
             .then(response => response.json())
-            .then(data => {
+            .then(res => {
+                let data = Array.isArray(res) ? res : (res.data || []);
+                
+                // Perbarui indikator kapasitas storage secara realtime tanpa reload halaman
+                if (res && res.storage) {
+                    const realEl = document.getElementById('storageRealVal');
+                    const dummyEl = document.getElementById('storageDummyVal');
+                    if (realEl && res.storage.real) realEl.textContent = res.storage.real;
+                    if (dummyEl && res.storage.dummy) dummyEl.textContent = res.storage.dummy;
+                }
+
                 if (!Array.isArray(data)) return;
                 
                 const startDate = document.getElementById('start_date').value;
