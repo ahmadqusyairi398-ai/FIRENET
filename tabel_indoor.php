@@ -23,6 +23,57 @@ if (!$pdo_indoor) {
     </div>");
 }
 
+// Pastikan kolom is_dummy ada di tabel data_sensor
+try {
+    $colCheck = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
+    if (!$colCheck || $colCheck->rowCount() == 0) {
+        @$pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN is_dummy INT DEFAULT 0");
+    }
+
+    // Cek jika data dummy di database masih kosong (0 baris), otomatis buatkan 50 data dummy awal ke database MySQL
+    $q_chk_dummy = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 1");
+    $total_dummy_db = $q_chk_dummy ? (int)$q_chk_dummy->fetchColumn() : 0;
+    if ($total_dummy_db === 0) {
+        $now = time();
+        for ($i = 49; $i >= 0; $i--) {
+            $t = date('Y-m-d H:i:s', $now - ($i * 60));
+            $d_api = (rand(1, 100) > 90) ? 100 : 0;
+            $d_asap = rand(15, 85);
+            $d_suhu = rand(26, 34);
+            $d_kelembapan = rand(50, 75);
+            $d_tegangan = rand(2180, 2220) / 10;
+            $d_arus = rand(20, 45) / 10;
+            $d_rssi = rand(-75, -55);
+            if ($d_api > 0) { 
+                $d_suhu += 15; 
+                $d_kelembapan -= 20; 
+                $d_asap += 40; 
+            }
+
+            $stmt_ins = $pdo_indoor->prepare("
+                INSERT INTO data_sensor (timestamp, api, asap, suhu, kelembapan, tegangan, arus, rssi, ip_address, is_dummy)
+                VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :rssi, '127.0.0.1 (Simulasi)', 1)
+            ");
+            $stmt_ins->execute([
+                ':waktu' => $t,
+                ':api' => $d_api,
+                ':asap' => $d_asap,
+                ':suhu' => $d_suhu,
+                ':kelembapan' => $d_kelembapan,
+                ':tegangan' => $d_tegangan,
+                ':arus' => $d_arus,
+                ':rssi' => $d_rssi
+            ]);
+        }
+    }
+} catch (Exception $e) {}
+
+// --- TAMBAHAN: Hitung Estimasi Kapasitas Data Dinamis (Indoor) ---
+$indoor_storage = get_sensor_storage_info($pdo_indoor, 'indoor');
+$kapasitas_real_formatted = $indoor_storage['real_formatted'];
+$kapasitas_dummy_formatted = $indoor_storage['dummy_formatted'];
+// -----------------------------------------------------------------
+
 // --- TAMBAHAN BARU: Ambil daftar lokasi dari database ---
 $db_locations = [];
 try {
@@ -48,7 +99,8 @@ try {
                 rssi,
                 ip_address,
                 latitude,
-                longitude
+                longitude,
+                is_dummy
               FROM data_sensor 
               ORDER BY timestamp DESC LIMIT 5000";
               
@@ -696,7 +748,17 @@ body::before {
     </div>
 
     <div class="card">
-        <h3><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
+        <!-- Modifikasi Judul Tabel dengan Kapasitas di Kanan -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;"><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
+
+            <div style="font-size: 13px; font-weight: 600; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; color: #495057;">
+                <i class="fas fa-hdd" style="color: #6c757d; margin-right: 5px;"></i> Storage:
+                <span style="color: #007bff; margin-left: 5px;">Real <span id="storageRealVal"><?= htmlspecialchars($kapasitas_real_formatted) ?></span> / 29 GB</span>
+                <span style="color: #ccc; margin: 0 5px;">|</span>
+                <span style="color: #dc3545;">Dummy <span id="storageDummyVal"><?= htmlspecialchars($kapasitas_dummy_formatted) ?></span> / 29 GB</span>
+            </div>
+        </div>
 
         <div class="filter-section" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
 
@@ -754,6 +816,7 @@ body::before {
                         <th><i class="fas fa-bolt"></i> Tegangan (V)</th>
                         <th><i class="fas fa-charging-station"></i> Arus (A)</th>
                         <th><i class="fas fa-signal"></i> RSSI (dBm)</th>
+                        <th><i class="fas fa-cogs"></i> Aksi</th> <!-- TAMBAHAN INI -->
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -875,7 +938,8 @@ let sensorData = sensorDataPHP.map((item, index) => {
         kelembapan: item.kelembapan !== null && item.kelembapan !== undefined ? parseFloat(item.kelembapan).toFixed(1) : '0',
         tegangan: item.tegangan !== null && item.tegangan !== undefined ? parseFloat(item.tegangan).toFixed(1) : '0',
         arus: item.arus !== null && item.arus !== undefined ? parseFloat(item.arus).toFixed(2) : '0',
-        rssi: item.rssi !== null && item.rssi !== undefined ? item.rssi : '0'
+        rssi: item.rssi !== null && item.rssi !== undefined ? item.rssi : '0',
+        is_dummy: parseInt(item.is_dummy || 0)
     };
 });
 
@@ -948,7 +1012,9 @@ function createRow(item) {
         `${item.kelembapan} %`,
         `${item.tegangan} V`,
         `${item.arus} A`,
-        `${item.rssi} dBm`
+        `${item.rssi} dBm`,
+        // --- TAMBAHAN TOMBOL HAPUS ---
+        item.id ? `<button onclick="hapusBaris(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i> Hapus</button>` : `<span style="color:#aaa; font-size:12px;">(Simulasi)</span>`
     ];
 }
 
@@ -971,10 +1037,11 @@ function initDataTable(data) {
         { title: "Api" }, 
         { title: "Asap" }, 
         { title: "Suhu (°C)" }, 
-        { title: "Kelembapan (%)" },
+        { title: "Kelembapan (%)" }, 
         { title: "Tegangan (V)" }, 
-        { title: "Arus (A)" },
-        { title: "RSSI (dBm)" }
+        { title: "Arus (A)" }, 
+        { title: "RSSI (dBm)" },
+        { title: "Aksi" }
     ];
 
     dataTable = $('#sensorTable').DataTable({
@@ -990,14 +1057,15 @@ function initDataTable(data) {
         scrollX: true,
         columnDefs: [
             { width: "5%", targets: 0 },
-            { width: "15%", targets: 1 },
-            { width: "12%", targets: 2 },
-            { width: "12%", targets: 3 },
-            { width: "10%", targets: 4 },
-            { width: "10%", targets: 5 },
-            { width: "10%", targets: 6 },
-            { width: "10%", targets: 7 },
-            { width: "8%", targets: 8 }
+            { width: "14%", targets: 1 },
+            { width: "11%", targets: 2 },
+            { width: "11%", targets: 3 },
+            { width: "9%", targets: 4 },
+            { width: "9%", targets: 5 },
+            { width: "9%", targets: 6 },
+            { width: "9%", targets: 7 },
+            { width: "8%", targets: 8 },
+            { width: "15%", targets: 9, orderable: false }
         ]
     });
 }
@@ -1039,7 +1107,6 @@ function generateDummyTable(count) {
             rssi: Math.floor(Math.random() * 20 - 70).toString()
         });
     }
-    // Urutkan terbalik (paling baru di atas)
     return dummyTable.reverse();
 }
 
@@ -1050,7 +1117,6 @@ function applyFilter() {
     const locSelect = document.getElementById('locationSelect');
     const locationVal = locSelect ? locSelect.value : 'LOK-002';
 
-    // UPDATE BADGE LIVE/DUMMY
     const tableBadge = document.getElementById('table-badge');
     if (tableBadge) {
         if (locationVal === 'LOK-002') {
@@ -1062,10 +1128,14 @@ function applyFilter() {
         }
     }
 
-    // CEK SUMBER DATA
-    let sourceData = sensorData; // Data asli dari DB (LOK-002)
-    if (locationVal !== 'LOK-002') {
-        sourceData = generateDummyTable(50); // Hasilkan 50 riwayat dummy
+    let sourceData = [];
+    if (locationVal === 'LOK-002') {
+        sourceData = sensorData.filter(item => !item.is_dummy || item.is_dummy === 0);
+    } else {
+        sourceData = sensorData.filter(item => item.is_dummy === 1);
+        if (sourceData.length === 0) {
+            sourceData = generateDummyTable(50);
+        }
     }
 
     let filteredData = [...sourceData];
@@ -1075,7 +1145,6 @@ function applyFilter() {
     if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
     if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
 
-    // Beri ulang nomor urut untuk tabel
     filteredData.forEach((item, idx) => item.no = idx + 1);
 
     currentData = filteredData;
@@ -1087,7 +1156,7 @@ function applyFilter() {
 function resetFilter() {
     document.getElementById('start_date').value = '';
     document.getElementById('end_date').value = '';
-    applyFilter(); // Panggil ulang logika Dummy/Live
+    applyFilter();
 }
 
 function exportToExcel() {
@@ -1121,7 +1190,6 @@ $(document).ready(function() {
         applyFilter();
         console.log(`Data berhasil dimuat: ${sensorData.length} record`);
     } else {
-        // Inisialisasi tabel kosong
         $('#sensorTable').DataTable({
             data: [],
             columns: [
@@ -1133,7 +1201,8 @@ $(document).ready(function() {
                 { title: "Kelembapan (%)" },
                 { title: "Tegangan (V)" }, 
                 { title: "Arus (A)" },
-                { title: "RSSI (dBm)" }
+                { title: "RSSI (dBm)" },
+                { title: "Aksi" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -1145,11 +1214,20 @@ $(document).ready(function() {
         applyFilter();
     }
 
-    // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database indoor
     function fetchTableDataRealtime() {
-        fetch('get_table_data.php?device=indoor')
+        fetch('get_table_data.php?device=indoor&with_storage=1')
             .then(response => response.json())
-            .then(data => {
+            .then(res => {
+                let data = Array.isArray(res) ? res : (res.data || []);
+                
+                // Perbarui indikator kapasitas storage secara realtime tanpa reload halaman
+                if (res && res.storage) {
+                    const realEl = document.getElementById('storageRealVal');
+                    const dummyEl = document.getElementById('storageDummyVal');
+                    if (realEl && res.storage.real) realEl.textContent = res.storage.real;
+                    if (dummyEl && res.storage.dummy) dummyEl.textContent = res.storage.dummy;
+                }
+
                 if (!Array.isArray(data)) return;
                 
                 const startDate = document.getElementById('start_date').value;
@@ -1200,6 +1278,32 @@ $(document).ready(function() {
     // Jalankan pembaruan tabel indoor otomatis (30s Alat Utama, 15s Dummy)
     scheduleNextIndoorTableUpdate();
 });
+
+// =======================================================
+// FUNGSI JAVASCRIPT HAPUS BARIS DATA INDOOR
+// =======================================================
+function hapusBaris(idData) {
+    if (confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini permanen.")) {
+        fetch('api_hapus_baris_indoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: idData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Data berhasil dihapus!");
+                location.reload(); // Muat ulang halaman untuk memperbarui tabel & kapasitas
+            } else {
+                alert("Gagal: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Terjadi kesalahan sistem saat menghapus data.");
+        });
+    }
+}
 </script>
 
 </body>

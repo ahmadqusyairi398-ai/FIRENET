@@ -63,5 +63,19 @@ if ($q) {
     }
 }
 
-echo json_encode($rows);
+if (isset($_GET['with_storage']) && $_GET['with_storage'] == '1') {
+    $target_db = ($device === 'indoor') ? ($dbname_indoor ?? 'indoor') : ($dbname_outdoor ?? 'outdoor');
+    $storage_info = get_sensor_storage_info($conn, $target_db);
+    echo json_encode([
+        'data' => $rows,
+        'storage' => [
+            'real' => $storage_info['real_formatted'],
+            'dummy' => $storage_info['dummy_formatted'],
+            'count_real' => $storage_info['count_real'],
+            'count_dummy' => $storage_info['count_dummy']
+        ]
+    ]);
+} else {
+    echo json_encode($rows);
+}
 ?>
