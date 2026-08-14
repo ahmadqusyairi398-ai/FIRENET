@@ -674,6 +674,25 @@ body::before {
 .dataTables_paginate .paginate_button:hover {
     background: rgba(255,255,255,0.9);
 }
+.btn-delete-row {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+.btn-delete-row:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
+}
 /* ========== DATA TYPE BADGE & LOCATION SELECT ========== */
 .data-type-badge {
     padding: 3px 10px;
@@ -814,6 +833,7 @@ body::before {
                         <th><i class="fas fa-wind"></i> Kecepatan Angin (m/s)</th>
                         <th><i class="fas fa-compass"></i> Arah Angin</th>
                         <th><i class="fas fa-skull-crossbones"></i> CO (ppm)</th>
+                        <th style="text-align:center;"><i class="fas fa-trash-alt"></i> Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -974,8 +994,12 @@ function getStatusIcon(value, type) {
     return '';
 }
 
-function updateDataTable(data) {
-    const rows = data.map((item) => [
+function createRow(item) {
+    let actionBtn = item.id ? 
+        `<button onclick="hapusBaris(${item.id})" class="btn-delete-row" title="Hapus Data"><i class="fas fa-trash-alt"></i> Hapus</button>` : 
+        `<span style="color:#aaa; font-size:12px;">(Simulasi)</span>`;
+
+    return [
         item.no,
         item.tanggal_waktu,
         `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${item.asap}</span>`,
@@ -986,8 +1010,13 @@ function updateDataTable(data) {
         `${item.daya} W`,
         `${item.kecepatan_angin} m/s`,
         `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
-    ]);
+        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`,
+        actionBtn
+    ];
+}
+
+function updateDataTable(data) {
+    const rows = data.map(createRow);
     if (dataTable) {
         dataTable.clear();
         if (rows.length > 0) dataTable.rows.add(rows);
@@ -997,19 +1026,7 @@ function updateDataTable(data) {
 
 function initDataTable(data) {
     if (dataTable) dataTable.destroy();
-    const rows = data.map((item) => [
-        item.no,
-        item.tanggal_waktu,
-        `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${item.asap}</span>`,
-        `${item.suhu} °C`,
-        `${item.kelembapan} %`,
-        `${item.tegangan} V`,
-        `${item.arus} A`,
-        `${item.daya} W`,
-        `${item.kecepatan_angin} m/s`,
-        `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
-    ]);
+    const rows = data.map(createRow);
     dataTable = $('#sensorTable').DataTable({
         data: rows,
         columns: [
@@ -1023,7 +1040,8 @@ function initDataTable(data) {
             { title: "Daya (W)" },
             { title: "Kecepatan Angin (m/s)" },
             { title: "Arah Angin" },
-            { title: "CO (ppm)" }
+            { title: "CO (ppm)" },
+            { title: "Aksi", orderable: false }
         ],
         language: {
             url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -1083,6 +1101,33 @@ function exportToExcel() {
     alert(`Berhasil mengexport ${exportData.length} data ke Excel!`);
 }
 
+// FUNGSI JAVASCRIPT HAPUS BARIS DATA OUTDOOR
+function hapusBaris(idData) {
+    if (confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini permanen.")) {
+        fetch('api_hapus_baris_outdoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: idData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                sensorData = sensorData.filter(item => item.id != idData);
+                sensorData.forEach((item, idx) => item.no = idx + 1);
+                currentData = [...sensorData];
+                updateDataTable(currentData);
+                alert("Data berhasil dihapus!");
+            } else {
+                alert("Gagal menghapus data: " + (data.message || 'Terjadi kesalahan.'));
+            }
+        })
+        .catch(err => {
+            console.error("Error deleting row:", err);
+            alert("Terjadi kesalahan sistem saat menghapus data.");
+        });
+    }
+}
+
 $(document).ready(function() {
     // Perbaikan kondisi: Cek apakah array memiliki isi terlebih dahulu secara aman
     if (sensorData && sensorData.length > 0) {
@@ -1103,7 +1148,8 @@ $(document).ready(function() {
                 { title: "Daya (W)" },
                 { title: "Kecepatan Angin (m/s)" },
                 { title: "Arah Angin" },
-                { title: "CO (ppm)" }
+                { title: "CO (ppm)" },
+                { title: "Aksi", orderable: false }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -1191,7 +1237,7 @@ $(document).ready(function() {
             const dayaVal = (250 + (numId % 6) * 20).toFixed(1);
 
             rows.push({
-                id: i + 1,
+                id: null,
                 no: i + 1,
                 tanggal_waktu: fullStr,
                 tanggal: dateStr,
