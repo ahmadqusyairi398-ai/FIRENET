@@ -23,6 +23,43 @@ if (!$pdo_indoor) {
     </div>");
 }
 
+// --- TAMBAHAN BARU: Hitung Estimasi Kapasitas Data (Indoor) ---
+$kapasitas_real_mb = "0.00";
+$kapasitas_dummy_mb = "0.00";
+try {
+    // 1. Dapatkan Rata-rata ukuran baris (Avg Row Length)
+    $q_info = $pdo_indoor->query("SELECT AVG_ROW_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'indoor' AND TABLE_NAME = 'data_sensor'");
+    $avg_row_length = $q_info->fetchColumn() ?: 0;
+
+    // Cek apakah kolom is_dummy ada
+    $colCheckDummy = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
+    $hasDummyCol = ($colCheckDummy && $colCheckDummy->rowCount() > 0);
+
+    $count_dummy = 0;
+    $count_real = 0;
+
+    if ($hasDummyCol) {
+        // 2. Hitung jumlah baris Data Dummy
+        $q_dummy = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 1");
+        $count_dummy = $q_dummy->fetchColumn() ?: 0;
+
+        // 3. Hitung jumlah baris Data Real
+        $q_real = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 0 OR is_dummy IS NULL");
+        $count_real = $q_real->fetchColumn() ?: 0;
+    } else {
+        // Jika tidak ada kolom dummy, anggap semua data adalah real
+        $q_real = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor");
+        $count_real = $q_real->fetchColumn() ?: 0;
+    }
+
+    // 4. Konversi ukuran ke MB = (Jumlah Baris * Rata-rata Ukuran) / (1024 * 1024)
+    if ($avg_row_length > 0) {
+        $kapasitas_dummy_mb = number_format(($count_dummy * $avg_row_length) / (1024 * 1024), 2);
+        $kapasitas_real_mb = number_format(($count_real * $avg_row_length) / (1024 * 1024), 2);
+    }
+} catch (Exception $e) {}
+// -----------------------------------------------------
+
 // --- TAMBAHAN BARU: Ambil daftar lokasi dari database ---
 $db_locations = [];
 try {
@@ -696,7 +733,17 @@ body::before {
     </div>
 
     <div class="card">
-        <h3><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
+        <!-- Modifikasi Judul Tabel dengan Kapasitas di Kanan -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;"><i class="fas fa-database"></i> Riwayat Data Sensor Lengkap</h3>
+
+            <div style="font-size: 13px; font-weight: 600; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; color: #495057;">
+                <i class="fas fa-hdd" style="color: #6c757d; margin-right: 5px;"></i> Storage:
+                <span style="color: #007bff; margin-left: 5px;">Real <?= $kapasitas_real_mb ?> MB / 25.9 MB</span>
+                <span style="color: #ccc; margin: 0 5px;">|</span>
+                <span style="color: #dc3545;">Dummy <?= $kapasitas_dummy_mb ?> MB / 6 MB</span>
+            </div>
+        </div>
 
         <div class="filter-section" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
 
