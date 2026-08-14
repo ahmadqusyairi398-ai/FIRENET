@@ -23,6 +23,51 @@ if (!$pdo_indoor) {
     </div>");
 }
 
+// Pastikan kolom is_dummy ada di tabel data_sensor
+try {
+    $colCheck = $pdo_indoor->query("SHOW COLUMNS FROM data_sensor LIKE 'is_dummy'");
+    if (!$colCheck || $colCheck->rowCount() == 0) {
+        @$pdo_indoor->exec("ALTER TABLE data_sensor ADD COLUMN is_dummy INT DEFAULT 0");
+    }
+
+    // Cek jika data dummy di database masih kosong (0 baris), otomatis buatkan 50 data dummy awal ke database MySQL
+    $q_chk_dummy = $pdo_indoor->query("SELECT COUNT(*) FROM data_sensor WHERE is_dummy = 1");
+    $total_dummy_db = $q_chk_dummy ? (int)$q_chk_dummy->fetchColumn() : 0;
+    if ($total_dummy_db === 0) {
+        $now = time();
+        for ($i = 49; $i >= 0; $i--) {
+            $t = date('Y-m-d H:i:s', $now - ($i * 60));
+            $d_api = (rand(1, 100) > 90) ? 100 : 0;
+            $d_asap = rand(15, 85);
+            $d_suhu = rand(26, 34);
+            $d_kelembapan = rand(50, 75);
+            $d_tegangan = rand(2180, 2220) / 10;
+            $d_arus = rand(20, 45) / 10;
+            $d_rssi = rand(-75, -55);
+            if ($d_api > 0) { 
+                $d_suhu += 15; 
+                $d_kelembapan -= 20; 
+                $d_asap += 40; 
+            }
+
+            $stmt_ins = $pdo_indoor->prepare("
+                INSERT INTO data_sensor (timestamp, api, asap, suhu, kelembapan, tegangan, arus, rssi, ip_address, is_dummy)
+                VALUES (:waktu, :api, :asap, :suhu, :kelembapan, :tegangan, :arus, :rssi, '127.0.0.1 (Simulasi)', 1)
+            ");
+            $stmt_ins->execute([
+                ':waktu' => $t,
+                ':api' => $d_api,
+                ':asap' => $d_asap,
+                ':suhu' => $d_suhu,
+                ':kelembapan' => $d_kelembapan,
+                ':tegangan' => $d_tegangan,
+                ':arus' => $d_arus,
+                ':rssi' => $d_rssi
+            ]);
+        }
+    }
+} catch (Exception $e) {}
+
 // --- TAMBAHAN: Hitung Estimasi Kapasitas Data Dinamis (Indoor) ---
 $indoor_storage = get_sensor_storage_info($pdo_indoor, 'indoor');
 $kapasitas_real_formatted = $indoor_storage['real_formatted'];
@@ -54,7 +99,8 @@ try {
                 rssi,
                 ip_address,
                 latitude,
-                longitude
+                longitude,
+                is_dummy
               FROM data_sensor 
               ORDER BY timestamp DESC LIMIT 5000";
               
@@ -891,7 +937,8 @@ let sensorData = sensorDataPHP.map((item, index) => {
         kelembapan: item.kelembapan !== null && item.kelembapan !== undefined ? parseFloat(item.kelembapan).toFixed(1) : '0',
         tegangan: item.tegangan !== null && item.tegangan !== undefined ? parseFloat(item.tegangan).toFixed(1) : '0',
         arus: item.arus !== null && item.arus !== undefined ? parseFloat(item.arus).toFixed(2) : '0',
-        rssi: item.rssi !== null && item.rssi !== undefined ? item.rssi : '0'
+        rssi: item.rssi !== null && item.rssi !== undefined ? item.rssi : '0',
+        is_dummy: parseInt(item.is_dummy || 0)
     };
 });
 
@@ -1078,10 +1125,18 @@ function applyFilter() {
         }
     }
 
-    // CEK SUMBER DATA
-    let sourceData = sensorData; // Data asli dari DB (LOK-002)
-    if (locationVal !== 'LOK-002') {
-        sourceData = generateDummyTable(50); // Hasilkan 50 riwayat dummy
+    // CEK SUMBER DATA (DATA ASLI vs DUMMY DARI DATABASE)
+    let sourceData = [];
+    if (locationVal === 'LOK-002') {
+        // Data Asli (is_dummy = 0 atau NULL)
+        sourceData = sensorData.filter(item => !item.is_dummy || item.is_dummy === 0);
+    } else {
+        // Data Dummy dari Database (is_dummy = 1)
+        sourceData = sensorData.filter(item => item.is_dummy === 1);
+        // Fallback jika belum ada data dummy
+        if (sourceData.length === 0) {
+            sourceData = generateDummyTable(50);
+        }
     }
 
     let filteredData = [...sourceData];
