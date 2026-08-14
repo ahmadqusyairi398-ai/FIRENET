@@ -36,6 +36,16 @@ try {
     $tegangan = floatval($input['tegangan'] ?? 0);
     $arus = floatval($input['arus'] ?? 0);
     $daya = floatval($input['daya'] ?? 0);
+
+    // Validasi & Proteksi Nilai Arus & Daya:
+    // Jika arus > 20 A (tidak wajar untuk solar panel IoT kecil), otomatis konversi dari mA ke A
+    if ($arus > 20) {
+        $arus = $arus / 1000.0;
+    }
+    // Hitung ulang daya jika daya kosong, 0, atau tidak realistis (> 500 W)
+    if ($daya <= 0 || $daya > 500) {
+        $daya = round($tegangan * $arus, 2);
+    }
     $kecepatan_angin = floatval($input['angin'] ?? ($input['kecepatan_angin'] ?? 0));
     $arah_angin = $input['arah'] ?? ($input['arah_angin'] ?? 'Utara');
     $co = floatval($input['co'] ?? ($input['mq7'] ?? 0));
