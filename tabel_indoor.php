@@ -754,9 +754,9 @@ body::before {
 
             <div style="font-size: 13px; font-weight: 600; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border: 1px solid #e0e0e0; color: #495057;">
                 <i class="fas fa-hdd" style="color: #6c757d; margin-right: 5px;"></i> Storage:
-                <span style="color: #007bff; margin-left: 5px;">Real <span id="storageRealVal"><?= htmlspecialchars($kapasitas_real_formatted) ?></span> / 25.9 MB</span>
+                <span style="color: #007bff; margin-left: 5px;">Real <span id="storageRealVal"><?= htmlspecialchars($kapasitas_real_formatted) ?></span> / 29 GB</span>
                 <span style="color: #ccc; margin: 0 5px;">|</span>
-                <span style="color: #dc3545;">Dummy <span id="storageDummyVal"><?= htmlspecialchars($kapasitas_dummy_formatted) ?></span> / 6 MB</span>
+                <span style="color: #dc3545;">Dummy <span id="storageDummyVal"><?= htmlspecialchars($kapasitas_dummy_formatted) ?></span> / 29 GB</span>
             </div>
         </div>
 
