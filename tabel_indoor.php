@@ -816,6 +816,7 @@ body::before {
                         <th><i class="fas fa-bolt"></i> Tegangan (V)</th>
                         <th><i class="fas fa-charging-station"></i> Arus (A)</th>
                         <th><i class="fas fa-signal"></i> RSSI (dBm)</th>
+                        <th><i class="fas fa-cogs"></i> Aksi</th> <!-- TAMBAHAN INI -->
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -1011,7 +1012,9 @@ function createRow(item) {
         `${item.kelembapan} %`,
         `${item.tegangan} V`,
         `${item.arus} A`,
-        `${item.rssi} dBm`
+        `${item.rssi} dBm`,
+        // --- TAMBAHAN TOMBOL HAPUS ---
+        item.id ? `<button onclick="hapusBaris(${item.id})" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash"></i> Hapus</button>` : `<span style="color:#aaa; font-size:12px;">(Simulasi)</span>`
     ];
 }
 
@@ -1034,10 +1037,11 @@ function initDataTable(data) {
         { title: "Api" }, 
         { title: "Asap" }, 
         { title: "Suhu (°C)" }, 
-        { title: "Kelembapan (%)" },
+        { title: "Kelembapan (%)" }, 
         { title: "Tegangan (V)" }, 
-        { title: "Arus (A)" },
-        { title: "RSSI (dBm)" }
+        { title: "Arus (A)" }, 
+        { title: "RSSI (dBm)" },
+        { title: "Aksi" }
     ];
 
     dataTable = $('#sensorTable').DataTable({
@@ -1053,14 +1057,15 @@ function initDataTable(data) {
         scrollX: true,
         columnDefs: [
             { width: "5%", targets: 0 },
-            { width: "15%", targets: 1 },
-            { width: "12%", targets: 2 },
-            { width: "12%", targets: 3 },
-            { width: "10%", targets: 4 },
-            { width: "10%", targets: 5 },
-            { width: "10%", targets: 6 },
-            { width: "10%", targets: 7 },
-            { width: "8%", targets: 8 }
+            { width: "14%", targets: 1 },
+            { width: "11%", targets: 2 },
+            { width: "11%", targets: 3 },
+            { width: "9%", targets: 4 },
+            { width: "9%", targets: 5 },
+            { width: "9%", targets: 6 },
+            { width: "9%", targets: 7 },
+            { width: "8%", targets: 8 },
+            { width: "15%", targets: 9, orderable: false }
         ]
     });
 }
@@ -1102,7 +1107,6 @@ function generateDummyTable(count) {
             rssi: Math.floor(Math.random() * 20 - 70).toString()
         });
     }
-    // Urutkan terbalik (paling baru di atas)
     return dummyTable.reverse();
 }
 
@@ -1113,7 +1117,6 @@ function applyFilter() {
     const locSelect = document.getElementById('locationSelect');
     const locationVal = locSelect ? locSelect.value : 'LOK-002';
 
-    // UPDATE BADGE LIVE/DUMMY
     const tableBadge = document.getElementById('table-badge');
     if (tableBadge) {
         if (locationVal === 'LOK-002') {
@@ -1125,15 +1128,11 @@ function applyFilter() {
         }
     }
 
-    // CEK SUMBER DATA (DATA ASLI vs DUMMY DARI DATABASE)
     let sourceData = [];
     if (locationVal === 'LOK-002') {
-        // Data Asli (is_dummy = 0 atau NULL)
         sourceData = sensorData.filter(item => !item.is_dummy || item.is_dummy === 0);
     } else {
-        // Data Dummy dari Database (is_dummy = 1)
         sourceData = sensorData.filter(item => item.is_dummy === 1);
-        // Fallback jika belum ada data dummy
         if (sourceData.length === 0) {
             sourceData = generateDummyTable(50);
         }
@@ -1146,7 +1145,6 @@ function applyFilter() {
     if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
     if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
 
-    // Beri ulang nomor urut untuk tabel
     filteredData.forEach((item, idx) => item.no = idx + 1);
 
     currentData = filteredData;
@@ -1158,7 +1156,7 @@ function applyFilter() {
 function resetFilter() {
     document.getElementById('start_date').value = '';
     document.getElementById('end_date').value = '';
-    applyFilter(); // Panggil ulang logika Dummy/Live
+    applyFilter();
 }
 
 function exportToExcel() {
@@ -1192,7 +1190,6 @@ $(document).ready(function() {
         applyFilter();
         console.log(`Data berhasil dimuat: ${sensorData.length} record`);
     } else {
-        // Inisialisasi tabel kosong
         $('#sensorTable').DataTable({
             data: [],
             columns: [
@@ -1204,7 +1201,8 @@ $(document).ready(function() {
                 { title: "Kelembapan (%)" },
                 { title: "Tegangan (V)" }, 
                 { title: "Arus (A)" },
-                { title: "RSSI (dBm)" }
+                { title: "RSSI (dBm)" },
+                { title: "Aksi" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -1216,7 +1214,6 @@ $(document).ready(function() {
         applyFilter();
     }
 
-    // Fungsi pembaruan data & tanggal/waktu otomatis secara real-time dari database indoor
     function fetchTableDataRealtime() {
         fetch('get_table_data.php?device=indoor&with_storage=1')
             .then(response => response.json())
@@ -1281,6 +1278,32 @@ $(document).ready(function() {
     // Jalankan pembaruan tabel indoor otomatis (30s Alat Utama, 15s Dummy)
     scheduleNextIndoorTableUpdate();
 });
+
+// =======================================================
+// FUNGSI JAVASCRIPT HAPUS BARIS DATA INDOOR
+// =======================================================
+function hapusBaris(idData) {
+    if (confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini permanen.")) {
+        fetch('api_hapus_baris_indoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: idData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Data berhasil dihapus!");
+                location.reload(); // Muat ulang halaman untuk memperbarui tabel & kapasitas
+            } else {
+                alert("Gagal: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Terjadi kesalahan sistem saat menghapus data.");
+        });
+    }
+}
 </script>
 
 </body>
