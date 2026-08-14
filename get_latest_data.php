@@ -76,6 +76,11 @@ if ($is_online && $data_sensor) {
         $cur_daya = round($cur_tegangan * $cur_arus, 2);
     }
 
+    // Ambil info penggunaan storage / kuota data database outdoor
+    $outdoor_storage = get_sensor_storage_info($conn, 'outdoor');
+    $total_storage_bytes = ($outdoor_storage['real_bytes'] ?? 0) + ($outdoor_storage['dummy_bytes'] ?? 0);
+    $kuota_data_formatted = format_storage_size($total_storage_bytes);
+
     $response = [
         'waktu'      => date('H:i:s', strtotime($data_sensor['timestamp'] ?? ($data_sensor['tanggal_dan_waktu'] ?? 'now'))),
         'tegangan'   => $cur_tegangan,
@@ -93,9 +98,16 @@ if ($is_online && $data_sensor) {
         'lat'            => $data_lokasi['latitude'] ?? -1.20249,
         'lng'            => $data_lokasi['longitude'] ?? 116.88708,
         'is_dummy'       => (int)($data_sensor['is_dummy'] ?? 0),
-        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30)
+        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30),
+        'kuota_data'     => $kuota_data_formatted,
+        'storage_real'   => $outdoor_storage['real_formatted'] ?? '0 B',
+        'storage_dummy'  => $outdoor_storage['dummy_formatted'] ?? '0 B'
     ];
 } else {
+    $outdoor_storage = get_sensor_storage_info($conn, 'outdoor');
+    $total_storage_bytes = ($outdoor_storage['real_bytes'] ?? 0) + ($outdoor_storage['dummy_bytes'] ?? 0);
+    $kuota_data_formatted = format_storage_size($total_storage_bytes);
+
     $response = [
         'waktu'          => date('H:i:s'),
         'tegangan'       => 0,
@@ -113,7 +125,10 @@ if ($is_online && $data_sensor) {
         'lat'            => $data_lokasi['latitude'] ?? -1.20249,
         'lng'            => $data_lokasi['longitude'] ?? 116.88708,
         'is_dummy'       => 0,
-        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30)
+        'interval_detik' => (int)($data_lokasi['interval_detik'] ?? 30),
+        'kuota_data'     => $kuota_data_formatted,
+        'storage_real'   => $outdoor_storage['real_formatted'] ?? '0 B',
+        'storage_dummy'  => $outdoor_storage['dummy_formatted'] ?? '0 B'
     ];
 }
 

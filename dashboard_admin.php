@@ -137,6 +137,11 @@ if ($conn) {
     }
 }
 
+// Ambil info kapasitas storage / kuota data outdoor
+$outdoor_storage = get_sensor_storage_info($conn ?: $pdo_outdoor, 'outdoor');
+$storage_bytes = ($outdoor_storage['real_bytes'] ?? 0) + ($outdoor_storage['dummy_bytes'] ?? 0);
+$kuota_data_formatted = format_storage_size($storage_bytes);
+
 // 4. Ambil 20 data sensor riwayat terbaru untuk grafik awal dari database outdoor
 $chart_labels = [];
 $chart_tegangan = [];
@@ -785,6 +790,11 @@ canvas {
                     <i class="fas fa-network-wired"></i>
                     <span>IP:</span>
                     <span class="value" id="ip"><?= htmlspecialchars($latest_sensor['ip']) ?></span>
+                </div>
+                <div class="status-item-header">
+                    <i class="fas fa-hdd" style="color: #00b4db;"></i>
+                    <span>Kuota Data:</span>
+                    <span class="value" id="kuota-data"><?= htmlspecialchars($kuota_data_formatted ?? '0 B') ?></span>
                 </div>
                 <div class="status-item-header">
                     <i class="fas fa-database"></i>
@@ -1668,6 +1678,9 @@ function fetchDataFromDB() {
             document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
             document.getElementById("rssi").innerHTML = `${data.rssi || '-'} dBm`;
             document.getElementById("ip").innerHTML = data.ip || '-';
+            if (document.getElementById("kuota-data") && data.kuota_data) {
+                document.getElementById("kuota-data").innerHTML = data.kuota_data;
+            }
             document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
 
             // 2. Update Sensor Cards (Real jika ID 1, Dummy jika ID lain)
