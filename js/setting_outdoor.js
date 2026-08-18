@@ -65,18 +65,22 @@ function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
         if (elId) elId.value = id;
         var elName = document.getElementById('edit_sensor_name');
         if (elName) elName.value = nama;
+        var cleanMin = isNaN(parseFloat(min)) ? min : parseFloat(min);
+        var cleanMax = isNaN(parseFloat(max)) ? max : parseFloat(max);
+        var cleanVal = isNaN(parseFloat(nilai)) ? nilai : parseFloat(nilai);
+
         var elMin = document.getElementById('edit_batas_min');
-        if (elMin) elMin.value = min;
+        if (elMin) elMin.value = cleanMin;
         var elMax = document.getElementById('edit_batas_max');
-        if (elMax) elMax.value = max;
+        if (elMax) elMax.value = cleanMax;
         var elVal = document.getElementById('edit_alarm_value');
-        if (elVal) elVal.value = nilai;
+        if (elVal) elVal.value = cleanVal;
         var elSat = document.getElementById('edit_satuan');
         if (elSat) elSat.value = satuan;
 
         var warning = document.getElementById('range_warning');
         if (warning) {
-            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + min + ' - ' + max + ' ' + satuan;
+            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + cleanMin + ' - ' + cleanMax + ' ' + satuan;
             warning.style.color = '#e74c3c';
         }
 

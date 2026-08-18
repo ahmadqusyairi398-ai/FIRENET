@@ -617,21 +617,21 @@ $totalUsers = count($users);
                                         </td>
                                         <td>
                                             <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#1e3c72' ?>;">
-                                                <?= number_format($sensor['nilai_alarm'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?>
+                                                <?= (float)$sensor['nilai_alarm'] ?> <?= htmlspecialchars($sensor['satuan']) ?>
                                             </strong>
                                         </td>
                                         <td><?= htmlspecialchars($sensor['satuan']) ?></td>
-                                        <td><?= number_format($sensor['batas_min'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
-                                        <td><?= number_format($sensor['batas_max'], 2) ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
+                                        <td><?= (float)$sensor['batas_min'] ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
+                                        <td><?= (float)$sensor['batas_max'] ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
                                         <td><?= $sensor['last_update'] ?></td>
                                         <td>
                                             <button type="button" class="btn-warning btn-edit-alarm" 
                                                 data-id="<?= $sensor['id'] ?>"
                                                 data-nama="<?= htmlspecialchars($sensor['nama_sensor']) ?>"
-                                                data-nilai="<?= $sensor['nilai_alarm'] ?>"
+                                                data-nilai="<?= (float)$sensor['nilai_alarm'] ?>"
                                                 data-satuan="<?= htmlspecialchars($sensor['satuan']) ?>"
-                                                data-min="<?= $sensor['batas_min'] ?>"
-                                                data-max="<?= $sensor['batas_max'] ?>">
+                                                data-min="<?= (float)$sensor['batas_min'] ?>"
+                                                data-max="<?= (float)$sensor['batas_max'] ?>">
                                                 <i class="fas fa-edit"></i> EDIT
                                             </button>
                                         </td>
