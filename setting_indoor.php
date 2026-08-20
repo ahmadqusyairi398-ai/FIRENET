@@ -171,7 +171,7 @@ try {
 
         // Insert data default sensor - HANYA SENSOR YANG ADA DI indoor.sql
         $defaultSensors = [
-            ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)'],
+            ['API', 1, '', 0, 1, 'Deteksi api (1=Aman, 2=Terdeteksi Api)'],
             ['ASAP', 70, '%', 0, 100, 'Deteksi asap (0=Normal, 100=Tinggi)'],
             ['SUHU', 45, '°C', 20, 60, 'Suhu lingkungan'],
             ['KELEMBAPAN', 85, '%', 30, 95, 'Kelembapan udara'],
@@ -199,7 +199,7 @@ try {
         
         // Hanya tambahkan sensor yang ada di indoor.sql
         $newSensors = [
-            ['API', 1, 'Status', 0, 1, 'Deteksi api (0=Aman, 1=Terdeteksi Api)']
+            ['API', 1, '', 0, 1, 'Deteksi api (1=Aman, 2=Terdeteksi Api)']
         ];
         
         foreach ($newSensors as $sensor) {
@@ -218,6 +218,12 @@ try {
         foreach ($sensorsToRemove as $sensor) {
             mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = '$sensor'");
         }
+
+        // Sinkronisasi data sensor API (satuan status, batas min 0, batas max 2)
+        mysqli_query($conn, "UPDATE batas_sensor SET satuan = 'status', batas_min = 0, batas_max = 2 WHERE nama_sensor = 'API'");
+
+        // Update satuan sensor SUHU menjadi '°C' jika sebelumnya 'C' atau 'c'
+        mysqli_query($conn, "UPDATE batas_sensor SET satuan = '°C' WHERE nama_sensor = 'SUHU' AND (satuan = 'C' OR satuan = 'c')");
     }
 
     // 2. Cek & Buat tabel login jika belum ada
@@ -320,11 +326,11 @@ function getSensorAlarmData($conn)
     return $sensors;
 }
 
-function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max)
+function updateSensorAlarm($conn, $id, $nilai_alarm, $batas_min, $batas_max, $satuan = '', $deskripsi = '')
 {
-    $stmt = mysqli_prepare($conn, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, last_update = NOW() WHERE id = ?");
+    $stmt = mysqli_prepare($conn, "UPDATE batas_sensor SET nilai_alarm = ?, batas_min = ?, batas_max = ?, satuan = ?, deskripsi = ?, last_update = NOW() WHERE id = ?");
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "dddi", $nilai_alarm, $batas_min, $batas_max, $id);
+        mysqli_stmt_bind_param($stmt, "dddssi", $nilai_alarm, $batas_min, $batas_max, $satuan, $deskripsi, $id);
         $result = mysqli_stmt_execute($stmt);
         mysqli_stmt_close($stmt);
         return $result;
@@ -376,6 +382,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $new_value = floatval($_POST['alarm_value']);
         $batas_min = floatval($_POST['batas_min']);
         $batas_max = floatval($_POST['batas_max']);
+        $satuan = trim($_POST['satuan'] ?? '');
+        $deskripsi = trim($_POST['deskripsi'] ?? '');
 
         if ($batas_min >= $batas_max) {
             $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
@@ -385,13 +393,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $sensor = mysqli_fetch_assoc($checkQuery);
                 if ($sensor) {
                     if ($new_value >= $batas_min && $new_value <= $batas_max) {
-                        if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max)) {
+                        if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max, $satuan, $deskripsi)) {
                             $success_message = "Nilai alarm dan batas range {$sensor['nama_sensor']} berhasil diupdate!";
                         } else {
                             $error_message = "Gagal mengupdate nilai alarm!";
                         }
                     } else {
-                        $error_message = "Nilai alarm harus antara {$batas_min} - {$batas_max} {$sensor['satuan']}!";
+                        $unit_label = !empty($satuan) ? " $satuan" : "";
+                        $error_message = "Nilai alarm harus antara {$batas_min} - {$batas_max}{$unit_label}!";
                     }
                 } else {
                     $error_message = "Sensor tidak ditemukan!";
@@ -625,11 +634,29 @@ $totalUsers = count($users);
                                     $nama_sensor = isset($sensor['nama_sensor']) ? htmlspecialchars($sensor['nama_sensor']) : '-';
                                     $deskripsi = isset($sensor['deskripsi']) ? htmlspecialchars($sensor['deskripsi']) : '';
                                     $satuan = isset($sensor['satuan']) ? htmlspecialchars($sensor['satuan']) : '';
+                                    // Standarisasi satuan suhu menjadi °C jika masih berupa 'C' atau 'c'
+                                    if (strtoupper($nama_sensor) === 'SUHU' && (strtolower($satuan) === 'c' || $satuan === '')) {
+                                        $satuan = '°C';
+                                    }
                                     $nilai_alarm = isset($sensor['nilai_alarm']) ? number_format(floatval($sensor['nilai_alarm']), 0) : '0';
                                     $batas_min = isset($sensor['batas_min']) ? number_format(floatval($sensor['batas_min']), 0) : '0';
                                     $batas_max = isset($sensor['batas_max']) ? number_format(floatval($sensor['batas_max']), 0) : '0';
                                     $last_update = isset($sensor['last_update']) ? $sensor['last_update'] : '-';
                                     $sensor_id = isset($sensor['id']) ? $sensor['id'] : 0;
+                                    $satuan_display = ($satuan !== '') ? ' ' . $satuan : '';
+
+                                    // Format tampilan khusus untuk sensor API
+                                    if (strtoupper($nama_sensor) === 'API') {
+                                        $satuan_tampil = 'status';
+                                        $nilai_alarm_tampil = (floatval($sensor['nilai_alarm']) >= 2) ? '2 Terdeteksi Api' : '1 aman';
+                                        $batas_min_tampil = '0 aman';
+                                        $batas_max_tampil = '2 Terdeteksi Api';
+                                    } else {
+                                        $satuan_tampil = ($satuan !== '') ? $satuan : '-';
+                                        $nilai_alarm_tampil = $nilai_alarm . $satuan_display;
+                                        $batas_min_tampil = $batas_min . $satuan_display;
+                                        $batas_max_tampil = $batas_max . $satuan_display;
+                                    }
                                     ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
@@ -640,12 +667,12 @@ $totalUsers = count($users);
                                         </td>
                                         <td>
                                             <strong style="color: <?= in_array($nama_sensor, ['ASAP', 'API']) ? '#dc3545' : '#1e3c72' ?>;">
-                                                <?= $nilai_alarm ?> <?= $satuan ?>
+                                                <?= $nilai_alarm_tampil ?>
                                             </strong>
                                         </td>
-                                        <td><?= $satuan ?></td>
-                                        <td><?= $batas_min ?> <?= $satuan ?></td>
-                                        <td><?= $batas_max ?> <?= $satuan ?></td>
+                                        <td><?= $satuan_tampil ?></td>
+                                        <td><?= $batas_min_tampil ?></td>
+                                        <td><?= $batas_max_tampil ?></td>
                                         <td><?= $last_update ?></td>
                                         <td>
                                             <button type="button" class="btn-warning btn-edit-alarm" 
@@ -653,6 +680,7 @@ $totalUsers = count($users);
                                                 data-nama="<?= $nama_sensor ?>"
                                                 data-nilai="<?= isset($sensor['nilai_alarm']) ? $sensor['nilai_alarm'] : 0 ?>"
                                                 data-satuan="<?= $satuan ?>"
+                                                data-deskripsi="<?= $deskripsi ?>"
                                                 data-min="<?= isset($sensor['batas_min']) ? $sensor['batas_min'] : 0 ?>"
                                                 data-max="<?= isset($sensor['batas_max']) ? $sensor['batas_max'] : 0 ?>">
                                                 <i class="fas fa-edit"></i> EDIT
@@ -884,6 +912,20 @@ $totalUsers = count($users);
                     <input type="text" id="edit_sensor_name" readonly style="background:#f5f5f5">
                 </div>
                 <div class="form-group">
+                    <label>Keterangan / Deskripsi Status</label>
+                    <input type="text" name="deskripsi" id="edit_deskripsi" placeholder="Contoh: 1 = Aman, 2 = Terdeteksi Api">
+                    <small style="color:#666; display:block; margin-top:5px;">
+                        <i class="fas fa-info-circle"></i> Keterangan atau panduan status sensor yang tampil di bawah nama sensor
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label>Satuan</label>
+                    <input type="text" name="satuan" id="edit_satuan" placeholder="Contoh: %, °C, V, A (kosongkan jika tanpa satuan)">
+                    <small style="color:#666; display:block; margin-top:5px;">
+                        <i class="fas fa-info-circle"></i> Satuan sensor (opsional, bisa diketik bebas atau dikosongkan)
+                    </small>
+                </div>
+                <div class="form-group">
                     <label>Batas Minimum</label>
                     <input type="number" name="batas_min" id="edit_batas_min" step="any" required>
                     <small style="color:#666; display:block; margin-top:5px;">
@@ -896,10 +938,6 @@ $totalUsers = count($users);
                     <small style="color:#666; display:block; margin-top:5px;">
                         <i class="fas fa-info-circle"></i> Nilai tertinggi yang diperbolehkan untuk sensor ini
                     </small>
-                </div>
-                <div class="form-group">
-                    <label>Satuan</label>
-                    <input type="text" id="edit_satuan" readonly style="background:#f5f5f5">
                 </div>
                 <div class="form-group">
                     <label>Nilai Alarm</label>
