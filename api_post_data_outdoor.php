@@ -48,6 +48,12 @@ try {
     }
     $kecepatan_angin = floatval($input['angin'] ?? ($input['kecepatan_angin'] ?? 0));
     $arah_angin = $input['arah'] ?? ($input['arah_angin'] ?? 'Utara');
+    if (is_numeric($arah_angin)) {
+        $deg = floatval($arah_angin);
+        $deg = fmod(fmod($deg, 360) + 360, 360);
+        $cardinals = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+        $arah_angin = $cardinals[round($deg / 45) % 8];
+    }
     $co = floatval($input['co'] ?? ($input['mq7'] ?? 0));
     $lat = floatval($input['lat'] ?? ($input['latitude'] ?? 0));
     $lng = floatval($input['lng'] ?? ($input['longitude'] ?? 0));

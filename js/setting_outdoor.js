@@ -59,29 +59,58 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
+function openEditAlarmModal(id, nama, nilai, satuan, min, max, deskripsi) {
     try {
         var elId = document.getElementById('edit_sensor_id');
         if (elId) elId.value = id;
         var elName = document.getElementById('edit_sensor_name');
         if (elName) elName.value = nama;
-        var cleanMin = isNaN(parseFloat(min)) ? min : parseFloat(min);
-        var cleanMax = isNaN(parseFloat(max)) ? max : parseFloat(max);
-        var cleanVal = isNaN(parseFloat(nilai)) ? nilai : parseFloat(nilai);
 
-        var elMin = document.getElementById('edit_batas_min');
-        if (elMin) elMin.value = cleanMin;
-        var elMax = document.getElementById('edit_batas_max');
-        if (elMax) elMax.value = cleanMax;
-        var elVal = document.getElementById('edit_alarm_value');
-        if (elVal) elVal.value = cleanVal;
-        var elSat = document.getElementById('edit_satuan');
-        if (elSat) elSat.value = satuan;
-
+        var isArah = (nama && nama.toUpperCase().trim() === 'ARAH ANGIN');
+        var formGroups = document.querySelectorAll('#editAlarmModal .form-group-numeric');
+        var infoArah = document.getElementById('arah_angin_info_box');
         var warning = document.getElementById('range_warning');
-        if (warning) {
-            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + cleanMin + ' - ' + cleanMax + ' ' + satuan;
-            warning.style.color = '#e74c3c';
+
+        if (isArah) {
+            if (formGroups) {
+                formGroups.forEach(function(el) { el.style.display = 'none'; });
+            }
+            if (infoArah) {
+                infoArah.style.display = 'block';
+            }
+            var elSat = document.getElementById('edit_satuan');
+            if (elSat) elSat.value = 'Mata Angin (Utara, Timur, Selatan, Barat, dll)';
+            var elMin = document.getElementById('edit_batas_min');
+            if (elMin) elMin.value = 0;
+            var elMax = document.getElementById('edit_batas_max');
+            if (elMax) elMax.value = 0;
+            var elVal = document.getElementById('edit_alarm_value');
+            if (elVal) elVal.value = 0;
+            if (warning) warning.innerHTML = '';
+        } else {
+            if (formGroups) {
+                formGroups.forEach(function(el) { el.style.display = 'block'; });
+            }
+            if (infoArah) {
+                infoArah.style.display = 'none';
+            }
+            var cleanMin = isNaN(parseFloat(min)) ? min : parseFloat(min);
+            var cleanMax = isNaN(parseFloat(max)) ? max : parseFloat(max);
+            var cleanVal = isNaN(parseFloat(nilai)) ? nilai : parseFloat(nilai);
+
+            var elMin = document.getElementById('edit_batas_min');
+            if (elMin) elMin.value = cleanMin;
+            var elMax = document.getElementById('edit_batas_max');
+            if (elMax) elMax.value = cleanMax;
+            var elVal = document.getElementById('edit_alarm_value');
+            if (elVal) elVal.value = cleanVal;
+            var elSat = document.getElementById('edit_satuan');
+            if (elSat) elSat.value = satuan;
+
+            if (warning) {
+                warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + cleanMin + ' - ' + cleanMax + ' ' + satuan;
+                warning.style.color = '#e74c3c';
+            }
         }
 
         var modal = document.getElementById('editAlarmModal');
@@ -176,7 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var satuan = $(this).data('satuan');
             var min = $(this).data('min');
             var max = $(this).data('max');
-            openEditAlarmModal(id, nama, nilai, satuan, min, max);
+            var deskripsi = $(this).data('deskripsi');
+            openEditAlarmModal(id, nama, nilai, satuan, min, max, deskripsi);
         });
     }
 
