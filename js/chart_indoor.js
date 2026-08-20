@@ -356,7 +356,7 @@ function filterData() {
         }
     }
 
-    let sourceData = isLive ? fullData : generateDummyHistory(200);
+    let sourceData = isLive ? fullData : generateDummyHistory(50);
 
     const fromDate = document.getElementById('dateFrom').value;
     const toDate = document.getElementById('dateTo').value;
