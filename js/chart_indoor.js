@@ -105,10 +105,10 @@ function initDatasets() {
             data: [],
             borderColor: sensor.color,
             backgroundColor: sensor.color + '20',
-            borderWidth: 2,
+            borderWidth: 2.5,
             tension: 0.3,
-            fill: true,
-            pointRadius: 3,
+            fill: false,
+            pointRadius: 3.5,
             pointHoverRadius: 6,
             hidden: sensor.group !== 'all',
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
@@ -181,30 +181,32 @@ function createChart(labels, dataPoints) {
                 },
                 'y-bahaya': {
                     position: 'left', 
-                    beginAtZero: true, 
+                    beginAtZero: false, 
+                    min: -5,
                     max: 120,
                     grid: { color: 'rgba(255,107,107,0.2)', drawOnChartArea: true },
                     title: { display: true, text: 'Api / Asap', color: '#ff6b6b' },
-                    ticks: { callback: function(v) { return v; } },
+                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
                     display: true
                 },
                 'y-env': {
                     position: 'right', 
-                    beginAtZero: true, 
+                    beginAtZero: false, 
+                    min: -5,
                     max: 100,
                     grid: { color: 'rgba(78,205,196,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
-                    ticks: { callback: function(v) { return v; } },
+                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
                     display: false
                 },
                 'y-listrik': {
                     position: 'right', 
                     beginAtZero: false, 
-                    min: 0, 
+                    min: -5, 
                     max: 250,
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A)', color: '#ff9800' },
-                    ticks: { callback: function(v) { return v; } },
+                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
                     display: false
                 }
             }
