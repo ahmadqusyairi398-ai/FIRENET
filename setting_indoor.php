@@ -219,8 +219,8 @@ try {
             mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor = '$sensor'");
         }
 
-        // Hapus kata 'Status' pada sensor API jika masih ada di database
-        mysqli_query($conn, "UPDATE batas_sensor SET satuan = '' WHERE nama_sensor = 'API' AND (satuan = 'Status' OR satuan = 'status')");
+        // Sinkronisasi data sensor API (satuan status, batas min 0, batas max 2)
+        mysqli_query($conn, "UPDATE batas_sensor SET satuan = 'status', batas_min = 0, batas_max = 2 WHERE nama_sensor = 'API'");
 
         // Update satuan sensor SUHU menjadi '°C' jika sebelumnya 'C' atau 'c'
         mysqli_query($conn, "UPDATE batas_sensor SET satuan = '°C' WHERE nama_sensor = 'SUHU' AND (satuan = 'C' OR satuan = 'c')");
@@ -634,10 +634,6 @@ $totalUsers = count($users);
                                     $nama_sensor = isset($sensor['nama_sensor']) ? htmlspecialchars($sensor['nama_sensor']) : '-';
                                     $deskripsi = isset($sensor['deskripsi']) ? htmlspecialchars($sensor['deskripsi']) : '';
                                     $satuan = isset($sensor['satuan']) ? htmlspecialchars($sensor['satuan']) : '';
-                                    // Bersihkan jika masih ada kata 'Status' pada sensor API
-                                    if (strtoupper($nama_sensor) === 'API' && strtolower($satuan) === 'status') {
-                                        $satuan = '';
-                                    }
                                     // Standarisasi satuan suhu menjadi °C jika masih berupa 'C' atau 'c'
                                     if (strtoupper($nama_sensor) === 'SUHU' && (strtolower($satuan) === 'c' || $satuan === '')) {
                                         $satuan = '°C';
@@ -648,6 +644,19 @@ $totalUsers = count($users);
                                     $last_update = isset($sensor['last_update']) ? $sensor['last_update'] : '-';
                                     $sensor_id = isset($sensor['id']) ? $sensor['id'] : 0;
                                     $satuan_display = ($satuan !== '') ? ' ' . $satuan : '';
+
+                                    // Format tampilan khusus untuk sensor API
+                                    if (strtoupper($nama_sensor) === 'API') {
+                                        $satuan_tampil = 'status';
+                                        $nilai_alarm_tampil = (floatval($sensor['nilai_alarm']) >= 2) ? '2 Terdeteksi Api' : '1 aman';
+                                        $batas_min_tampil = '0 aman';
+                                        $batas_max_tampil = '2 Terdeteksi Api';
+                                    } else {
+                                        $satuan_tampil = ($satuan !== '') ? $satuan : '-';
+                                        $nilai_alarm_tampil = $nilai_alarm . $satuan_display;
+                                        $batas_min_tampil = $batas_min . $satuan_display;
+                                        $batas_max_tampil = $batas_max . $satuan_display;
+                                    }
                                     ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
@@ -658,12 +667,12 @@ $totalUsers = count($users);
                                         </td>
                                         <td>
                                             <strong style="color: <?= in_array($nama_sensor, ['ASAP', 'API']) ? '#dc3545' : '#1e3c72' ?>;">
-                                                <?= $nilai_alarm ?><?= $satuan_display ?>
+                                                <?= $nilai_alarm_tampil ?>
                                             </strong>
                                         </td>
-                                        <td><?= ($satuan !== '') ? $satuan : '-' ?></td>
-                                        <td><?= $batas_min ?><?= $satuan_display ?></td>
-                                        <td><?= $batas_max ?><?= $satuan_display ?></td>
+                                        <td><?= $satuan_tampil ?></td>
+                                        <td><?= $batas_min_tampil ?></td>
+                                        <td><?= $batas_max_tampil ?></td>
                                         <td><?= $last_update ?></td>
                                         <td>
                                             <button type="button" class="btn-warning btn-edit-alarm" 
