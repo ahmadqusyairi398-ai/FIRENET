@@ -54,12 +54,12 @@ document.addEventListener('keydown', function(e) {
 const rawData = (typeof window.INDOOR_CHART_DATA !== 'undefined') ? window.INDOOR_CHART_DATA : [];
 
 const sensorConfig = [
-    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
-    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
-    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
-    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
-    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 }
+    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'circle' },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'rectRot' },
+    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70, pointStyle: 'circle' },
+    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100, pointStyle: 'circle' },
+    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250, pointStyle: 'circle' },
+    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10, pointStyle: 'circle' }
 ];
 
 let currentMode = "all";
@@ -105,12 +105,13 @@ function initDatasets() {
             data: [],
             borderColor: sensor.color,
             backgroundColor: sensor.color + '20',
-            borderWidth: 2.5,
+            borderWidth: 3,
             tension: 0.3,
             fill: false,
-            pointRadius: 3.5,
-            pointHoverRadius: 6,
-            hidden: sensor.group !== 'all',
+            pointStyle: sensor.pointStyle || 'circle',
+            pointRadius: 4.5,
+            pointHoverRadius: 7,
+            hidden: false,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
         });
@@ -260,14 +261,19 @@ function updateLegend() {
     if (!container) return;
     container.innerHTML = '';
     datasets.forEach((ds, idx) => {
-        if (ds.hidden) return;
         const sensor = sensorConfig[idx];
+        let visibleInTab = true;
+        if (currentMode === 'bahaya' && sensor.group !== 'bahaya') visibleInTab = false;
+        if (currentMode === 'env' && sensor.group !== 'env') visibleInTab = false;
+        if (currentMode === 'listrik' && sensor.group !== 'listrik') visibleInTab = false;
+        if (!visibleInTab) return;
+
         const legendItem = document.createElement('div');
-        legendItem.className = 'legend-item';
+        legendItem.className = 'legend-item' + (ds.hidden ? ' disabled' : '');
         legendItem.onclick = () => toggleDataset(idx);
         legendItem.innerHTML = `
-            <div class="legend-color" style="background: ${sensor.color}"></div>
-            <span class="legend-text">${sensor.label}</span>
+            <div class="legend-color" style="background: ${sensor.color}; ${ds.hidden ? 'opacity: 0.3;' : ''}"></div>
+            <span class="legend-text" style="${ds.hidden ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${sensor.label}</span>
         `;
         container.appendChild(legendItem);
     });
@@ -389,12 +395,12 @@ function resetFilter() {
 document.addEventListener('DOMContentLoaded', () => {
     fullData = rawData.map(row => ({
         waktu: row.waktu || '',
-        asap: typeof row.asap === 'number' ? row.asap : 0,
-        suhu: typeof row.suhu === 'number' ? row.suhu : 0,
-        kelembapan: typeof row.kelembapan === 'number' ? row.kelembapan : 0,
-        tegangan: typeof row.tegangan === 'number' ? row.tegangan : 0,
-        arus: typeof row.arus === 'number' ? row.arus : 0,
-        api: typeof row.api === 'number' ? row.api : 0
+        asap: typeof row.asap === 'number' ? row.asap : (parseFloat(row.asap) || 0),
+        suhu: typeof row.suhu === 'number' ? row.suhu : (parseFloat(row.suhu) || 0),
+        kelembapan: typeof row.kelembapan === 'number' ? row.kelembapan : (parseFloat(row.kelembapan) || 0),
+        tegangan: typeof row.tegangan === 'number' ? row.tegangan : (parseFloat(row.tegangan) || 0),
+        arus: typeof row.arus === 'number' ? row.arus : (parseFloat(row.arus) || 0),
+        api: typeof row.api === 'number' ? row.api : (parseFloat(row.api) || 0)
     }));
     
     filterData();
