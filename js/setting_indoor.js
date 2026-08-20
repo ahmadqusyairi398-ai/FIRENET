@@ -62,14 +62,15 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ========== FUNGSI OPEN EDIT ALARM MODAL ==========
-function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
+function openEditAlarmModal(id, nama, nilai, satuan, min, max, deskripsi) {
     try {
         id = id || 0;
         nama = nama || '-';
         nilai = nilai || 0;
-        satuan = satuan || '';
+        satuan = (satuan !== undefined && satuan !== null) ? satuan : '';
         min = min || 0;
         max = max || 100;
+        deskripsi = (deskripsi !== undefined && deskripsi !== null) ? deskripsi : '';
         
         document.getElementById('edit_sensor_id').value = id;
         document.getElementById('edit_sensor_name').value = nama;
@@ -78,9 +79,15 @@ function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
         document.getElementById('edit_alarm_value').value = nilai;
         document.getElementById('edit_satuan').value = satuan;
 
+        var descField = document.getElementById('edit_deskripsi');
+        if (descField) {
+            descField.value = deskripsi;
+        }
+
         var warning = document.getElementById('range_warning');
         if (warning) {
-            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + min + ' - ' + max + ' ' + satuan;
+            var unitText = satuan ? ' ' + satuan : '';
+            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nilai alarm harus antara ' + min + ' - ' + max + unitText;
             warning.style.color = '#e74c3c';
         }
 
@@ -199,16 +206,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Event listener untuk tombol edit alarm (menggunakan jQuery jika ada)
+    // Event listener untuk tombol edit alarm
     if (typeof $ !== 'undefined') {
-        $('.btn-edit-alarm').on('click', function() {
-            var id = $(this).data('id');
-            var nama = $(this).data('nama');
-            var nilai = $(this).data('nilai');
-            var satuan = $(this).data('satuan');
-            var min = $(this).data('min');
-            var max = $(this).data('max');
-            openEditAlarmModal(id, nama, nilai, satuan, min, max);
+        $(document).on('click', '.btn-edit-alarm', function() {
+            var id = $(this).data('id') || $(this).attr('data-id');
+            var nama = $(this).data('nama') || $(this).attr('data-nama');
+            var nilai = $(this).data('nilai') || $(this).attr('data-nilai');
+            var satuan = $(this).attr('data-satuan') !== undefined ? $(this).attr('data-satuan') : ($(this).data('satuan') || '');
+            var min = $(this).data('min') || $(this).attr('data-min');
+            var max = $(this).data('max') || $(this).attr('data-max');
+            var deskripsi = $(this).attr('data-deskripsi') !== undefined ? $(this).attr('data-deskripsi') : ($(this).data('deskripsi') || '');
+            openEditAlarmModal(id, nama, nilai, satuan, min, max, deskripsi);
+        });
+    } else {
+        document.querySelectorAll('.btn-edit-alarm').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var id = this.getAttribute('data-id');
+                var nama = this.getAttribute('data-nama');
+                var nilai = this.getAttribute('data-nilai');
+                var satuan = this.getAttribute('data-satuan') || '';
+                var min = this.getAttribute('data-min');
+                var max = this.getAttribute('data-max');
+                var deskripsi = this.getAttribute('data-deskripsi') || '';
+                openEditAlarmModal(id, nama, nilai, satuan, min, max, deskripsi);
+            });
         });
     }
 
