@@ -88,17 +88,32 @@ if ($device_id === 'indoor') {
                     $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
                     if (is_numeric($rawAsap)) {
                         $fAsap = (float)$rawAsap;
-                        // Perbaikan: Gunakan standar analog (> 750 bahaya, > 350 sedang)
-                        $asapVal = ($fAsap > 750) ? 1 : (($fAsap > 350) ? 0.5 : 0);
+                        if ($fAsap > 750) {
+                            $asapStatus = "Tinggi";
+                        } else if ($fAsap > 350) {
+                            $asapStatus = "Sedang";
+                        } else {
+                            $asapStatus = "Normal";
+                        }
+                        $asapVal = $fAsap;
                     } else {
                         $strAsap = trim((string)$rawAsap);
-                        $asapVal = (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) ? 1 : ((strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) ? 0.5 : 0);
+                        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
+                            $asapStatus = "Tinggi";
+                            $asapVal = 1;
+                        } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
+                            $asapStatus = "Sedang";
+                            $asapVal = 0.5;
+                        } else {
+                            $asapStatus = "Normal";
+                            $asapVal = 0;
+                        }
                     }
 
                     $history_data[] = [
                         'waktu'      => $waktu_raw ? date('H:i:s', strtotime($waktu_raw)) : date('H:i:s'),
                         'api'        => ($apiValue === 1) ? 'Terdeteksi Api' : 'Aman',
-                        'asap'       => ($asapVal === 1) ? 'Tinggi' : (($asapVal === 0.5) ? 'Waspada' : 'Normal'),
+                        'asap'       => $asapStatus,
                         'asap_value' => $asapVal,
                         'suhu'       => (float)($row['suhu'] ?? 0),
                         'kelembapan' => (float)($row['kelembapan'] ?? 0),

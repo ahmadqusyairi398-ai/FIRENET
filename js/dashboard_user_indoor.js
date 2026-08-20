@@ -338,8 +338,13 @@ const myChart = new Chart(ctx, {
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
                         else if (label.includes('Sensor Asap')) {
-                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
-                            return `${label}: ${status}`;
+                            if (typeof value === 'number' && value > 1) {
+                                let status = value > 750 ? '⚠️ Asap Tinggi' : (value > 350 ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${value} % (${status})`;
+                            } else {
+                                let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${status}`;
+                            }
                         }
                         else if (label.includes('Sensor Api')) {
                             let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';

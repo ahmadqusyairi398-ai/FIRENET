@@ -299,8 +299,13 @@ const myChart = new Chart(ctx, {
                         if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
                         else if (label.includes('Status Asap')) {
-                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
-                            return `${label}: ${status}`;
+                            if (typeof value === 'number' && value > 1) {
+                                let status = value > 750 ? '⚠️ Asap Tinggi' : (value > 350 ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${value} % (${status})`;
+                            } else {
+                                let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${status}`;
+                            }
                         }
                         else if (label.includes('Status Api')) {
                             let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
@@ -639,9 +644,15 @@ async function fetchDataFromDB() {
             dataChart.datasets[1].data.push(parseFloat(data.kelembapan) || 0);
             
             var numericAsap = 0;
-            if (data.asap === "Tinggi" || data.asap === "Bahaya") numericAsap = 1;
-            else if (data.asap === "Sedang" || data.asap === "Waspada") numericAsap = 0.5;
-            else if (!isNaN(parseFloat(data.asap))) numericAsap = parseFloat(data.asap);
+            if (data.asap_value !== undefined) {
+                numericAsap = parseFloat(data.asap_value);
+            } else if (data.asap === "Tinggi" || data.asap === "Bahaya") {
+                numericAsap = 1;
+            } else if (data.asap === "Sedang" || data.asap === "Waspada") {
+                numericAsap = 0.5;
+            } else if (!isNaN(parseFloat(data.asap))) {
+                numericAsap = parseFloat(data.asap);
+            }
             dataChart.datasets[2].data.push(numericAsap);
             dataChart.datasets[3].data.push(data.api === "Terdeteksi Api" ? 1 : 0);
 

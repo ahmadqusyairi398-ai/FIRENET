@@ -177,8 +177,8 @@ if ($conn) {
             ];
         }
 
-        // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru)
-        $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
+        // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru - Hanya Alat Asli)
+        $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor WHERE (is_dummy = 0 OR is_dummy IS NULL) ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
         if ($q_chart && mysqli_num_rows($q_chart) > 0) {
             while ($r = mysqli_fetch_assoc($q_chart)) {
                 $waktu_raw = $r['timestamp'] ?? ($r['tanggal_dan_waktu'] ?? 'now');
