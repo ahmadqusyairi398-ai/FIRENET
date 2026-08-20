@@ -70,11 +70,11 @@ try {
     $dummyFilter = in_array('is_dummy', $columns) ? " WHERE (is_dummy = 0 OR is_dummy IS NULL)" : "";
     $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor" . $dummyFilter;
 
-    // Ambil 100 data riwayat terbaru dari database untuk tampilan rapi, jelas, dan tanpa lag
+    // Ambil 200 data riwayat terbaru dari database untuk tampilan rapi, jelas, dan tanpa lag
     if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC LIMIT 100";
+        $query .= " ORDER BY $dateColumn DESC LIMIT 200";
     } else {
-        $query .= " ORDER BY id DESC LIMIT 100";
+        $query .= " ORDER BY id DESC LIMIT 200";
     }
 
     $stmt = $pdo_indoor->prepare($query);
@@ -119,9 +119,25 @@ $chartData = [];
 foreach ($rows as $row) {
     $timestamp = isset($row['waktu']) ? $row['waktu'] : '';
 
-    // Karena di indoor.sql tipe data asap dan api adalah FLOAT
-    $asapVal = isset($row['asap']) ? floatval($row['asap']) : 0;
-    $apiVal = isset($row['api']) ? floatval($row['api']) : 0;
+    // Normalisasi nilai sensor asap
+    $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
+    if (is_numeric($rawAsap)) {
+        $asapVal = (float)$rawAsap;
+    } else {
+        $strAsap = trim((string)$rawAsap);
+        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) $asapVal = 100;
+        else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) $asapVal = 50;
+        else $asapVal = 0;
+    }
+
+    // Normalisasi nilai sensor api (skala 0 - 100 agar lonjakan terlihat jelas)
+    $rawApi = isset($row['api']) ? $row['api'] : 0;
+    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+    if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'tinggi' || (is_numeric($rawApi) && (float)$rawApi >= 1)) {
+        $apiVal = 100;
+    } else {
+        $apiVal = (is_numeric($rawApi) && (float)$rawApi > 0 && (float)$rawApi < 1) ? (float)$rawApi * 100 : 0;
+    }
 
     // Ambil nilai tegangan dan arus
     $teganganVal = isset($row['tegangan']) ? floatval($row['tegangan']) : 0;
