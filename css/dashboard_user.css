@@ -180,6 +180,32 @@ body::before {
 .location-info-item .label { color: #555; }
 .location-info-item .value { font-weight: 600; color: #1e3c72; }
 
+/* ========== DATA TYPE BADGE (REALTIME VS DUMMY) ========== */
+.data-type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.realtime-badge {
+    background: rgba(40, 167, 69, 0.15);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.dummy-badge {
+    background: rgba(255, 193, 7, 0.2);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
 /* ========== CHART ========== */
 .chart-container { margin-top: 10px; height: 420px; min-height: 380px; }
 canvas {

@@ -304,6 +304,7 @@ function flyToLocation(lat, lng, id) {
         dangerZone.setLatLng([lat, lng]);
     }
     if (prevId !== id) {
+        switchLocationChartData(id);
         scheduleNextUpdate();
         fetchDataFromDB();
     }
@@ -406,6 +407,73 @@ var dataChart = {
         { label: 'CO (ppm)', data: initialRealChartData.co, borderColor: '#aa96da', backgroundColor: 'rgba(170,150,218,0.1)', borderWidth: 2, tension: 0.4, fill: true, yAxisID: 'yKecil' }
     ] 
 };
+
+function switchLocationChartData(id) {
+    if (typeof dataChart === 'undefined' || typeof myChart === 'undefined') return;
+
+    if (id === 1 || id === '1' || id === 'out_1' || id === 'out_def_1') {
+        dataChart.labels = [...initialRealChartData.labels];
+        dataChart.datasets[0].data = [...initialRealChartData.tegangan];
+        dataChart.datasets[1].data = [...initialRealChartData.arus];
+        dataChart.datasets[2].data = [...initialRealChartData.daya];
+        dataChart.datasets[3].data = [...initialRealChartData.suhu];
+        dataChart.datasets[4].data = [...initialRealChartData.kelembapan];
+        dataChart.datasets[5].data = [...initialRealChartData.angin];
+        dataChart.datasets[6].data = [...initialRealChartData.co];
+    } else {
+        var numId = typeof id === 'number' ? id : (parseInt(String(id).replace(/\D/g, '')) || 2);
+        var labels = [];
+        var tegArr = [], arusArr = [], dayaArr = [], suhuArr = [], humiArr = [], anginArr = [], coArr = [];
+        var now = new Date();
+
+        for (var i = 10; i >= 0; i--) {
+            var t = new Date(now.getTime() - i * 15000);
+            var tStr = t.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + t.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            labels.push(tStr);
+
+            var stepIndex = Math.floor(t.getTime() / 15000);
+            var conditionStep = (stepIndex + numId) % 3;
+
+            var suhuVal, humiVal, coVal;
+            if (conditionStep === 0) {
+                suhuVal = parseFloat((26.0 + (numId % 3)).toFixed(1));
+                humiVal = 68;
+                coVal = 5.0;
+            } else if (conditionStep === 1) {
+                suhuVal = parseFloat((42.0 + (numId % 3)).toFixed(1));
+                humiVal = 48;
+                coVal = 30.0;
+            } else {
+                suhuVal = parseFloat((65.0 + (numId % 3)).toFixed(1));
+                humiVal = 28;
+                coVal = 65.0;
+            }
+
+            var tegVal = parseFloat((12.0 + (numId % 5) * 1.5).toFixed(1));
+            var arusVal = parseFloat((1.2 + (numId % 4) * 0.4).toFixed(2));
+            var dayaVal = parseFloat((tegVal * arusVal).toFixed(1));
+            var anginVal = parseFloat((2.0 + (numId % 5) * 1.2).toFixed(1));
+
+            tegArr.push(tegVal);
+            arusArr.push(arusVal);
+            dayaArr.push(dayaVal);
+            suhuArr.push(suhuVal);
+            humiArr.push(humiVal);
+            anginArr.push(anginVal);
+            coArr.push(coVal);
+        }
+
+        dataChart.labels = labels;
+        dataChart.datasets[0].data = tegArr;
+        dataChart.datasets[1].data = arusArr;
+        dataChart.datasets[2].data = dayaArr;
+        dataChart.datasets[3].data = suhuArr;
+        dataChart.datasets[4].data = humiArr;
+        dataChart.datasets[5].data = anginArr;
+        dataChart.datasets[6].data = coArr;
+    }
+    myChart.update();
+}
 
 var myChart = ctx ? new Chart(ctx, { 
     type: 'line', 
@@ -511,9 +579,26 @@ function fetchDataFromDB() {
             }
 
             latestRealSensorData = data;
+            if (data.interval_detik && parseInt(data.interval_detik) >= 3) {
+                currentMainDeviceIntervalMs = parseInt(data.interval_detik) * 1000;
+            }
             var activeData = getDummyDataForLocation(activeSelectedLocationId, data);
 
+            // Update badge tipe data grafik
+            var tagElem = document.getElementById('chart-data-type-tag');
+            if (tagElem) {
+                var isDummy = (data.is_dummy == 1);
+                if (isDummy) {
+                    tagElem.className = 'data-type-badge dummy-badge';
+                    tagElem.innerHTML = '<i class="fas fa-flask"></i> Data Dummy';
+                } else {
+                    tagElem.className = 'data-type-badge realtime-badge';
+                    tagElem.innerHTML = '<i class="fas fa-satellite-dish"></i> Data Real Time';
+                }
+            }
+
             // 1. Update status header
+            var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             var stElem = document.getElementById("status");
             if (stElem) stElem.innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
             var rssiElem = document.getElementById("rssi");
@@ -523,7 +608,7 @@ function fetchDataFromDB() {
             var kuotaElem = document.getElementById("kuota-data");
             if (kuotaElem && data.kuota_data) kuotaElem.innerHTML = data.kuota_data;
             var waktuElem = document.getElementById("waktu");
-            if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${data.waktu || '-'}`;
+            if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
 
             // 2. Update Sensor Cards
             updateSensorDisplayCards(activeData);
@@ -546,7 +631,7 @@ function fetchDataFromDB() {
             // 4. Deteksi Bahaya untuk lokasi yang sedang aktif
             updateLocationStatus(activeData, curLat, curLng);
 
-            // 5. Update Grafik
+            // 5. Update Grafik dengan data lokasi aktif
             if (dataChart && myChart) {
                 var todayDateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 var labelWithDate = data.waktu ? (todayDateStr + ' ' + data.waktu) : new Date().toLocaleString('id-ID');
@@ -575,12 +660,13 @@ function fetchDataFromDB() {
 
 // ================= JALANKAN FUNGSI (INTERVAL INTERAKTIF) =================
 var autoUpdateTimer = null;
+var currentMainDeviceIntervalMs = 30000;
 
 function scheduleNextUpdate() {
     if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
 
     var isMainDevice = (activeSelectedLocationId === 1 || activeSelectedLocationId === '1' || activeSelectedLocationId === 'out_1' || activeSelectedLocationId === 'out_def_1');
-    var intervalMs = isMainDevice ? 30000 : 15000;
+    var intervalMs = isMainDevice ? currentMainDeviceIntervalMs : 15000;
 
     autoUpdateTimer = setTimeout(function() {
         fetchDataFromDB();
