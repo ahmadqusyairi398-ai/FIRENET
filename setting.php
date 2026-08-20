@@ -72,7 +72,6 @@ try {
             ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
             ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
             ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-            ['ARAH ANGIN', 0, 'Mata Angin', 0, 0, 'Arah mata angin (Utara, Timur, Selatan, Barat, dll)'],
             ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
         ];
 
@@ -96,7 +95,6 @@ try {
         $newSensors = [
             ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
             ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-            ['ARAH ANGIN', 0, 'Mata Angin', 0, 0, 'Arah mata angin (Utara, Timur, Selatan, Barat, dll)'],
             ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
         ];
         
@@ -111,8 +109,8 @@ try {
             }
         }
 
-        // Update record ARAH ANGIN jika masih berformat derajat (° atau deskripsi mengandung derajat)
-        @mysqli_query($conn, "UPDATE batas_sensor SET satuan = 'Mata Angin', batas_min = 0, batas_max = 0, deskripsi = 'Arah mata angin (Utara, Timur, Selatan, Barat, dll)' WHERE nama_sensor = 'ARAH ANGIN' AND (satuan = '°' OR deskripsi LIKE '%derajat%')");
+        // Hapus sensor ARAH ANGIN dari batas_sensor outdoor karena arah angin tidak memiliki set point / nilai alarm
+        @mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor IN ('ARAH ANGIN', 'ARAH_ANGIN')");
     }
 
     // 2. Cek & Buat tabel pengguna jika belum ada
@@ -332,14 +330,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
 
             if ($sensor) {
-                $is_arah = (strtoupper(trim($sensor['nama_sensor'])) === 'ARAH ANGIN');
-                if ($is_arah) {
-                    if (updateSensorAlarm($conn, $sensor_id, 0, 0, 0)) {
-                        $success_message = "Pengaturan {$sensor['nama_sensor']} berhasil disimpan!";
-                    } else {
-                        $error_message = "Gagal mengupdate sensor: " . mysqli_error($conn);
-                    }
-                } else if ($batas_min >= $batas_max) {
+                if ($batas_min >= $batas_max) {
                     $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
                 } else {
                     if ($new_value >= $batas_min && $new_value <= $batas_max) {
@@ -618,58 +609,30 @@ $totalUsers = count($users);
                         <tbody>
                             <?php if (count($sensorAlarmData) > 0): ?>
                                 <?php foreach ($sensorAlarmData as $index => $sensor): ?>
-                                    <?php 
-                                    $is_arah = (strtoupper(trim($sensor['nama_sensor'])) === 'ARAH ANGIN');
-                                    ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
                                         <td>
                                             <i class="fas fa-<?= getSensorIconPHP($sensor['nama_sensor']) ?>" style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#00b4db' ?>;"></i>
                                             <strong><?= htmlspecialchars($sensor['nama_sensor']) ?></strong>
-                                            <br><small style="color:#666;"><?= htmlspecialchars($is_arah ? 'Arah mata angin (Utara, Timur, Selatan, Barat, dll)' : $sensor['deskripsi']) ?></small>
+                                            <br><small style="color:#666;"><?= htmlspecialchars($sensor['deskripsi']) ?></small>
                                         </td>
                                         <td>
-                                            <?php if ($is_arah): ?>
-                                                <strong style="color: #0083b0;">
-                                                    <i class="fas fa-compass"></i> 8 Arah Mata Angin
-                                                </strong>
-                                            <?php else: ?>
-                                                <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#1e3c72' ?>;">
-                                                    <?= (float)$sensor['nilai_alarm'] ?> <?= htmlspecialchars($sensor['satuan']) ?>
-                                                </strong>
-                                            <?php endif; ?>
+                                            <strong style="color: <?= in_array($sensor['nama_sensor'], ['ASAP', 'CO']) ? '#dc3545' : '#1e3c72' ?>;">
+                                                <?= (float)$sensor['nilai_alarm'] ?> <?= htmlspecialchars($sensor['satuan']) ?>
+                                            </strong>
                                         </td>
-                                        <td>
-                                            <?php if ($is_arah): ?>
-                                                <span class="badge" style="background: rgba(0, 180, 219, 0.15); color: #0083b0; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 12px;"><i class="fas fa-compass"></i> Mata Angin</span>
-                                            <?php else: ?>
-                                                <?= htmlspecialchars($sensor['satuan']) ?>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($is_arah): ?>
-                                                <span style="color:#888;">-</span>
-                                            <?php else: ?>
-                                                <?= (float)$sensor['batas_min'] ?> <?= htmlspecialchars($sensor['satuan']) ?>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($is_arah): ?>
-                                                <span style="color:#888;">-</span>
-                                            <?php else: ?>
-                                                <?= (float)$sensor['batas_max'] ?> <?= htmlspecialchars($sensor['satuan']) ?>
-                                            <?php endif; ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($sensor['satuan']) ?></td>
+                                        <td><?= (float)$sensor['batas_min'] ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
+                                        <td><?= (float)$sensor['batas_max'] ?> <?= htmlspecialchars($sensor['satuan']) ?></td>
                                         <td><?= $sensor['last_update'] ?></td>
                                         <td>
                                             <button type="button" class="btn-warning btn-edit-alarm" 
                                                 data-id="<?= $sensor['id'] ?>"
                                                 data-nama="<?= htmlspecialchars($sensor['nama_sensor']) ?>"
                                                 data-nilai="<?= (float)$sensor['nilai_alarm'] ?>"
-                                                data-satuan="<?= htmlspecialchars($is_arah ? 'Mata Angin' : $sensor['satuan']) ?>"
+                                                data-satuan="<?= htmlspecialchars($sensor['satuan']) ?>"
                                                 data-min="<?= (float)$sensor['batas_min'] ?>"
-                                                data-max="<?= (float)$sensor['batas_max'] ?>"
-                                                data-deskripsi="<?= htmlspecialchars($is_arah ? 'Arah mata angin (Utara, Timur, Selatan, Barat, dll)' : $sensor['deskripsi']) ?>">
+                                                data-max="<?= (float)$sensor['batas_max'] ?>">
                                                 <i class="fas fa-edit"></i> EDIT
                                             </button>
                                         </td>
@@ -896,29 +859,20 @@ $totalUsers = count($users);
                     <input type="text" id="edit_sensor_name" readonly style="background:#f5f5f5">
                 </div>
                 <div class="form-group">
+                    <label>Batas Minimum</label>
+                    <input type="number" name="batas_min" id="edit_batas_min" step="any" required>
+                </div>
+                <div class="form-group">
+                    <label>Batas Maksimum</label>
+                    <input type="number" name="batas_max" id="edit_batas_max" step="any" required>
+                </div>
+                <div class="form-group">
                     <label>Satuan</label>
                     <input type="text" id="edit_satuan" readonly style="background:#f5f5f5">
                 </div>
-
-                <!-- Info Box khusus Arah Angin -->
-                <div id="arah_angin_info_box" style="display:none; background:#e0f2fe; border:1px solid #7dd3fc; border-radius:8px; padding:12px 15px; margin-bottom:15px; font-size:13.5px; color:#0369a1;">
-                    <p style="margin:0 0 6px 0; font-weight:700;"><i class="fas fa-compass"></i> Arah Angin Langsung (Mata Angin):</p>
-                    <p style="margin:0; font-size:13px; line-height: 1.5; color:#0c4a6e;">
-                        Sensor Arah Angin outdoor menampilkan arah mata angin langsung (<strong>Utara, Timur Laut, Timur, Tenggara, Selatan, Barat Daya, Barat, Barat Laut</strong>) tanpa satuan derajat (°).
-                    </p>
-                </div>
-
-                <div class="form-group form-group-numeric">
-                    <label>Batas Minimum</label>
-                    <input type="number" name="batas_min" id="edit_batas_min" step="any">
-                </div>
-                <div class="form-group form-group-numeric">
-                    <label>Batas Maksimum</label>
-                    <input type="number" name="batas_max" id="edit_batas_max" step="any">
-                </div>
-                <div class="form-group form-group-numeric">
+                <div class="form-group">
                     <label>Nilai Alarm</label>
-                    <input type="number" name="alarm_value" id="edit_alarm_value" step="any">
+                    <input type="number" name="alarm_value" id="edit_alarm_value" step="any" required>
                     <small id="range_warning" style="color:#e74c3c; display:block; margin-top:5px;"></small>
                 </div>
                 <button type="submit" name="update_alarm_value" class="btn-primary" style="width:100%">
