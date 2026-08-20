@@ -345,7 +345,7 @@ function filterData() {
 
     let sourceData = fullData;
     if (locationVal !== 'LOK-002') {
-        sourceData = generateDummyHistory(50);
+        sourceData = generateDummyHistory(100);
     }
 
     const fromDate = document.getElementById('dateFrom').value;

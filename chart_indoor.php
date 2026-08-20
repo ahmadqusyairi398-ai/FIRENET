@@ -70,11 +70,11 @@ try {
     $dummyFilter = in_array('is_dummy', $columns) ? " WHERE (is_dummy = 0 OR is_dummy IS NULL)" : "";
     $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor" . $dummyFilter;
 
-    // Ambil 200 data riwayat terbaru dari database untuk performa instan tanpa lag
+    // Ambil 100 data riwayat terbaru dari database untuk tampilan rapi, jelas, dan tanpa lag
     if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC LIMIT 200";
+        $query .= " ORDER BY $dateColumn DESC LIMIT 100";
     } else {
-        $query .= " ORDER BY id DESC LIMIT 200";
+        $query .= " ORDER BY id DESC LIMIT 100";
     }
 
     $stmt = $pdo_indoor->prepare($query);
