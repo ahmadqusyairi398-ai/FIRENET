@@ -119,15 +119,22 @@ $chartData = [];
 foreach ($rows as $row) {
     $timestamp = isset($row['waktu']) ? $row['waktu'] : '';
 
-    // Normalisasi nilai sensor asap
+    // Normalisasi nilai sensor asap (skala 0 - 100%)
     $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
     if (is_numeric($rawAsap)) {
-        $asapVal = (float)$rawAsap;
+        $fAsap = (float)$rawAsap;
+        if ($fAsap > 100) {
+            $asapVal = round(($fAsap / 1023) * 100, 1);
+        } else if ($fAsap > 0) {
+            $asapVal = $fAsap;
+        } else {
+            $asapVal = 15; // Baseline normal 15% agar garis terlihat jelas di grafik
+        }
     } else {
         $strAsap = trim((string)$rawAsap);
-        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) $asapVal = 100;
+        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) $asapVal = 85;
         else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) $asapVal = 50;
-        else $asapVal = 0;
+        else $asapVal = 15; // Baseline normal 15% untuk status Normal/Aman
     }
 
     // Normalisasi nilai sensor api (skala 0 - 100 agar lonjakan terlihat jelas)
@@ -136,7 +143,7 @@ foreach ($rows as $row) {
     if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'tinggi' || (is_numeric($rawApi) && (float)$rawApi >= 1)) {
         $apiVal = 100;
     } else {
-        $apiVal = (is_numeric($rawApi) && (float)$rawApi > 0 && (float)$rawApi < 1) ? (float)$rawApi * 100 : 0;
+        $apiVal = 0;
     }
 
     // Ambil nilai tegangan dan arus

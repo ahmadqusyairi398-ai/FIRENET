@@ -54,12 +54,12 @@ document.addEventListener('keydown', function(e) {
 const rawData = (typeof window.INDOOR_CHART_DATA !== 'undefined') ? window.INDOOR_CHART_DATA : [];
 
 const sensorConfig = [
-    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'circle' },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'rectRot', borderDash: [6, 4] },
-    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70, pointStyle: 'circle' },
-    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100, pointStyle: 'circle' },
-    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250, pointStyle: 'circle' },
-    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10, pointStyle: 'circle' }
+    { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 120 },
+    { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
+    { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
+    { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
+    { id: 'arus', label: 'Arus', color: '#a8e6cf', unit: 'A', group: 'listrik', min: 0.5, max: 5.5, yMax: 10 }
 ];
 
 let currentMode = "all";
@@ -100,25 +100,20 @@ function formatWaktuLengkap(waktuStr) {
 function initDatasets() {
     datasets = [];
     sensorConfig.forEach(sensor => {
-        const ds = {
+        datasets.push({
             label: sensor.label,
             data: [],
             borderColor: sensor.color,
             backgroundColor: sensor.color + '20',
-            borderWidth: 3,
-            tension: 0.3,
-            fill: false,
-            pointStyle: sensor.pointStyle || 'circle',
-            pointRadius: 4.5,
-            pointHoverRadius: 7,
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 6,
             hidden: false,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
-        };
-        if (sensor.borderDash) {
-            ds.borderDash = sensor.borderDash;
-        }
-        datasets.push(ds);
+        });
     });
 }
 
@@ -164,7 +159,7 @@ function createChart(labels, dataPoints) {
                                 return `${label}: ${value} ${unit} - ${status}`;
                             }
                             if (sensor && sensor.id === 'asap') {
-                                let status = value > 70 ? '🔥 TINGGI' : (value > 40 ? '⚠️ SEDANG' : '✅ NORMAL');
+                                let status = value > 70 ? '🔥 TINGGI' : (value > 35 ? '⚠️ SEDANG' : '✅ NORMAL');
                                 return `${label}: ${value} ${unit} - ${status}`;
                             }
                             return `${label}: ${value} ${unit}`;
@@ -186,32 +181,30 @@ function createChart(labels, dataPoints) {
                 },
                 'y-bahaya': {
                     position: 'left', 
-                    beginAtZero: false, 
-                    min: -5,
+                    beginAtZero: true, 
                     max: 120,
                     grid: { color: 'rgba(255,107,107,0.2)', drawOnChartArea: true },
                     title: { display: true, text: 'Api / Asap', color: '#ff6b6b' },
-                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
+                    ticks: { callback: function(v) { return v; } },
                     display: true
                 },
                 'y-env': {
                     position: 'right', 
-                    beginAtZero: false, 
-                    min: -5,
+                    beginAtZero: true, 
                     max: 100,
                     grid: { color: 'rgba(78,205,196,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Suhu (°C) / Kelembapan (%)', color: '#4ecdc4' },
-                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
+                    ticks: { callback: function(v) { return v; } },
                     display: false
                 },
                 'y-listrik': {
                     position: 'right', 
                     beginAtZero: false, 
-                    min: -5, 
+                    min: 0, 
                     max: 250,
                     grid: { color: 'rgba(255,152,0,0.2)', drawOnChartArea: false },
                     title: { display: true, text: 'Tegangan (V) / Arus (A)', color: '#ff9800' },
-                    ticks: { callback: function(v) { return v >= 0 ? v : ''; } },
+                    ticks: { callback: function(v) { return v; } },
                     display: false
                 }
             }
