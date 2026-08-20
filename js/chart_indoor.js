@@ -97,10 +97,8 @@ function formatWaktuLengkap(waktuStr) {
     }
 }
 
-function initDatasets(pointCount = 0) {
+function initDatasets() {
     datasets = [];
-    // Jika data banyak (> 60), hilangkan titik statis agar canvas sangat ringan dan cepat
-    const pRadius = pointCount > 60 ? 0 : 2;
     sensorConfig.forEach(sensor => {
         datasets.push({
             label: sensor.label,
@@ -110,7 +108,7 @@ function initDatasets(pointCount = 0) {
             borderWidth: 2,
             tension: 0.3,
             fill: true,
-            pointRadius: pRadius,
+            pointRadius: 3,
             pointHoverRadius: 6,
             hidden: sensor.group !== 'all',
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
@@ -124,7 +122,7 @@ function createChart(labels, dataPoints) {
     if (!chartEl) return;
     const ctx = chartEl.getContext('2d');
     if (myChart) myChart.destroy();
-    initDatasets(dataPoints.length);
+    initDatasets();
     datasets.forEach((ds, idx) => {
         const sensorId = sensorConfig[idx].id;
         ds.data = dataPoints.map(row => row[sensorId]);
