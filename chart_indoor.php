@@ -67,13 +67,14 @@ try {
         else $selectFields[] = "0 as $sf";
     }
 
-    $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
+    $dummyFilter = in_array('is_dummy', $columns) ? " WHERE (is_dummy = 0 OR is_dummy IS NULL)" : "";
+    $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor" . $dummyFilter;
 
-    // Ambil 5000 data terbaru dari database (DESC LIMIT 5000)
+    // Ambil 200 data riwayat terbaru dari database untuk performa instan tanpa lag
     if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC LIMIT 5000";
+        $query .= " ORDER BY $dateColumn DESC LIMIT 200";
     } else {
-        $query .= " ORDER BY id DESC LIMIT 5000";
+        $query .= " ORDER BY id DESC LIMIT 200";
     }
 
     $stmt = $pdo_indoor->prepare($query);
