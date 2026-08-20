@@ -2,21 +2,16 @@
 // Mulai session untuk user (simulasi login)
 session_start();
 
-// Jika tipe dashboard adalah outdoor, alihkan ke dashboard_admin.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'outdoor') {
-    header("Location: dashboard_admin.php");
+// Proteksi: Hanya admin indoor yang bisa mengakses halaman ini
+$is_admin_indoor = (isset($_SESSION['login_indoor']) && $_SESSION['login_indoor'] === true && isset($_SESSION['indoor_role']) && $_SESSION['indoor_role'] === 'admin');
+if (!$is_admin_indoor) {
+    header("Location: login.php?redirect=indoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'indoor';
 
-// Proteksi: Hanya admin yang bisa mengakses halaman ini
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: login.php?redirect=indoor");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
+$user = isset($_SESSION['indoor_username']) ? $_SESSION['indoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
+$role = isset($_SESSION['indoor_role']) ? $_SESSION['indoor_role'] : "admin";
 
 // Tentukan tipe dashboard (selalu indoor untuk berkas ini)
 $dashboard_type = 'indoor';
@@ -430,7 +425,7 @@ if ($conn) {
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                 <i class="fas fa-times"></i> CANCEL
             </button>
-            <a href="logout.php" class="btn-modal btn-logout-confirm">
+            <a href="logout.php?redirect=indoor" class="btn-modal btn-logout-confirm">
                 <i class="fas fa-sign-out-alt"></i> LOGOUT
             </a>
         </div>

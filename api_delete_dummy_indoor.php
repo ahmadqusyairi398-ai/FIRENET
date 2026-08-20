@@ -3,8 +3,9 @@ session_start();
 require_once 'koneksi.php';
 header('Content-Type: application/json');
 
-// Proteksi: Hanya admin
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+// Proteksi: Hanya admin indoor
+$is_admin_indoor = (isset($_SESSION['login_indoor']) && $_SESSION['login_indoor'] === true && isset($_SESSION['indoor_role']) && $_SESSION['indoor_role'] === 'admin');
+if (!$is_admin_indoor && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin')) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit;

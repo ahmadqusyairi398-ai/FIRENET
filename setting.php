@@ -1,21 +1,15 @@
 <?php
 session_start();
 
-// Jika tipe dashboard adalah indoor, alihkan ke setting_indoor.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
-    header("Location: setting_indoor.php");
+// PROTEKSI: Hanya admin outdoor yang bisa mengakses halaman ini
+if (!isset($_SESSION['login_outdoor']) || $_SESSION['login_outdoor'] !== true || ($_SESSION['outdoor_role'] ?? '') !== 'admin') {
+    header("Location: login.php?redirect=outdoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'outdoor';
 
-// PROTEKSI: Hanya admin yang bisa mengakses halaman ini
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: dashboard_admin.php");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
+$user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
+$role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
 
 // Koneksi Database
 require_once 'koneksi.php';
@@ -72,7 +66,6 @@ try {
             ['ARUS', 15, 'A', 0, 20, 'Arus listrik'],
             ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
             ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-            ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
             ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
         ];
 
@@ -96,7 +89,6 @@ try {
         $newSensors = [
             ['DAYA', 100, 'W', 0, 500, 'Daya listrik'],
             ['KECEPATAN ANGIN', 15, 'm/s', 0, 30, 'Kecepatan angin'],
-            ['ARAH ANGIN', 0, '°', 0, 360, 'Arah angin dalam derajat'],
             ['CO', 35, 'ppm', 0, 100, 'Karbon Monoksida (0-35=Normal, 35-50=Waspada, >50=Berbahaya)']
         ];
         
@@ -110,6 +102,9 @@ try {
                 }
             }
         }
+
+        // Hapus sensor ARAH ANGIN dari batas_sensor outdoor karena arah angin tidak memiliki set point / nilai alarm
+        @mysqli_query($conn, "DELETE FROM batas_sensor WHERE nama_sensor IN ('ARAH ANGIN', 'ARAH_ANGIN')");
     }
 
     // 2. Cek & Buat tabel pengguna jika belum ada
@@ -321,17 +316,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // UPDATE NILAI ALARM SENSOR
         if (isset($_POST['update_alarm_value'])) {
             $sensor_id = intval($_POST['sensor_id']);
-            $new_value = floatval($_POST['alarm_value']);
-            $batas_min = floatval($_POST['batas_min']);
-            $batas_max = floatval($_POST['batas_max']);
+            $new_value = floatval($_POST['alarm_value'] ?? 0);
+            $batas_min = floatval($_POST['batas_min'] ?? 0);
+            $batas_max = floatval($_POST['batas_max'] ?? 0);
 
-            if ($batas_min >= $batas_max) {
-                $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
-            } else {
-                $check_query = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
-                $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
+            $check_query = mysqli_query($conn, "SELECT * FROM batas_sensor WHERE id = $sensor_id");
+            $sensor = $check_query ? mysqli_fetch_assoc($check_query) : null;
 
-                if ($sensor) {
+            if ($sensor) {
+                if ($batas_min >= $batas_max) {
+                    $error_message = "Batas minimum harus lebih kecil dari batas maksimum!";
+                } else {
                     if ($new_value >= $batas_min && $new_value <= $batas_max) {
                         if (updateSensorAlarm($conn, $sensor_id, $new_value, $batas_min, $batas_max)) {
                             $success_message = "Nilai alarm dan batas range {$sensor['nama_sensor']} berhasil diupdate!";
@@ -341,9 +336,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     } else {
                         $error_message = "Nilai alarm harus antara {$batas_min} - {$batas_max} {$sensor['satuan']}!";
                     }
-                } else {
-                    $error_message = "Sensor tidak ditemukan!";
                 }
+            } else {
+                $error_message = "Sensor tidak ditemukan!";
             }
         }
 
@@ -818,7 +813,7 @@ $totalUsers = count($users);
                 <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                     <i class="fas fa-times"></i> CANCEL
                 </button>
-                <a href="logout.php" class="btn-modal btn-logout-confirm">
+                <a href="logout.php?redirect=outdoor" class="btn-modal btn-logout-confirm">
                     <i class="fas fa-sign-out-alt"></i> LOGOUT
                 </a>
             </div>

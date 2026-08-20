@@ -42,6 +42,14 @@ if ($q) {
 
         $co_raw = $r['co'] ?? 0;
 
+        $raw_arah = !empty($r['arah_angin']) ? $r['arah_angin'] : '-';
+        if (is_numeric($raw_arah)) {
+            $deg = floatval($raw_arah);
+            $deg = fmod(fmod($deg, 360) + 360, 360);
+            $cardinals = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+            $raw_arah = $cardinals[round($deg / 45) % 8];
+        }
+
         $rows[] = [
             'id' => $r['id'],
             'tanggal_waktu' => $waktu_formatted,
@@ -53,7 +61,7 @@ if ($q) {
             'arus' => isset($r['arus']) ? number_format((float)$r['arus'], 2) : '0.00',
             'daya' => isset($r['daya']) ? number_format((float)$r['daya'], 1) : '0.0',
             'kecepatan_angin' => isset($r['kecepatan_angin']) ? number_format((float)$r['kecepatan_angin'], 1) : '0.0',
-            'arah_angin' => !empty($r['arah_angin']) ? $r['arah_angin'] : '-',
+            'arah_angin' => $raw_arah,
             'co' => is_numeric($co_raw) ? number_format((float)$co_raw, 1) : $co_raw,
             'api' => $api_val,
             'api_raw' => $r['api'] ?? 0,

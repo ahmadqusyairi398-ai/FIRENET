@@ -81,12 +81,20 @@ if ($is_online && $data_sensor) {
     $total_storage_bytes = ($outdoor_storage['real_bytes'] ?? 0) + ($outdoor_storage['dummy_bytes'] ?? 0);
     $kuota_data_formatted = format_storage_size($total_storage_bytes);
 
+    $raw_arah = $data_sensor['arah_angin'] ?? 'Utara';
+    if (is_numeric($raw_arah)) {
+        $deg = floatval($raw_arah);
+        $deg = fmod(fmod($deg, 360) + 360, 360);
+        $cardinals = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+        $raw_arah = $cardinals[round($deg / 45) % 8];
+    }
+
     $response = [
         'waktu'      => date('H:i:s', strtotime($data_sensor['timestamp'] ?? ($data_sensor['tanggal_dan_waktu'] ?? 'now'))),
         'tegangan'   => $cur_tegangan,
         'arus'       => $cur_arus,
         'daya'       => $cur_daya,
-        'arah'       => $data_sensor['arah_angin'] ?? 'Utara',
+        'arah'       => $raw_arah,
         'angin'      => $data_sensor['kecepatan_angin'] ?? 0,
         'asap'       => $status_asap,
         'suhu'       => $data_sensor['suhu'] ?? 0,

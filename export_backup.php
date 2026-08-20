@@ -45,6 +45,13 @@ try {
     $no = 1;
     foreach ($rows as $row) {
         $timeVal = $row[$dateCol] ?? $row['tanggal_dan_waktu'] ?? $row['timestamp'] ?? '-';
+        $arahExport = $row['arah_angin'] ?? '-';
+        if (is_numeric($arahExport)) {
+            $deg = floatval($arahExport);
+            $deg = fmod(fmod($deg, 360) + 360, 360);
+            $cardinals = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+            $arahExport = $cardinals[round($deg / 45) % 8];
+        }
         fputcsv($output, [
             $no++,
             $timeVal,
@@ -55,7 +62,7 @@ try {
             $row['arus'] ?? 0,
             $row['daya'] ?? 0,
             $row['kecepatan_angin'] ?? 0,
-            $row['arah_angin'] ?? '-',
+            $arahExport,
             $row['co'] ?? 0
         ]);
     }

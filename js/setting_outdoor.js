@@ -65,6 +65,7 @@ function openEditAlarmModal(id, nama, nilai, satuan, min, max) {
         if (elId) elId.value = id;
         var elName = document.getElementById('edit_sensor_name');
         if (elName) elName.value = nama;
+
         var cleanMin = isNaN(parseFloat(min)) ? min : parseFloat(min);
         var cleanMax = isNaN(parseFloat(max)) ? max : parseFloat(max);
         var cleanVal = isNaN(parseFloat(nilai)) ? nilai : parseFloat(nilai);

@@ -56,66 +56,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         }
                     } else {
                         // Status approved, lanjutkan login
-                        // Set session
-                        $_SESSION['username'] = $user['username'];
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['login_time'] = time();
+                        $user_role = isset($user['role']) ? $user['role'] : (($username == 'admin') ? 'admin' : 'user');
                         
-                        // Cek role dari database
-                        if (isset($user['role'])) {
-                            $_SESSION['role'] = $user['role'];
-                        } else {
-                            // Fallback: tentukan role berdasarkan username
-                            $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
-                        }
-                        
-                        // Redirect berdasarkan role dan parameter redirect
-                        if ($_SESSION['role'] == 'admin') {
-                            if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
-                                $redirect_to = "dashboard_admin_indoor.php";
-                                $_SESSION['dashboard_type'] = 'indoor';
-                            } else {
-                                $redirect_to = "dashboard_admin.php";
-                                $_SESSION['dashboard_type'] = 'outdoor';
-                            }
+                        if ($is_indoor) {
+                            $_SESSION['login_indoor'] = true;
+                            $_SESSION['indoor_username'] = $user['username'];
+                            $_SESSION['indoor_user_id'] = $user['id'];
+                            $_SESSION['indoor_login_time'] = time();
+                            $_SESSION['indoor_role'] = $user_role;
+                            $_SESSION['dashboard_type'] = 'indoor';
+                            
+                            $redirect_to = ($user_role === 'admin') ? "dashboard_admin_indoor.php" : "dashboard_user_indoor.php";
                             header("Location: $redirect_to");
                         } else {
-                            $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
-                            $_SESSION['dashboard_type'] = $redirect_type;
-                            $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+                            $_SESSION['login_outdoor'] = true;
+                            $_SESSION['outdoor_username'] = $user['username'];
+                            $_SESSION['outdoor_user_id'] = $user['id'];
+                            $_SESSION['outdoor_login_time'] = time();
+                            $_SESSION['outdoor_role'] = $user_role;
+                            $_SESSION['dashboard_type'] = 'outdoor';
+                            
+                            $redirect_to = ($user_role === 'admin') ? "dashboard_admin.php" : "dashboard_user.php";
                             header("Location: $redirect_to");
                         }
                         exit();
                     }
                 } else {
                     // Jika tidak ada kolom status (tabel lama), lanjutkan login tanpa pengecekan status
-                    // Set session
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['login_time'] = time();
+                    $user_role = isset($user['role']) ? $user['role'] : (($username == 'admin') ? 'admin' : 'user');
                     
-                    // Cek role dari database
-                    if (isset($user['role'])) {
-                        $_SESSION['role'] = $user['role'];
-                    } else {
-                        // Fallback: tentukan role berdasarkan username
-                        $_SESSION['role'] = ($username == 'admin') ? 'admin' : 'user';
-                    }
-                    
-                    // Redirect berdasarkan role dan parameter redirect
-                    if ($_SESSION['role'] == 'admin') {
-                        if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
-                            $redirect_to = "dashboard_admin_indoor.php";
-                            $_SESSION['dashboard_type'] = 'indoor';
-                        } else {
-                            $redirect_to = "dashboard_admin.php";
-                            $_SESSION['dashboard_type'] = 'outdoor';
-                        }
+                    if ($is_indoor) {
+                        $_SESSION['login_indoor'] = true;
+                        $_SESSION['indoor_username'] = $user['username'];
+                        $_SESSION['indoor_user_id'] = $user['id'];
+                        $_SESSION['indoor_login_time'] = time();
+                        $_SESSION['indoor_role'] = $user_role;
+                        $_SESSION['dashboard_type'] = 'indoor';
+                        
+                        $redirect_to = ($user_role === 'admin') ? "dashboard_admin_indoor.php" : "dashboard_user_indoor.php";
                         header("Location: $redirect_to");
                     } else {
-                        $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
-                        $_SESSION['dashboard_type'] = $redirect_type;
-                        $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
+                        $_SESSION['login_outdoor'] = true;
+                        $_SESSION['outdoor_username'] = $user['username'];
+                        $_SESSION['outdoor_user_id'] = $user['id'];
+                        $_SESSION['outdoor_login_time'] = time();
+                        $_SESSION['outdoor_role'] = $user_role;
+                        $_SESSION['dashboard_type'] = 'outdoor';
+                        
+                        $redirect_to = ($user_role === 'admin') ? "dashboard_admin.php" : "dashboard_user.php";
                         header("Location: $redirect_to");
                     }
                     exit();
@@ -129,24 +117,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Jika sudah login, redirect ke dashboard sesuai role dan parameter redirect
-if (isset($_SESSION['username'])) {
-    if ($_SESSION['role'] == 'admin') {
-        if (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') {
-            $redirect_to = "dashboard_admin_indoor.php";
-            $_SESSION['dashboard_type'] = 'indoor';
+// Auto-redirect jika sudah login sesuai target (Indoor atau Outdoor) secara terpisah
+if ($is_indoor) {
+    if (isset($_SESSION['login_indoor']) && $_SESSION['login_indoor'] === true) {
+        $role = $_SESSION['indoor_role'] ?? 'user';
+        $_SESSION['dashboard_type'] = 'indoor';
+        if ($role === 'admin') {
+            header("Location: dashboard_admin_indoor.php");
         } else {
-            $redirect_to = "dashboard_admin.php";
-            $_SESSION['dashboard_type'] = 'outdoor';
+            header("Location: dashboard_user_indoor.php");
         }
-        header("Location: $redirect_to");
-    } else {
-        $redirect_type = (isset($_GET['redirect']) && $_GET['redirect'] === 'indoor') ? 'indoor' : 'outdoor';
-        $_SESSION['dashboard_type'] = $redirect_type;
-        $redirect_to = ($redirect_type === 'indoor') ? "dashboard_user_indoor.php" : "dashboard_user.php";
-        header("Location: $redirect_to");
+        exit();
     }
-    exit();
+} else {
+    if (isset($_SESSION['login_outdoor']) && $_SESSION['login_outdoor'] === true) {
+        $role = $_SESSION['outdoor_role'] ?? 'user';
+        $_SESSION['dashboard_type'] = 'outdoor';
+        if ($role === 'admin') {
+            header("Location: dashboard_admin.php");
+        } else {
+            header("Location: dashboard_user.php");
+        }
+        exit();
+    }
 }
 ?>
 
