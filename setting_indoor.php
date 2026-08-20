@@ -631,9 +631,9 @@ $totalUsers = count($users);
                                     $nama_sensor = isset($sensor['nama_sensor']) ? htmlspecialchars($sensor['nama_sensor']) : '-';
                                     $deskripsi = isset($sensor['deskripsi']) ? htmlspecialchars($sensor['deskripsi']) : '';
                                     $satuan = isset($sensor['satuan']) ? htmlspecialchars($sensor['satuan']) : '';
-                                    $nilai_alarm = isset($sensor['nilai_alarm']) ? number_format(floatval($sensor['nilai_alarm']), 2) : '0.00';
-                                    $batas_min = isset($sensor['batas_min']) ? number_format(floatval($sensor['batas_min']), 2) : '0.00';
-                                    $batas_max = isset($sensor['batas_max']) ? number_format(floatval($sensor['batas_max']), 2) : '0.00';
+                                    $nilai_alarm = isset($sensor['nilai_alarm']) ? number_format(floatval($sensor['nilai_alarm']), 0) : '0';
+                                    $batas_min = isset($sensor['batas_min']) ? number_format(floatval($sensor['batas_min']), 0) : '0';
+                                    $batas_max = isset($sensor['batas_max']) ? number_format(floatval($sensor['batas_max']), 0) : '0';
                                     $last_update = isset($sensor['last_update']) ? $sensor['last_update'] : '-';
                                     $sensor_id = isset($sensor['id']) ? $sensor['id'] : 0;
                                     ?>
