@@ -1,21 +1,15 @@
 <?php
 session_start();
 
-// Jika tipe dashboard adalah indoor, alihkan ke setting_indoor.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
-    header("Location: setting_indoor.php");
+// PROTEKSI: Hanya admin outdoor yang bisa mengakses halaman ini
+if (!isset($_SESSION['login_outdoor']) || $_SESSION['login_outdoor'] !== true || ($_SESSION['outdoor_role'] ?? '') !== 'admin') {
+    header("Location: login.php?redirect=outdoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'outdoor';
 
-// PROTEKSI: Hanya admin yang bisa mengakses halaman ini
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: dashboard_admin.php");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
+$user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
+$role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
 
 // Koneksi Database
 require_once 'koneksi.php';
@@ -819,7 +813,7 @@ $totalUsers = count($users);
                 <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                     <i class="fas fa-times"></i> CANCEL
                 </button>
-                <a href="logout.php" class="btn-modal btn-logout-confirm">
+                <a href="logout.php?redirect=outdoor" class="btn-modal btn-logout-confirm">
                     <i class="fas fa-sign-out-alt"></i> LOGOUT
                 </a>
             </div>

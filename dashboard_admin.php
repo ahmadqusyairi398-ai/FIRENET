@@ -202,21 +202,16 @@ if ($conn) {
 }
 // ==========================================================
 
-// Jika tipe dashboard adalah indoor, alihkan ke dashboard_admin_indoor.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
-    header("Location: dashboard_admin_indoor.php");
+// Proteksi: Hanya admin outdoor yang bisa mengakses halaman ini
+$is_admin_outdoor = (isset($_SESSION['login_outdoor']) && $_SESSION['login_outdoor'] === true && isset($_SESSION['outdoor_role']) && $_SESSION['outdoor_role'] === 'admin');
+if (!$is_admin_outdoor) {
+    header("Location: login.php?redirect=outdoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'outdoor';
 
-// Proteksi: Hanya admin yang bisa mengakses halaman ini
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: login.php");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "Admin";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
+$user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
+$role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
 ?>
 
 <!DOCTYPE html>
@@ -502,7 +497,7 @@ $role = isset($_SESSION['role']) ? $_SESSION['role'] : "admin";
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                 <i class="fas fa-times"></i> CANCEL
             </button>
-            <a href="logout.php" class="btn-modal btn-logout-confirm">
+            <a href="logout.php?redirect=outdoor" class="btn-modal btn-logout-confirm">
                 <i class="fas fa-sign-out-alt"></i> LOGOUT
             </a>
         </div>

@@ -2,21 +2,15 @@
 // Mulai session untuk user (simulasi login)
 session_start();
 
-// Jika tipe dashboard adalah outdoor, alihkan ke dashboard_user.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'outdoor') {
-    header("Location: dashboard_user.php");
+// Proteksi: Hanya user indoor yang bisa mengakses halaman ini
+if (!isset($_SESSION['login_indoor']) || $_SESSION['login_indoor'] !== true) {
+    header("Location: login.php?redirect=indoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'indoor';
 
-// Jika belum login, redirect ke halaman login
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php?redirect=indoor");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
+$user = isset($_SESSION['indoor_username']) ? $_SESSION['indoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "User");
+$role = isset($_SESSION['indoor_role']) ? $_SESSION['indoor_role'] : "user";
 
 // Koneksi Database & Query Data Sensor (Database Indoor)
 require_once 'koneksi.php';
@@ -394,7 +388,7 @@ if ($conn) {
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                 <i class="fas fa-times"></i> CANCEL
             </button>
-            <a href="logout.php" class="btn-modal btn-logout-confirm">
+            <a href="logout.php?redirect=indoor" class="btn-modal btn-logout-confirm">
                 <i class="fas fa-sign-out-alt"></i> LOGOUT
             </a>
         </div>

@@ -2,21 +2,15 @@
 // Mulai session untuk user
 session_start();
 
-// Jika tipe dashboard adalah indoor, alihkan ke dashboard_user_indoor.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
-    header("Location: dashboard_user_indoor.php");
+// Proteksi: Hanya user outdoor yang bisa mengakses halaman ini
+if (!isset($_SESSION['login_outdoor']) || $_SESSION['login_outdoor'] !== true) {
+    header("Location: login.php?redirect=outdoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'outdoor';
 
-// Proteksi: Jika belum login, redirect ke halaman login
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
-
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
+$user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "User");
+$role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "user";
 
 // ================= TAMBAHAN KODE DATABASE =================
 // 1. Hubungkan ke database
@@ -408,7 +402,7 @@ if ($conn) {
         <h2>Apakah Anda yakin keluar?</h2>
         <div class="modal-buttons">
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()"><i class="fas fa-times"></i> CANCEL</button>
-            <a href="logout.php" class="btn-modal btn-logout-confirm"><i class="fas fa-sign-out-alt"></i> LOGOUT</a>
+            <a href="logout.php?redirect=outdoor" class="btn-modal btn-logout-confirm"><i class="fas fa-sign-out-alt"></i> LOGOUT</a>
         </div>
     </div>
 </div>

@@ -2,15 +2,15 @@
 date_default_timezone_set('Asia/Makassar');
 session_start();
 
-// Jika tipe dashboard adalah indoor, alihkan ke chart_indoor.php
-if (isset($_SESSION['dashboard_type']) && $_SESSION['dashboard_type'] === 'indoor') {
-    header("Location: chart_indoor.php");
+// Proteksi: Hanya user outdoor yang bisa mengakses halaman ini
+if (!isset($_SESSION['login_outdoor']) || $_SESSION['login_outdoor'] !== true) {
+    header("Location: login.php?redirect=outdoor");
     exit();
 }
 $_SESSION['dashboard_type'] = 'outdoor';
 
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : "User";
-$role = isset($_SESSION['role']) ? $_SESSION['role'] : "user";
+$user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "User");
+$role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "user";
 
 // Koneksi database
 require_once 'koneksi.php';
@@ -275,7 +275,7 @@ $jsonData = json_encode($chartData);
             <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">
                 <i class="fas fa-times"></i> CANCEL
             </button>
-            <a href="logout.php" class="btn-modal btn-logout-confirm">
+            <a href="logout.php?redirect=outdoor" class="btn-modal btn-logout-confirm">
                 <i class="fas fa-sign-out-alt"></i> LOGOUT
             </a>
         </div>
