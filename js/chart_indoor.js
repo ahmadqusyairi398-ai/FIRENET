@@ -55,7 +55,7 @@ const rawData = (typeof window.INDOOR_CHART_DATA !== 'undefined') ? window.INDOO
 
 const sensorConfig = [
     { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'circle' },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'rectRot' },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120, pointStyle: 'rectRot', borderDash: [6, 4] },
     { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70, pointStyle: 'circle' },
     { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100, pointStyle: 'circle' },
     { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250, pointStyle: 'circle' },
@@ -100,7 +100,7 @@ function formatWaktuLengkap(waktuStr) {
 function initDatasets() {
     datasets = [];
     sensorConfig.forEach(sensor => {
-        datasets.push({
+        const ds = {
             label: sensor.label,
             data: [],
             borderColor: sensor.color,
@@ -114,7 +114,11 @@ function initDatasets() {
             hidden: false,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
-        });
+        };
+        if (sensor.borderDash) {
+            ds.borderDash = sensor.borderDash;
+        }
+        datasets.push(ds);
     });
 }
 
@@ -339,10 +343,11 @@ function generateDummyHistory(count) {
 function filterData() {
     const locSelect = document.getElementById('locationSelect');
     const locationVal = locSelect ? locSelect.value : 'LOK-002';
+    const isLive = (locationVal === 'LOK-002' || locationVal === 'IND-002' || locationVal.includes('002') || locationVal.toUpperCase().includes('UTAMA') || locationVal === '2');
 
     const chartBadge = document.getElementById('chart-badge');
     if (chartBadge) {
-        if (locationVal === 'LOK-002') {
+        if (isLive) {
             chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
             chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
         } else {
@@ -351,10 +356,7 @@ function filterData() {
         }
     }
 
-    let sourceData = fullData;
-    if (locationVal !== 'LOK-002') {
-        sourceData = generateDummyHistory(200);
-    }
+    let sourceData = isLive ? fullData : generateDummyHistory(200);
 
     const fromDate = document.getElementById('dateFrom').value;
     const toDate = document.getElementById('dateTo').value;

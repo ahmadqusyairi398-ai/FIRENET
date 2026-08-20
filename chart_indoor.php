@@ -231,10 +231,10 @@ $jsonData = json_encode($chartData);
                 <?php foreach ($db_locations as $loc):
                     $idAlat = !empty($loc['id_alat']) ? $loc['id_alat'] : "LOK-".$loc['id'];
                     $namaLokasi = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : $idAlat;
-                    $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2);
+                    $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2 || stripos($idAlat, '002') !== false || stripos($idAlat, 'utama') !== false);
                     $labelStatus = $isLive ? "(Alat Utama / Live)" : "(Dummy)";
                 ?>
-                    <option value="<?= htmlspecialchars($idAlat) ?>">
+                    <option value="<?= htmlspecialchars($idAlat) ?>" <?= $isLive ? 'selected' : '' ?>>
                         <?= htmlspecialchars($idAlat) ?> - <?= htmlspecialchars($namaLokasi) ?> <?= $labelStatus ?>
                     </option>
                 <?php endforeach; ?>
