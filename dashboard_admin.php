@@ -53,87 +53,91 @@ if ($conn) {
     if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
         $s = mysqli_fetch_assoc($q_sensor);
         
+        // Ambil setting interval lokasi utama jika ada
+        $q_intv = @mysqli_query($conn, "SELECT interval_detik FROM lokasi_alat WHERE id = 1 LIMIT 1");
+        $row_intv = $q_intv ? mysqli_fetch_assoc($q_intv) : null;
+        $interval_setting = intval($row_intv['interval_detik'] ?? 30);
+        $timeout_seconds = max(90, ($interval_setting * 3) + 30);
+
         // Cek selisih waktu data terakhir
         $time_str = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? ($s['created_at'] ?? null));
         $is_online = false;
         if ($time_str) {
             $last_time = strtotime($time_str);
-            if ($last_time > 0 && (time() - $last_time) <= 15) {
+            if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
                 $is_online = true;
             }
         }
 
-        if ($is_online) {
-            $raw_asap = $s['asap'] ?? 'Normal';
-            if (is_numeric($raw_asap)) {
-                $f_asap = (float)$raw_asap;
-                if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) {
-                    $asap_val = "Tinggi";
-                } else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) {
-                    $asap_val = "Sedang";
-                } else {
-                    $asap_val = "Normal";
-                }
+        $raw_asap = $s['asap'] ?? 'Normal';
+        if (is_numeric($raw_asap)) {
+            $f_asap = (float)$raw_asap;
+            if ($f_asap > ($f_asap > 1 ? 50 : 0.5)) {
+                $asap_val = "Tinggi";
+            } else if ($f_asap > ($f_asap > 1 ? 25 : 0.25)) {
+                $asap_val = "Sedang";
             } else {
-                $str_asap = trim((string)$raw_asap);
-                if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) {
-                    $asap_val = "Tinggi";
-                } else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) {
-                    $asap_val = "Sedang";
-                } else {
-                    $asap_val = "Normal";
-                }
+                $asap_val = "Normal";
             }
-
-            $co_val = isset($s['co']) ? (float)$s['co'] : 0;
-            $co_status = "Normal";
-            if (is_numeric($s['co'] ?? null)) {
-                if ($co_val > 50) {
-                    $co_status = "Tinggi";
-                } else if ($co_val > 35) {
-                    $co_status = "Sedang";
-                } else {
-                    $co_status = "Normal";
-                }
-            } else if (isset($s['co'])) {
-                $str_co = trim((string)$s['co']);
-                if (strcasecmp($str_co, 'Tinggi') === 0 || strcasecmp($str_co, 'Bahaya') === 0) {
-                    $co_status = "Tinggi";
-                } else if (strcasecmp($str_co, 'Sedang') === 0 || strcasecmp($str_co, 'Waspada') === 0) {
-                    $co_status = "Sedang";
-                } else {
-                    $co_status = "Normal";
-                }
+        } else {
+            $str_asap = trim((string)$raw_asap);
+            if (strcasecmp($str_asap, 'Tinggi') === 0 || strcasecmp($str_asap, 'Bahaya') === 0) {
+                $asap_val = "Tinggi";
+            } else if (strcasecmp($str_asap, 'Sedang') === 0 || strcasecmp($str_asap, 'Waspada') === 0) {
+                $asap_val = "Sedang";
+            } else {
+                $asap_val = "Normal";
             }
-            
-            $raw_tegangan = isset($s['tegangan']) ? (float)$s['tegangan'] : 0.0;
-            $raw_arus = isset($s['arus']) ? (float)$s['arus'] : 0.0;
-            $raw_daya = isset($s['daya']) ? (float)$s['daya'] : 0.0;
-            if ($raw_arus > 20) {
-                $raw_arus = $raw_arus / 1000.0;
-            }
-            if ($raw_daya <= 0 || $raw_daya > 500) {
-                $raw_daya = $raw_tegangan * $raw_arus;
-            }
-
-            $latest_sensor = [
-                'waktu' => date('H:i:s', strtotime($time_str)),
-                'tegangan' => number_format($raw_tegangan, 1),
-                'arus' => number_format($raw_arus, 2),
-                'daya' => number_format($raw_daya, 1),
-                'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
-                'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
-                'asap' => $asap_val,
-                'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
-                'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
-                'co' => $co_val,
-                'co_status' => $co_status,
-                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
-                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-                'status' => 'Online',
-                'is_dummy' => (int)($s['is_dummy'] ?? 0)
-            ];
         }
+
+        $co_val = isset($s['co']) ? (float)$s['co'] : 0;
+        $co_status = "Normal";
+        if (is_numeric($s['co'] ?? null)) {
+            if ($co_val > 50) {
+                $co_status = "Tinggi";
+            } else if ($co_val > 35) {
+                $co_status = "Sedang";
+            } else {
+                $co_status = "Normal";
+            }
+        } else if (isset($s['co'])) {
+            $str_co = trim((string)$s['co']);
+            if (strcasecmp($str_co, 'Tinggi') === 0 || strcasecmp($str_co, 'Bahaya') === 0) {
+                $co_status = "Tinggi";
+            } else if (strcasecmp($str_co, 'Sedang') === 0 || strcasecmp($str_co, 'Waspada') === 0) {
+                $co_status = "Sedang";
+            } else {
+                $co_status = "Normal";
+            }
+        }
+        
+        $raw_tegangan = isset($s['tegangan']) ? (float)$s['tegangan'] : 0.0;
+        $raw_arus = isset($s['arus']) ? (float)$s['arus'] : 0.0;
+        $raw_daya = isset($s['daya']) ? (float)$s['daya'] : 0.0;
+        if ($raw_arus > 20) {
+            $raw_arus = $raw_arus / 1000.0;
+        }
+        if ($raw_daya <= 0 || $raw_daya > 500) {
+            $raw_daya = $raw_tegangan * $raw_arus;
+        }
+
+        $latest_sensor = [
+            'waktu' => $time_str ? date('H:i:s', strtotime($time_str)) : date('H:i:s'),
+            'tegangan' => number_format($raw_tegangan, 1),
+            'arus' => number_format($raw_arus, 2),
+            'daya' => number_format($raw_daya, 1),
+            'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
+            'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
+            'asap' => $asap_val,
+            'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
+            'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
+            'co' => $co_val,
+            'co_status' => $co_status,
+            'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+            'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+            'status' => $is_online ? 'Online' : 'Offline',
+            'is_dummy' => (int)($s['is_dummy'] ?? 0)
+        ];
     }
 }
 

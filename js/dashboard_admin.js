@@ -635,7 +635,7 @@ function fetchDataFromDB() {
             // 1. Update status header
             var nowClock = new Date().toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
             var stElem = document.getElementById("status");
-            if (stElem) stElem.innerHTML = `<i class="fas fa-circle status-online"></i> ${data.status || 'Online'}`;
+            if (stElem) stElem.innerHTML = `<i class="fas fa-circle ${data.status === 'Online' ? 'status-online' : ''}"></i> ${data.status || 'Offline'}`;
             var rssiElem = document.getElementById("rssi");
             if (rssiElem) rssiElem.innerHTML = `${data.rssi || '-'} dBm`;
             var ipElem = document.getElementById("ip");

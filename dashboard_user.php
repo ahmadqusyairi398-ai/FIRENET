@@ -62,46 +62,50 @@ if ($conn) {
     if ($q_sensor && mysqli_num_rows($q_sensor) > 0) {
         $s = mysqli_fetch_assoc($q_sensor);
         
+        // Ambil setting interval lokasi utama jika ada
+        $q_intv = @mysqli_query($conn, "SELECT interval_detik FROM lokasi_alat WHERE id = 1 LIMIT 1");
+        $row_intv = $q_intv ? mysqli_fetch_assoc($q_intv) : null;
+        $interval_setting = intval($row_intv['interval_detik'] ?? 30);
+        $timeout_seconds = max(90, ($interval_setting * 3) + 30);
+
         // Cek selisih waktu data terakhir
         $time_str = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? ($s['created_at'] ?? null));
         $is_online = false;
         if ($time_str) {
             $last_time = strtotime($time_str);
-            if ($last_time > 0 && (time() - $last_time) <= 15) {
+            if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
                 $is_online = true;
             }
         }
 
-        if ($is_online) {
-            $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
-            $co_val = isset($s['co']) ? (float)$s['co'] : 0;
-            
-            $raw_tegangan = isset($s['tegangan']) ? (float)$s['tegangan'] : 0.0;
-            $raw_arus = isset($s['arus']) ? (float)$s['arus'] : 0.0;
-            $raw_daya = isset($s['daya']) ? (float)$s['daya'] : 0.0;
-            if ($raw_arus > 20) {
-                $raw_arus = $raw_arus / 1000.0;
-            }
-            if ($raw_daya <= 0 || $raw_daya > 500) {
-                $raw_daya = $raw_tegangan * $raw_arus;
-            }
-
-            $latest_sensor = [
-                'waktu' => date('H:i:s', strtotime($time_str)),
-                'tegangan' => number_format($raw_tegangan, 1),
-                'arus' => number_format($raw_arus, 2),
-                'daya' => number_format($raw_daya, 1),
-                'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
-                'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
-                'asap' => $asap_val,
-                'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
-                'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
-                'co' => $co_val,
-                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
-                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-                'status' => 'Online'
-            ];
+        $asap_val = (isset($s['asap']) && ($s['asap'] === 'Tinggi' || (is_numeric($s['asap']) && (float)$s['asap'] > 0.5))) ? "Tinggi" : "Normal";
+        $co_val = isset($s['co']) ? (float)$s['co'] : 0;
+        
+        $raw_tegangan = isset($s['tegangan']) ? (float)$s['tegangan'] : 0.0;
+        $raw_arus = isset($s['arus']) ? (float)$s['arus'] : 0.0;
+        $raw_daya = isset($s['daya']) ? (float)$s['daya'] : 0.0;
+        if ($raw_arus > 20) {
+            $raw_arus = $raw_arus / 1000.0;
         }
+        if ($raw_daya <= 0 || $raw_daya > 500) {
+            $raw_daya = $raw_tegangan * $raw_arus;
+        }
+
+        $latest_sensor = [
+            'waktu' => $time_str ? date('H:i:s', strtotime($time_str)) : date('H:i:s'),
+            'tegangan' => number_format($raw_tegangan, 1),
+            'arus' => number_format($raw_arus, 2),
+            'daya' => number_format($raw_daya, 1),
+            'arah' => !empty($s['arah_angin']) ? $s['arah_angin'] : "Utara",
+            'angin' => isset($s['kecepatan_angin']) ? number_format((float)$s['kecepatan_angin'], 1) : "0.0",
+            'asap' => $asap_val,
+            'suhu' => isset($s['suhu']) ? number_format((float)$s['suhu'], 1) : "0.0",
+            'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "0.0",
+            'co' => $co_val,
+            'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
+            'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
+            'status' => $is_online ? 'Online' : 'Offline'
+        ];
     }
 }
 
