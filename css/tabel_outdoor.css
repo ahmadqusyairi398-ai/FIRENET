@@ -266,6 +266,51 @@ body::before {
     transform: translateY(-2px);
 }
 
+.btn-delete-selected {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-delete-selected.active,
+.btn-delete-selected:not(:disabled) {
+    opacity: 1;
+    cursor: pointer;
+    background: linear-gradient(135deg, #dc3545, #b91c1c);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-delete-selected.active:hover,
+.btn-delete-selected:not(:disabled):hover {
+    background: linear-gradient(135deg, #c82333, #a71d2a);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.row-checkbox, #selectAllCheckbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #dc3545;
+    vertical-align: middle;
+}
+
 .table-container {
     overflow-x: auto;
 }
