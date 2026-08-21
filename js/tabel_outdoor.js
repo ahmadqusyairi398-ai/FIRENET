@@ -127,10 +127,6 @@ function createRow(item) {
         `<input type="checkbox" class="row-checkbox" value="${item.id}" ${isChecked} onchange="toggleRowCheckbox(this, '${item.id}')">` : 
         `<input type="checkbox" disabled title="Data simulasi tidak dapat dipilih">`;
 
-    var actionBtn = item.id ? 
-        `<button onclick="hapusBaris(${item.id})" class="btn-delete-row" title="Hapus Data"><i class="fas fa-trash-alt"></i> Hapus</button>` : 
-        `<span style="color:#aaa; font-size:12px;">(Simulasi)</span>`;
-
     return [
         checkboxHtml,
         item.no,
@@ -143,8 +139,7 @@ function createRow(item) {
         `${item.daya} W`,
         `${item.kecepatan_angin} m/s`,
         `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`,
-        actionBtn
+        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
     ];
 }
 
@@ -175,8 +170,7 @@ function initDataTable(data) {
             { title: "Daya (W)" },
             { title: "Kecepatan Angin (m/s)" },
             { title: "Arah Angin" },
-            { title: "CO (ppm)" },
-            { title: "Aksi", orderable: false, className: 'text-center' }
+            { title: "CO (ppm)" }
         ],
         language: {
             url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -452,8 +446,7 @@ $(document).ready(function() {
                 { title: "Daya (W)" },
                 { title: "Kecepatan Angin (m/s)" },
                 { title: "Arah Angin" },
-                { title: "CO (ppm)" },
-                { title: "Aksi", orderable: false, className: 'text-center' }
+                { title: "CO (ppm)" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",

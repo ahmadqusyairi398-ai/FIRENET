@@ -267,7 +267,7 @@ try {
                     <i class="fas fa-file-excel"></i> Export Excel
                 </button>
                 <button class="btn-delete-selected" id="btnDeleteSelected" onclick="hapusTerpilih()" disabled>
-                    <i class="fas fa-trash-alt"></i> Hapus Terpilih (<span id="selectedCount">0</span>)
+                    <i class="fas fa-trash-alt"></i> Hapus (<span id="selectedCount">0</span>)
                 </button>
             </div>
         </div>
@@ -290,7 +290,6 @@ try {
                         <th><i class="fas fa-wind"></i> Kecepatan Angin (m/s)</th>
                         <th><i class="fas fa-compass"></i> Arah Angin</th>
                         <th><i class="fas fa-skull-crossbones"></i> CO (ppm)</th>
-                        <th style="text-align:center;"><i class="fas fa-trash-alt"></i> Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
