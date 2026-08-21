@@ -161,6 +161,16 @@ if ($conn) {
             $waktu_raw = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? 'now');
             $waktu_str = date('H:i:s', strtotime($waktu_raw));
             
+            // Batas toleransi mati/offline 20 detik
+            $timeout_seconds = 20;
+            $is_online = false;
+            if ($waktu_raw) {
+                $last_time = strtotime($waktu_raw);
+                if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+                    $is_online = true;
+                }
+            }
+            
             $latest_sensor = [
                 'waktu' => $waktu_str,
                 'api' => $apiStatus,
@@ -169,9 +179,9 @@ if ($conn) {
                 'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
                 'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
                 'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 2) : "-",
-                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
-                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-                'status' => 'Online',
+                'rssi' => $is_online ? (isset($s['rssi']) ? $s['rssi'] : "-") : "-",
+                'ip' => $is_online ? (!empty($s['ip_address']) ? $s['ip_address'] : "-") : "-",
+                'status' => $is_online ? 'Online' : 'Offline',
                 'isDanger' => ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi"),
                 'apiValue' => ($apiStatus === "Terdeteksi Api") ? 1 : 0
             ];

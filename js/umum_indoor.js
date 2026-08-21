@@ -481,16 +481,32 @@ async function fetchDataFromDB() {
     var statusElem = document.getElementById("status");
     if (statusElem) {
         if (isLive) {
-            statusElem.innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+            if (data.status === 'Online') {
+                statusElem.innerHTML = `<i class="fas fa-circle status-online"></i> Live (Online)`;
+            } else {
+                statusElem.innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
+            }
         } else {
             statusElem.innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
         }
     }
     var rssiElem = document.getElementById("rssi");
-    if (rssiElem) rssiElem.innerHTML = `${data.rssi || '-'} dBm`;
+    if (rssiElem) {
+        if (isLive) {
+            rssiElem.innerHTML = (data.status === 'Online' && data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : '-';
+        } else {
+            rssiElem.innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : `${data.rssi || '-'}`;
+        }
+    }
     
     var ipElem = document.getElementById("ip");
-    if (ipElem) ipElem.innerHTML = data.ip || '-';
+    if (ipElem) {
+        if (isLive) {
+            ipElem.innerHTML = (data.status === 'Online' && data.ip) ? data.ip : '-';
+        } else {
+            ipElem.innerHTML = data.ip || '-';
+        }
+    }
 
     var waktuElem = document.getElementById("waktu");
     if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
@@ -498,8 +514,13 @@ async function fetchDataFromDB() {
     const chartBadge = document.getElementById("chart-badge");
     if (chartBadge) {
         if (isLive) {
-            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
-            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            if (data.status === 'Online') {
+                chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+                chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            } else {
+                chartBadge.innerHTML = '<i class="fas fa-power-off"></i> Alat Offline';
+                chartBadge.style.background = 'linear-gradient(135deg, #dc3545, #b91c1c)';
+            }
         } else {
             chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
             chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';

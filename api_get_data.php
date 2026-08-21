@@ -138,15 +138,15 @@ if ($device_id === 'indoor') {
 
             $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
 
-            // PERBAIKAN: Ubah batas toleransi mati/offline menjadi 45 detik agar tidak kedap-kedip
-            $timeout_seconds = 45;
-        $is_online = false;
-        if ($waktu_raw) {
-            $last_time = strtotime($waktu_raw);
-            if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
-                $is_online = true;
+            // Batas toleransi mati/offline 20 detik
+            $timeout_seconds = 20;
+            $is_online = false;
+            if ($waktu_raw) {
+                $last_time = strtotime($waktu_raw);
+                if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+                    $is_online = true;
+                }
             }
-        }
 
         $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
         $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
@@ -204,8 +204,8 @@ if ($device_id === 'indoor') {
             "kelembapan"       => number_format($kelembapanVal, 1),
             "tegangan"         => number_format($teganganVal, 1),
             "arus"             => number_format($arusVal, 2),
-            "rssi"             => $row['rssi'] ?? '-',
-            "ip"               => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+            "rssi"             => $is_online ? ($row['rssi'] ?? '-') : '-',
+            "ip"               => $is_online ? (!empty($row['ip_address']) ? $row['ip_address'] : '-') : '-',
             "latitude"         => isset($row['latitude']) ? (float)$row['latitude'] : null,
             "longitude"        => isset($row['longitude']) ? (float)$row['longitude'] : null,
             "isDanger"         => $isDanger,

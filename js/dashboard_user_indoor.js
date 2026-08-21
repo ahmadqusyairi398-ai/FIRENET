@@ -530,19 +530,32 @@ async function updateDashboard() {
     }
 
     if (isLive) {
-        document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+        if (data.status === 'Online') {
+            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Online)`;
+            document.getElementById("rssi").innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : '-';
+            document.getElementById("ip").innerHTML = data.ip || '-';
+        } else {
+            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-offline"></i> Offline`;
+            document.getElementById("rssi").innerHTML = '-';
+            document.getElementById("ip").innerHTML = '-';
+        }
     } else {
         document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
+        document.getElementById("rssi").innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : `${data.rssi}`;
+        document.getElementById("ip").innerHTML = data.ip;
     }
-    document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-    document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
 
     const chartBadge = document.getElementById("chart-badge");
     if (chartBadge) {
         if (isLive) {
-            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
-            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            if (data.status === 'Online') {
+                chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+                chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            } else {
+                chartBadge.innerHTML = '<i class="fas fa-power-off"></i> Alat Offline';
+                chartBadge.style.background = 'linear-gradient(135deg, #dc3545, #b91c1c)';
+            }
         } else {
             chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
             chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
