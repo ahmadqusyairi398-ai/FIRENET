@@ -88,17 +88,32 @@ if ($device_id === 'indoor') {
                     $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
                     if (is_numeric($rawAsap)) {
                         $fAsap = (float)$rawAsap;
-                        // Perbaikan: Gunakan standar analog (> 750 bahaya, > 350 sedang)
-                        $asapVal = ($fAsap > 750) ? 1 : (($fAsap > 350) ? 0.5 : 0);
+                        if ($fAsap > 750) {
+                            $asapStatus = "Tinggi";
+                        } else if ($fAsap > 350) {
+                            $asapStatus = "Sedang";
+                        } else {
+                            $asapStatus = "Normal";
+                        }
+                        $asapVal = $fAsap;
                     } else {
                         $strAsap = trim((string)$rawAsap);
-                        $asapVal = (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) ? 1 : ((strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) ? 0.5 : 0);
+                        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) {
+                            $asapStatus = "Tinggi";
+                            $asapVal = 1;
+                        } else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) {
+                            $asapStatus = "Sedang";
+                            $asapVal = 0.5;
+                        } else {
+                            $asapStatus = "Normal";
+                            $asapVal = 0;
+                        }
                     }
 
                     $history_data[] = [
                         'waktu'      => $waktu_raw ? date('H:i:s', strtotime($waktu_raw)) : date('H:i:s'),
                         'api'        => ($apiValue === 1) ? 'Terdeteksi Api' : 'Aman',
-                        'asap'       => ($asapVal === 1) ? 'Tinggi' : (($asapVal === 0.5) ? 'Waspada' : 'Normal'),
+                        'asap'       => $asapStatus,
                         'asap_value' => $asapVal,
                         'suhu'       => (float)($row['suhu'] ?? 0),
                         'kelembapan' => (float)($row['kelembapan'] ?? 0),
@@ -123,15 +138,15 @@ if ($device_id === 'indoor') {
 
             $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
 
-            // PERBAIKAN: Ubah batas toleransi mati/offline menjadi 45 detik agar tidak kedap-kedip
-            $timeout_seconds = 45;
-        $is_online = false;
-        if ($waktu_raw) {
-            $last_time = strtotime($waktu_raw);
-            if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
-                $is_online = true;
+            // Batas toleransi mati/offline 20 detik
+            $timeout_seconds = 20;
+            $is_online = false;
+            if ($waktu_raw) {
+                $last_time = strtotime($waktu_raw);
+                if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+                    $is_online = true;
+                }
             }
-        }
 
         $apiValue = isset($row['api']) ? (float)$row['api'] : 0;
         $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
@@ -189,8 +204,8 @@ if ($device_id === 'indoor') {
             "kelembapan"       => number_format($kelembapanVal, 1),
             "tegangan"         => number_format($teganganVal, 1),
             "arus"             => number_format($arusVal, 2),
-            "rssi"             => $row['rssi'] ?? '-',
-            "ip"               => !empty($row['ip_address']) ? $row['ip_address'] : '-',
+            "rssi"             => $is_online ? ($row['rssi'] ?? '-') : '-',
+            "ip"               => $is_online ? (!empty($row['ip_address']) ? $row['ip_address'] : '-') : '-',
             "latitude"         => isset($row['latitude']) ? (float)$row['latitude'] : null,
             "longitude"        => isset($row['longitude']) ? (float)$row['longitude'] : null,
             "isDanger"         => $isDanger,

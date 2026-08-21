@@ -268,7 +268,7 @@ let dataChart = {
     datasets: [
         { label: 'Suhu (°C)', data: chartSuhu, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Kelembapan (%)', data: chartKelembapan, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Status Asap', data: chartAsap, borderColor: '#ff9f43', backgroundColor: 'rgba(255,159,67,0.1)', borderWidth: 2, tension: 0.4, fill: true, borderDash: [5, 5] },
+        { label: 'Status Asap', data: chartAsap, borderColor: '#ff9f43', backgroundColor: 'rgba(255,159,67,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Status Api', data: chartApi, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true }
     ]
 };
@@ -299,8 +299,13 @@ const myChart = new Chart(ctx, {
                         if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
                         else if (label.includes('Status Asap')) {
-                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
-                            return `${label}: ${status}`;
+                            if (typeof value === 'number' && value > 1) {
+                                let status = value > 750 ? '⚠️ Asap Tinggi' : (value > 350 ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${value} % (${status})`;
+                            } else {
+                                let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${status}`;
+                            }
                         }
                         else if (label.includes('Status Api')) {
                             let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
@@ -476,16 +481,32 @@ async function fetchDataFromDB() {
     var statusElem = document.getElementById("status");
     if (statusElem) {
         if (isLive) {
-            statusElem.innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+            if (data.status === 'Online') {
+                statusElem.innerHTML = `<i class="fas fa-circle status-online"></i> Live (Online)`;
+            } else {
+                statusElem.innerHTML = `<i class="fas fa-circle" style="color: #dc3545;"></i> Offline`;
+            }
         } else {
             statusElem.innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
         }
     }
     var rssiElem = document.getElementById("rssi");
-    if (rssiElem) rssiElem.innerHTML = `${data.rssi || '-'} dBm`;
+    if (rssiElem) {
+        if (isLive) {
+            rssiElem.innerHTML = (data.status === 'Online' && data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : '-';
+        } else {
+            rssiElem.innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : `${data.rssi || '-'}`;
+        }
+    }
     
     var ipElem = document.getElementById("ip");
-    if (ipElem) ipElem.innerHTML = data.ip || '-';
+    if (ipElem) {
+        if (isLive) {
+            ipElem.innerHTML = (data.status === 'Online' && data.ip) ? data.ip : '-';
+        } else {
+            ipElem.innerHTML = data.ip || '-';
+        }
+    }
 
     var waktuElem = document.getElementById("waktu");
     if (waktuElem) waktuElem.innerHTML = `<i class="far fa-clock"></i> ${nowClock}`;
@@ -493,8 +514,13 @@ async function fetchDataFromDB() {
     const chartBadge = document.getElementById("chart-badge");
     if (chartBadge) {
         if (isLive) {
-            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
-            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            if (data.status === 'Online') {
+                chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+                chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            } else {
+                chartBadge.innerHTML = '<i class="fas fa-power-off"></i> Alat Offline';
+                chartBadge.style.background = 'linear-gradient(135deg, #dc3545, #b91c1c)';
+            }
         } else {
             chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
             chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
@@ -639,9 +665,15 @@ async function fetchDataFromDB() {
             dataChart.datasets[1].data.push(parseFloat(data.kelembapan) || 0);
             
             var numericAsap = 0;
-            if (data.asap === "Tinggi" || data.asap === "Bahaya") numericAsap = 1;
-            else if (data.asap === "Sedang" || data.asap === "Waspada") numericAsap = 0.5;
-            else if (!isNaN(parseFloat(data.asap))) numericAsap = parseFloat(data.asap);
+            if (data.asap_value !== undefined) {
+                numericAsap = parseFloat(data.asap_value);
+            } else if (data.asap === "Tinggi" || data.asap === "Bahaya") {
+                numericAsap = 1;
+            } else if (data.asap === "Sedang" || data.asap === "Waspada") {
+                numericAsap = 0.5;
+            } else if (!isNaN(parseFloat(data.asap))) {
+                numericAsap = parseFloat(data.asap);
+            }
             dataChart.datasets[2].data.push(numericAsap);
             dataChart.datasets[3].data.push(data.api === "Terdeteksi Api" ? 1 : 0);
 

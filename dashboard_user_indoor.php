@@ -155,6 +155,16 @@ if ($conn) {
             $waktu_raw = $s['timestamp'] ?? ($s['tanggal_dan_waktu'] ?? 'now');
             $waktu_str = date('H:i:s', strtotime($waktu_raw));
             
+            // Batas toleransi mati/offline 20 detik
+            $timeout_seconds = 20;
+            $is_online = false;
+            if ($waktu_raw) {
+                $last_time = strtotime($waktu_raw);
+                if ($last_time > 0 && (time() - $last_time) <= $timeout_seconds) {
+                    $is_online = true;
+                }
+            }
+            
             $latest_sensor = [
                 'waktu' => $waktu_str,
                 'api' => $apiStatus,
@@ -163,16 +173,16 @@ if ($conn) {
                 'kelembapan' => isset($s['kelembapan']) ? number_format((float)$s['kelembapan'], 1) : "-",
                 'tegangan' => isset($s['tegangan']) ? number_format((float)$s['tegangan'], 1) : "-",
                 'arus' => isset($s['arus']) ? number_format((float)$s['arus'], 3) : "-",
-                'rssi' => isset($s['rssi']) ? $s['rssi'] : "-",
-                'ip' => !empty($s['ip_address']) ? $s['ip_address'] : "-",
-                'status' => 'Online',
+                'rssi' => $is_online ? (isset($s['rssi']) ? $s['rssi'] : "-") : "-",
+                'ip' => $is_online ? (!empty($s['ip_address']) ? $s['ip_address'] : "-") : "-",
+                'status' => $is_online ? 'Online' : 'Offline',
                 'isDanger' => ($apiStatus === "Terdeteksi Api" || $asapStatus === "Tinggi"),
                 'apiValue' => ($apiStatus === "Terdeteksi Api") ? 1 : 0
             ];
         }
 
-        // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru)
-        $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
+        // Ambil 20 data riwayat untuk Grafik Real Time Sensor (Urut terlama ke terbaru - Hanya Alat Asli)
+        $q_chart = mysqli_query($conn, "SELECT * FROM (SELECT * FROM data_sensor WHERE (is_dummy = 0 OR is_dummy IS NULL) ORDER BY id DESC LIMIT 20) Var1 ORDER BY id ASC");
         if ($q_chart && mysqli_num_rows($q_chart) > 0) {
             while ($r = mysqli_fetch_assoc($q_chart)) {
                 $waktu_raw = $r['timestamp'] ?? ($r['tanggal_dan_waktu'] ?? 'now');

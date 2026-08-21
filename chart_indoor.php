@@ -67,13 +67,14 @@ try {
         else $selectFields[] = "0 as $sf";
     }
 
-    $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor";
+    $dummyFilter = in_array('is_dummy', $columns) ? " WHERE (is_dummy = 0 OR is_dummy IS NULL)" : "";
+    $query = "SELECT " . implode(", ", $selectFields) . " FROM data_sensor" . $dummyFilter;
 
-    // Ambil 5000 data terbaru dari database (DESC LIMIT 5000)
+    // Ambil 200 data riwayat terbaru dari database untuk tampilan rapi, jelas, dan tanpa lag
     if ($dateColumn) {
-        $query .= " ORDER BY $dateColumn DESC LIMIT 5000";
+        $query .= " ORDER BY $dateColumn DESC LIMIT 200";
     } else {
-        $query .= " ORDER BY id DESC LIMIT 5000";
+        $query .= " ORDER BY id DESC LIMIT 200";
     }
 
     $stmt = $pdo_indoor->prepare($query);
@@ -118,9 +119,32 @@ $chartData = [];
 foreach ($rows as $row) {
     $timestamp = isset($row['waktu']) ? $row['waktu'] : '';
 
-    // Karena di indoor.sql tipe data asap dan api adalah FLOAT
-    $asapVal = isset($row['asap']) ? floatval($row['asap']) : 0;
-    $apiVal = isset($row['api']) ? floatval($row['api']) : 0;
+    // Normalisasi nilai sensor asap (skala 0 - 100%)
+    $rawAsap = isset($row['asap']) ? $row['asap'] : 0;
+    if (is_numeric($rawAsap)) {
+        $fAsap = (float)$rawAsap;
+        if ($fAsap > 100) {
+            $asapVal = round(($fAsap / 1023) * 100, 1);
+        } else if ($fAsap > 0) {
+            $asapVal = $fAsap;
+        } else {
+            $asapVal = 15; // Baseline normal 15% agar garis terlihat jelas di grafik
+        }
+    } else {
+        $strAsap = trim((string)$rawAsap);
+        if (strcasecmp($strAsap, 'Tinggi') === 0 || strcasecmp($strAsap, 'Bahaya') === 0) $asapVal = 85;
+        else if (strcasecmp($strAsap, 'Sedang') === 0 || strcasecmp($strAsap, 'Waspada') === 0) $asapVal = 50;
+        else $asapVal = 15; // Baseline normal 15% untuk status Normal/Aman
+    }
+
+    // Normalisasi nilai sensor api (skala 0 - 100 agar lonjakan terlihat jelas)
+    $rawApi = isset($row['api']) ? $row['api'] : 0;
+    $strApi = isset($row['api']) ? trim(strtolower((string)$row['api'])) : '';
+    if ($strApi === 'terdeteksi api' || $strApi === 'dekat' || $strApi === 'tinggi' || (is_numeric($rawApi) && (float)$rawApi >= 1)) {
+        $apiVal = 100;
+    } else {
+        $apiVal = 0;
+    }
 
     // Ambil nilai tegangan dan arus
     $teganganVal = isset($row['tegangan']) ? floatval($row['tegangan']) : 0;
@@ -214,10 +238,10 @@ $jsonData = json_encode($chartData);
                 <?php foreach ($db_locations as $loc):
                     $idAlat = !empty($loc['id_alat']) ? $loc['id_alat'] : "LOK-".$loc['id'];
                     $namaLokasi = !empty($loc['nama_lokasi']) ? $loc['nama_lokasi'] : $idAlat;
-                    $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2);
+                    $isLive = (strtoupper($idAlat) === 'LOK-002' || $loc['id'] == 2 || stripos($idAlat, '002') !== false || stripos($idAlat, 'utama') !== false);
                     $labelStatus = $isLive ? "(Alat Utama / Live)" : "(Dummy)";
                 ?>
-                    <option value="<?= htmlspecialchars($idAlat) ?>">
+                    <option value="<?= htmlspecialchars($idAlat) ?>" <?= $isLive ? 'selected' : '' ?>>
                         <?= htmlspecialchars($idAlat) ?> - <?= htmlspecialchars($namaLokasi) ?> <?= $labelStatus ?>
                     </option>
                 <?php endforeach; ?>

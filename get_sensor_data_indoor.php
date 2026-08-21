@@ -45,9 +45,9 @@ if ($q_batas && mysqli_num_rows($q_batas) > 0) {
 if ($result && mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
     
-    // Cek selisih waktu data terakhir
+    // Cek selisih waktu data terakhir (toleransi 20 detik)
     $waktu_raw = $row['timestamp'] ?? ($row['tanggal_dan_waktu'] ?? ($row['created_at'] ?? null));
-    $timeout_seconds = 15;
+    $timeout_seconds = 20;
     $is_online = false;
     if ($waktu_raw) {
         $last_time = strtotime($waktu_raw);

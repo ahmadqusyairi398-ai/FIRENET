@@ -638,9 +638,9 @@ $totalUsers = count($users);
                                     if (strtoupper($nama_sensor) === 'SUHU' && (strtolower($satuan) === 'c' || $satuan === '')) {
                                         $satuan = '°C';
                                     }
-                                    $nilai_alarm = isset($sensor['nilai_alarm']) ? number_format(floatval($sensor['nilai_alarm']), 0) : '0';
-                                    $batas_min = isset($sensor['batas_min']) ? number_format(floatval($sensor['batas_min']), 0) : '0';
-                                    $batas_max = isset($sensor['batas_max']) ? number_format(floatval($sensor['batas_max']), 0) : '0';
+                                    $nilai_alarm = isset($sensor['nilai_alarm']) ? (float)$sensor['nilai_alarm'] : 0;
+                                    $batas_min = isset($sensor['batas_min']) ? (float)$sensor['batas_min'] : 0;
+                                    $batas_max = isset($sensor['batas_max']) ? (float)$sensor['batas_max'] : 0;
                                     $last_update = isset($sensor['last_update']) ? $sensor['last_update'] : '-';
                                     $sensor_id = isset($sensor['id']) ? $sensor['id'] : 0;
                                     $satuan_display = ($satuan !== '') ? ' ' . $satuan : '';

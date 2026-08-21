@@ -302,7 +302,7 @@ let dataChart = {
     labels: chartLabels,
     datasets: [
         { label: 'Sensor Api', data: chartApi, borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.1)', borderWidth: 2, tension: 0.4, fill: true },
-        { label: 'Sensor Asap', data: chartAsap, borderColor: '#ffa502', backgroundColor: 'rgba(255,165,2,0.1)', borderWidth: 2, tension: 0.4, fill: true, borderDash: [5, 5] },
+        { label: 'Sensor Asap', data: chartAsap, borderColor: '#ffa502', backgroundColor: 'rgba(255,165,2,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Suhu (°C)', data: chartSuhu, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Kelembapan (%)', data: chartKelembapan, borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', borderWidth: 2, tension: 0.4, fill: true },
         { label: 'Tegangan (V)', data: chartTegangan, borderColor: '#ffe66d', backgroundColor: 'rgba(255,230,109,0.1)', borderWidth: 2, tension: 0.4, fill: true },
@@ -338,8 +338,13 @@ const myChart = new Chart(ctx, {
                         else if (label.includes('Suhu')) unit = ' °C';
                         else if (label.includes('Kelembapan')) unit = ' %';
                         else if (label.includes('Sensor Asap')) {
-                            let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
-                            return `${label}: ${status}`;
+                            if (typeof value === 'number' && value > 1) {
+                                let status = value > 750 ? '⚠️ Asap Tinggi' : (value > 350 ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${value} % (${status})`;
+                            } else {
+                                let status = (value === 1 || value === 'Tinggi') ? '⚠️ Asap Tinggi' : (value === 0.5 || value === 'Sedang' ? '⚡ Asap Sedang' : '✅ Normal');
+                                return `${label}: ${status}`;
+                            }
                         }
                         else if (label.includes('Sensor Api')) {
                             let status = value === 1 ? '🔥 Terdeteksi Api' : '✅ Aman';
@@ -525,19 +530,32 @@ async function updateDashboard() {
     }
 
     if (isLive) {
-        document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Real-Time)`;
+        if (data.status === 'Online') {
+            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-online"></i> Live (Online)`;
+            document.getElementById("rssi").innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : '-';
+            document.getElementById("ip").innerHTML = data.ip || '-';
+        } else {
+            document.getElementById("status").innerHTML = `<i class="fas fa-circle status-offline"></i> Offline`;
+            document.getElementById("rssi").innerHTML = '-';
+            document.getElementById("ip").innerHTML = '-';
+        }
     } else {
         document.getElementById("status").innerHTML = `<i class="fas fa-circle" style="color: #00b4db;"></i> Simulasi (Dummy)`;
+        document.getElementById("rssi").innerHTML = (data.rssi && data.rssi !== '-') ? `${data.rssi} dBm` : `${data.rssi}`;
+        document.getElementById("ip").innerHTML = data.ip;
     }
-    document.getElementById("rssi").innerHTML = `${data.rssi} dBm`;
-    document.getElementById("ip").innerHTML = data.ip;
     document.getElementById("waktu").innerHTML = `<i class="far fa-clock"></i> ${data.waktu}`;
 
     const chartBadge = document.getElementById("chart-badge");
     if (chartBadge) {
         if (isLive) {
-            chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
-            chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            if (data.status === 'Online') {
+                chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
+                chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            } else {
+                chartBadge.innerHTML = '<i class="fas fa-power-off"></i> Alat Offline';
+                chartBadge.style.background = 'linear-gradient(135deg, #dc3545, #b91c1c)';
+            }
         } else {
             chartBadge.innerHTML = '<i class="fas fa-flask"></i> Data Dummy (Simulasi)';
             chartBadge.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';

@@ -55,7 +55,7 @@ const rawData = (typeof window.INDOOR_CHART_DATA !== 'undefined') ? window.INDOO
 
 const sensorConfig = [
     { id: 'api', label: 'Sensor Api', color: '#dc3545', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
-    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '', group: 'bahaya', min: 0, max: 100, yMax: 120 },
+    { id: 'asap', label: 'Sensor Asap', color: '#ffa502', unit: '%', group: 'bahaya', min: 0, max: 100, yMax: 120 },
     { id: 'suhu', label: 'Suhu', color: '#ff6b6b', unit: '°C', group: 'env', min: 20, max: 60, yMax: 70 },
     { id: 'kelembapan', label: 'Kelembapan', color: '#4ecdc4', unit: '%', group: 'env', min: 30, max: 95, yMax: 100 },
     { id: 'tegangan', label: 'Tegangan', color: '#ffe66d', unit: 'V', group: 'listrik', min: 200, max: 230, yMax: 250 },
@@ -110,7 +110,7 @@ function initDatasets() {
             fill: true,
             pointRadius: 3,
             pointHoverRadius: 6,
-            hidden: sensor.group !== 'all',
+            hidden: false,
             yAxisID: sensor.id === 'tegangan' || sensor.id === 'arus' ? 'y-listrik' : 
                      (sensor.id === 'suhu' || sensor.id === 'kelembapan' ? 'y-env' : 'y-bahaya')
         });
@@ -136,6 +136,7 @@ function createChart(labels, dataPoints) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            animation: { duration: 300 },
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
@@ -158,7 +159,7 @@ function createChart(labels, dataPoints) {
                                 return `${label}: ${value} ${unit} - ${status}`;
                             }
                             if (sensor && sensor.id === 'asap') {
-                                let status = value > 70 ? '🔥 TINGGI' : (value > 40 ? '⚠️ SEDANG' : '✅ NORMAL');
+                                let status = value > 70 ? '🔥 TINGGI' : (value > 35 ? '⚠️ SEDANG' : '✅ NORMAL');
                                 return `${label}: ${value} ${unit} - ${status}`;
                             }
                             return `${label}: ${value} ${unit}`;
@@ -257,14 +258,19 @@ function updateLegend() {
     if (!container) return;
     container.innerHTML = '';
     datasets.forEach((ds, idx) => {
-        if (ds.hidden) return;
         const sensor = sensorConfig[idx];
+        let visibleInTab = true;
+        if (currentMode === 'bahaya' && sensor.group !== 'bahaya') visibleInTab = false;
+        if (currentMode === 'env' && sensor.group !== 'env') visibleInTab = false;
+        if (currentMode === 'listrik' && sensor.group !== 'listrik') visibleInTab = false;
+        if (!visibleInTab) return;
+
         const legendItem = document.createElement('div');
-        legendItem.className = 'legend-item';
+        legendItem.className = 'legend-item' + (ds.hidden ? ' disabled' : '');
         legendItem.onclick = () => toggleDataset(idx);
         legendItem.innerHTML = `
-            <div class="legend-color" style="background: ${sensor.color}"></div>
-            <span class="legend-text">${sensor.label}</span>
+            <div class="legend-color" style="background: ${sensor.color}; ${ds.hidden ? 'opacity: 0.3;' : ''}"></div>
+            <span class="legend-text" style="${ds.hidden ? 'text-decoration: line-through; opacity: 0.5;' : ''}">${sensor.label}</span>
         `;
         container.appendChild(legendItem);
     });
@@ -330,10 +336,11 @@ function generateDummyHistory(count) {
 function filterData() {
     const locSelect = document.getElementById('locationSelect');
     const locationVal = locSelect ? locSelect.value : 'LOK-002';
+    const isLive = (locationVal === 'LOK-002' || locationVal === 'IND-002' || locationVal.includes('002') || locationVal.toUpperCase().includes('UTAMA') || locationVal === '2');
 
     const chartBadge = document.getElementById('chart-badge');
     if (chartBadge) {
-        if (locationVal === 'LOK-002') {
+        if (isLive) {
             chartBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
             chartBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
         } else {
@@ -342,10 +349,7 @@ function filterData() {
         }
     }
 
-    let sourceData = fullData;
-    if (locationVal !== 'LOK-002') {
-        sourceData = generateDummyHistory(50);
-    }
+    let sourceData = isLive ? fullData : generateDummyHistory(50);
 
     const fromDate = document.getElementById('dateFrom').value;
     const toDate = document.getElementById('dateTo').value;
@@ -386,12 +390,12 @@ function resetFilter() {
 document.addEventListener('DOMContentLoaded', () => {
     fullData = rawData.map(row => ({
         waktu: row.waktu || '',
-        asap: typeof row.asap === 'number' ? row.asap : 0,
-        suhu: typeof row.suhu === 'number' ? row.suhu : 0,
-        kelembapan: typeof row.kelembapan === 'number' ? row.kelembapan : 0,
-        tegangan: typeof row.tegangan === 'number' ? row.tegangan : 0,
-        arus: typeof row.arus === 'number' ? row.arus : 0,
-        api: typeof row.api === 'number' ? row.api : 0
+        asap: typeof row.asap === 'number' ? row.asap : (parseFloat(row.asap) || 0),
+        suhu: typeof row.suhu === 'number' ? row.suhu : (parseFloat(row.suhu) || 0),
+        kelembapan: typeof row.kelembapan === 'number' ? row.kelembapan : (parseFloat(row.kelembapan) || 0),
+        tegangan: typeof row.tegangan === 'number' ? row.tegangan : (parseFloat(row.tegangan) || 0),
+        arus: typeof row.arus === 'number' ? row.arus : (parseFloat(row.arus) || 0),
+        api: typeof row.api === 'number' ? row.api : (parseFloat(row.api) || 0)
     }));
     
     filterData();
