@@ -18,26 +18,37 @@ if (!is_array($input) || empty($input)) {
     $input = $_POST;
 }
 
-$id = isset($input['id']) ? intval($input['id']) : 0;
+$ids = [];
+if (isset($input['ids']) && is_array($input['ids'])) {
+    $ids = array_filter(array_map('intval', $input['ids']), function($v) { return $v > 0; });
+} elseif (isset($input['id'])) {
+    $singleId = intval($input['id']);
+    if ($singleId > 0) {
+        $ids = [$singleId];
+    }
+}
 
-if ($id <= 0) {
-    echo json_encode(['status' => 'error', 'message' => 'ID data tidak valid.']);
+if (empty($ids)) {
+    echo json_encode(['status' => 'error', 'message' => 'ID data tidak valid atau belum ada data yang dipilih.']);
     exit;
 }
 
 try {
-    $stmt = $pdo_outdoor->prepare("DELETE FROM data_sensor WHERE id = :id");
-    $stmt->execute([':id' => $id]);
+    $inClause = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $pdo_outdoor->prepare("DELETE FROM data_sensor WHERE id IN ($inClause)");
+    $stmt->execute(array_values($ids));
+    $deletedCount = $stmt->rowCount();
     
-    if ($stmt->rowCount() > 0) {
+    if ($deletedCount > 0) {
         echo json_encode([
             'status' => 'success',
-            'message' => 'Data berhasil dihapus.'
+            'message' => "$deletedCount data berhasil dihapus.",
+            'deleted_count' => $deletedCount
         ]);
     } else {
         echo json_encode([
             'status' => 'error',
-            'message' => 'Data tidak ditemukan atau sudah dihapus.'
+            'message' => 'Data tidak ditemukan atau sudah dihapus sebelumnya.'
         ]);
     }
 } catch (Exception $e) {

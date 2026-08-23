@@ -88,6 +88,7 @@ var sensorData = sensorDataPHP.map(function(item, index) {
 
 var currentData = [...sensorData];
 var dataTable = null;
+var selectedIds = new Set(); // Menyimpan ID data sensor yang dichecklist
 
 // Fungsi untuk menentukan status dan kelas CSS
 function getStatusClass(value, type) {
@@ -121,11 +122,13 @@ function getStatusIcon(value, type) {
 }
 
 function createRow(item) {
-    var actionBtn = item.id ? 
-        `<button onclick="hapusBaris(${item.id})" class="btn-delete-row" title="Hapus Data"><i class="fas fa-trash-alt"></i> Hapus</button>` : 
-        `<span style="color:#aaa; font-size:12px;">(Simulasi)</span>`;
+    var isChecked = item.id && selectedIds.has(String(item.id)) ? 'checked' : '';
+    var checkboxHtml = item.id ? 
+        `<input type="checkbox" class="row-checkbox" value="${item.id}" ${isChecked} onchange="toggleRowCheckbox(this, '${item.id}')">` : 
+        `<input type="checkbox" disabled title="Data simulasi tidak dapat dipilih">`;
 
     return [
+        checkboxHtml,
         item.no,
         item.tanggal_waktu,
         `<span class="${getStatusClass(item.asap, 'asap')}">${getStatusIcon(item.asap, 'asap')} ${item.asap}</span>`,
@@ -136,8 +139,7 @@ function createRow(item) {
         `${item.daya} W`,
         `${item.kecepatan_angin} m/s`,
         `${item.arah_angin}`,
-        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`,
-        actionBtn
+        `<span class="${getStatusClass(item.co, 'co')}">${getStatusIcon(item.co, 'co')} ${item.co} ppm</span>`
     ];
 }
 
@@ -148,6 +150,7 @@ function updateDataTable(data) {
         if (rows.length > 0) dataTable.rows.add(rows);
         dataTable.draw(false);
     }
+    syncCheckboxStates();
 }
 
 function initDataTable(data) {
@@ -156,6 +159,7 @@ function initDataTable(data) {
     dataTable = $('#sensorTable').DataTable({
         data: rows,
         columns: [
+            { title: '<input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Pilih Semua">', orderable: false, className: 'text-center', width: '40px' },
             { title: "No" }, 
             { title: "Tanggal & Waktu" }, 
             { title: "Asap" }, 
@@ -166,8 +170,7 @@ function initDataTable(data) {
             { title: "Daya (W)" },
             { title: "Kecepatan Angin (m/s)" },
             { title: "Arah Angin" },
-            { title: "CO (ppm)" },
-            { title: "Aksi", orderable: false }
+            { title: "CO (ppm)" }
         ],
         language: {
             url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -178,10 +181,196 @@ function initDataTable(data) {
             paginate: { first: "Pertama", last: "Terakhir", next: "Selanjutnya", previous: "Sebelumnya" }
         },
         pageLength: 10, 
-        lengthMenu: [5, 10, 25, 50], 
-        order: [[1, 'desc']], 
+        lengthMenu: [5, 10, 25, 50, 100], 
+        order: [[2, 'desc']], 
         scrollX: true
     });
+
+    dataTable.on('draw', function() {
+        syncCheckboxStates();
+    });
+}
+
+// ================= FUNGSI CHECKLIST / MULTI-DELETE =================
+function toggleRowCheckbox(checkboxElem, id) {
+    if (!id) return;
+    var idStr = String(id);
+    if (checkboxElem.checked) {
+        selectedIds.add(idStr);
+    } else {
+        selectedIds.delete(idStr);
+    }
+    updateSelectedCount();
+    updateSelectAllCheckboxState();
+}
+
+function toggleSelectAll(masterCheckbox) {
+    var isChecked = masterCheckbox.checked;
+    currentData.forEach(function(item) {
+        if (item.id) {
+            var idStr = String(item.id);
+            if (isChecked) {
+                selectedIds.add(idStr);
+            } else {
+                selectedIds.delete(idStr);
+            }
+        }
+    });
+    syncCheckboxStates();
+    updateSelectedCount();
+}
+
+function syncCheckboxStates() {
+    $('.row-checkbox').each(function() {
+        var id = $(this).val();
+        if (id && selectedIds.has(String(id))) {
+            this.checked = true;
+        } else {
+            this.checked = false;
+        }
+    });
+    updateSelectAllCheckboxState();
+}
+
+function updateSelectAllCheckboxState() {
+    var master = document.getElementById('selectAllCheckbox');
+    if (!master) return;
+
+    var validCurrentItems = currentData.filter(function(item) { return item.id; });
+    if (validCurrentItems.length === 0) {
+        master.checked = false;
+        master.indeterminate = false;
+        return;
+    }
+
+    var countSelected = validCurrentItems.filter(function(item) {
+        return selectedIds.has(String(item.id));
+    }).length;
+
+    if (countSelected === 0) {
+        master.checked = false;
+        master.indeterminate = false;
+    } else if (countSelected === validCurrentItems.length) {
+        master.checked = true;
+        master.indeterminate = false;
+    } else {
+        master.checked = false;
+        master.indeterminate = true;
+    }
+}
+
+function updateSelectedCount() {
+    var count = selectedIds.size;
+    var countElem = document.getElementById('selectedCount');
+    if (countElem) countElem.innerText = count;
+
+    var btn = document.getElementById('btnDeleteSelected');
+    if (btn) {
+        btn.disabled = (count === 0);
+        if (count > 0) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+}
+
+function hapusTerpilih() {
+    var idsArray = Array.from(selectedIds);
+    if (idsArray.length === 0) {
+        alert("Pilih setidaknya satu data yang ingin dihapus dengan mencentang kotak checklist.");
+        return;
+    }
+
+    var msg = `Apakah Anda yakin ingin menghapus ${idsArray.length} data yang dipilih? Aksi ini permanen dan tidak dapat dibatalkan.`;
+    if (confirm(msg)) {
+        var btn = document.getElementById('btnDeleteSelected');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menghapus...`;
+        }
+
+        fetch('api_hapus_baris_outdoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: idsArray })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.status === 'success') {
+                var deletedSet = new Set(idsArray.map(String));
+                sensorData = sensorData.filter(function(item) {
+                    return !item.id || !deletedSet.has(String(item.id));
+                });
+                sensorData.forEach(function(item, idx) { item.no = idx + 1; });
+
+                selectedIds.clear();
+                updateSelectedCount();
+                updateSelectAllCheckboxState();
+
+                var startDate = document.getElementById('start_date').value;
+                var endDate = document.getElementById('end_date').value;
+                if (startDate || endDate) {
+                    applyFilter();
+                } else {
+                    currentData = [...sensorData];
+                    updateDataTable(currentData);
+                }
+
+                alert(data.message || `Berhasil menghapus ${idsArray.length} data.`);
+            } else {
+                alert("Gagal menghapus data: " + (data.message || 'Terjadi kesalahan.'));
+            }
+        })
+        .catch(function(err) {
+            console.error("Error batch deleting:", err);
+            alert("Terjadi kesalahan sistem saat menghapus data.");
+        })
+        .finally(function() {
+            var btn = document.getElementById('btnDeleteSelected');
+            if (btn) {
+                btn.innerHTML = `<i class="fas fa-trash-alt"></i> Hapus Terpilih (<span id="selectedCount">${selectedIds.size}</span>)`;
+                btn.disabled = (selectedIds.size === 0);
+            }
+        });
+    }
+}
+
+// FUNGSI JAVASCRIPT HAPUS SATU BARIS DATA OUTDOOR
+function hapusBaris(idData) {
+    if (confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini permanen.")) {
+        fetch('api_hapus_baris_outdoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: idData })
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.status === 'success') {
+                selectedIds.delete(String(idData));
+                updateSelectedCount();
+                sensorData = sensorData.filter(function(item) { return item.id != idData; });
+                sensorData.forEach(function(item, idx) { item.no = idx + 1; });
+                
+                var startDate = document.getElementById('start_date').value;
+                var endDate = document.getElementById('end_date').value;
+                if (startDate || endDate) {
+                    applyFilter();
+                } else {
+                    currentData = [...sensorData];
+                    updateDataTable(currentData);
+                }
+                updateSelectAllCheckboxState();
+                alert("Data berhasil dihapus!");
+            } else {
+                alert("Gagal menghapus data: " + (data.message || 'Terjadi kesalahan.'));
+            }
+        })
+        .catch(function(err) {
+            console.error("Error deleting row:", err);
+            alert("Terjadi kesalahan sistem saat menghapus data.");
+        });
+    }
 }
 
 function applyFilter() {
@@ -229,32 +418,14 @@ function exportToExcel() {
     alert(`Berhasil mengexport ${exportData.length} data ke Excel!`);
 }
 
-// FUNGSI JAVASCRIPT HAPUS BARIS DATA OUTDOOR
-function hapusBaris(idData) {
-    if (confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini permanen.")) {
-        fetch('api_hapus_baris_outdoor.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: idData })
-        })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            if (data.status === 'success') {
-                sensorData = sensorData.filter(function(item) { return item.id != idData; });
-                sensorData.forEach(function(item, idx) { item.no = idx + 1; });
-                currentData = [...sensorData];
-                updateDataTable(currentData);
-                alert("Data berhasil dihapus!");
-            } else {
-                alert("Gagal menghapus data: " + (data.message || 'Terjadi kesalahan.'));
-            }
-        })
-        .catch(function(err) {
-            console.error("Error deleting row:", err);
-            alert("Terjadi kesalahan sistem saat menghapus data.");
-        });
-    }
-}
+// Ekspor fungsi ke window agar dapat dipanggil dari HTML onclick/onchange
+window.toggleRowCheckbox = toggleRowCheckbox;
+window.toggleSelectAll = toggleSelectAll;
+window.hapusTerpilih = hapusTerpilih;
+window.hapusBaris = hapusBaris;
+window.applyFilter = applyFilter;
+window.resetFilter = resetFilter;
+window.exportToExcel = exportToExcel;
 
 $(document).ready(function() {
     if (sensorData && sensorData.length > 0) {
@@ -264,6 +435,7 @@ $(document).ready(function() {
         $('#sensorTable').DataTable({
             data: [],
             columns: [
+                { title: '<input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Pilih Semua">', orderable: false, className: 'text-center', width: '40px' },
                 { title: "No" }, 
                 { title: "Tanggal & Waktu" }, 
                 { title: "Asap" }, 
@@ -274,8 +446,7 @@ $(document).ready(function() {
                 { title: "Daya (W)" },
                 { title: "Kecepatan Angin (m/s)" },
                 { title: "Arah Angin" },
-                { title: "CO (ppm)" },
-                { title: "Aksi", orderable: false }
+                { title: "CO (ppm)" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
@@ -305,6 +476,11 @@ $(document).ready(function() {
             localStorage.setItem('activeLocationId', activeTableLocationId);
         } catch(e) {}
         var isDummy = (activeTableLocationId !== 1);
+
+        // Reset checklist ketika berpindah lokasi
+        selectedIds.clear();
+        updateSelectedCount();
+        updateSelectAllCheckboxState();
 
         var tag = document.getElementById('data-type-tag');
         if (tag) {

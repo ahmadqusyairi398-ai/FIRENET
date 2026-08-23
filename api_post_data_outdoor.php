@@ -72,9 +72,16 @@ try {
         }
     }
 
+    $rssi = isset($input['rssi']) ? intval($input['rssi']) : null;
+
     $colCheckIp = $pdo_outdoor->query("SHOW COLUMNS FROM data_sensor LIKE 'ip_address'");
     if (!$colCheckIp || $colCheckIp->rowCount() == 0) {
         @$pdo_outdoor->exec("ALTER TABLE data_sensor ADD COLUMN ip_address VARCHAR(45) DEFAULT NULL");
+    }
+
+    $colCheckRssi = $pdo_outdoor->query("SHOW COLUMNS FROM data_sensor LIKE 'rssi'");
+    if (!$colCheckRssi || $colCheckRssi->rowCount() == 0) {
+        @$pdo_outdoor->exec("ALTER TABLE data_sensor ADD COLUMN rssi INT DEFAULT NULL");
     }
 
     // 3. Tentukan nama kolom tanggal/waktu yang tersedia di tabel data_sensor
@@ -95,8 +102,8 @@ try {
     }
 
     // 5. Simpan data sensor ke tabel data_sensor (Outdoor)
-    $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, ip_address, is_dummy)
-            VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :ip_address, :is_dummy)";
+    $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, rssi, ip_address, is_dummy)
+            VALUES (:waktu, :asap, :suhu, :kelembapan, :tegangan, :arus, :daya, :kecepatan_angin, :arah_angin, :co, :rssi, :ip_address, :is_dummy)";
 
     $stmt = $pdo_outdoor->prepare($sql);
     $stmt->execute([
@@ -110,6 +117,7 @@ try {
         ':kecepatan_angin' => $kecepatan_angin,
         ':arah_angin' => $arah_angin,
         ':co' => $co,
+        ':rssi' => $rssi,
         ':ip_address' => $ip_address,
         ':is_dummy' => $is_dummy
     ]);

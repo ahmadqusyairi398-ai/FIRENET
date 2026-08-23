@@ -25,9 +25,9 @@ if (!$query_lokasi || mysqli_num_rows($query_lokasi) == 0) {
 }
 $data_lokasi = ($query_lokasi && mysqli_num_rows($query_lokasi) > 0) ? mysqli_fetch_assoc($query_lokasi) : null;
 
-// Batas waktu offline (detik). Menyesuaikan dengan interval alat (minimal 45 detik)
+// Batas waktu offline (detik). Toleransi diperluas (minimal 90 detik, atau 3x interval setting + 30 detik)
 $interval_setting = intval($data_lokasi['interval_detik'] ?? 30);
-$timeout_seconds = max(45, ($interval_setting * 2) + 5);
+$timeout_seconds = max(90, ($interval_setting * 3) + 30);
 $is_online = false;
 
 if ($data_sensor) {
@@ -38,11 +38,9 @@ if ($data_sensor) {
             $is_online = true;
         }
     }
-}
 
-// 3. Logika penentuan status Asap & CO jika alat Online
-$status_asap = "Normal";
-if ($is_online && $data_sensor) {
+    // 3. Logika penentuan status Asap & CO
+    $status_asap = "Normal";
     $raw_asap = $data_sensor['asap'] ?? 0;
     if (is_numeric($raw_asap)) {
         $f_asap = (float)$raw_asap;
@@ -59,10 +57,8 @@ if ($is_online && $data_sensor) {
             $status_asap = "Sedang";
         }
     }
-}
 
-// Gabungkan response (Jika alat mati/offline, set nilai sensor ke 0)
-if ($is_online && $data_sensor) {
+    // Ambil nilai sensor terakhir (SOLUSI 1: Nilai tetap dipertahankan dari database)
     $cur_tegangan = floatval($data_sensor['tegangan'] ?? 0);
     $cur_arus = floatval($data_sensor['arus'] ?? 0);
     $cur_daya = floatval($data_sensor['daya'] ?? 0);
@@ -90,19 +86,19 @@ if ($is_online && $data_sensor) {
     }
 
     $response = [
-        'waktu'      => date('H:i:s', strtotime($data_sensor['timestamp'] ?? ($data_sensor['tanggal_dan_waktu'] ?? 'now'))),
-        'tegangan'   => $cur_tegangan,
-        'arus'       => $cur_arus,
-        'daya'       => $cur_daya,
-        'arah'       => $raw_arah,
-        'angin'      => $data_sensor['kecepatan_angin'] ?? 0,
-        'asap'       => $status_asap,
-        'suhu'       => $data_sensor['suhu'] ?? 0,
-        'kelembapan' => $data_sensor['kelembapan'] ?? 0,
-        'co'         => $data_sensor['co'] ?? 0,
-        'rssi'       => $data_sensor['rssi'] ?? 0,
-        'ip'         => $data_sensor['ip_address'] ?? '127.0.0.1',
-        'status'     => 'Online',
+        'waktu'          => $time_str ? date('H:i:s', strtotime($time_str)) : date('H:i:s'),
+        'tegangan'       => $cur_tegangan,
+        'arus'           => $cur_arus,
+        'daya'           => $cur_daya,
+        'arah'           => $raw_arah,
+        'angin'          => $data_sensor['kecepatan_angin'] ?? 0,
+        'asap'           => $status_asap,
+        'suhu'           => $data_sensor['suhu'] ?? 0,
+        'kelembapan'     => $data_sensor['kelembapan'] ?? 0,
+        'co'             => $data_sensor['co'] ?? 0,
+        'rssi'           => $data_sensor['rssi'] ?? '-',
+        'ip'             => $data_sensor['ip_address'] ?? '127.0.0.1',
+        'status'         => $is_online ? 'Online' : 'Offline',
         'lat'            => $data_lokasi['latitude'] ?? -1.20249,
         'lng'            => $data_lokasi['longitude'] ?? 116.88708,
         'is_dummy'       => (int)($data_sensor['is_dummy'] ?? 0),
@@ -112,6 +108,7 @@ if ($is_online && $data_sensor) {
         'storage_dummy'  => $outdoor_storage['dummy_formatted'] ?? '0 B'
     ];
 } else {
+    // Hanya jika tabel data_sensor benar-benar kosong belum ada data
     $outdoor_storage = get_sensor_storage_info($conn, 'outdoor');
     $total_storage_bytes = ($outdoor_storage['real_bytes'] ?? 0) + ($outdoor_storage['dummy_bytes'] ?? 0);
     $kuota_data_formatted = format_storage_size($total_storage_bytes);

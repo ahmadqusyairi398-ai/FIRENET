@@ -256,7 +256,7 @@ try {
                 <label><i class="fas fa-calendar"></i> Tanggal Akhir</label>
                 <input type="date" id="end_date" class="date-filter">
             </div>
-            <div class="filter-group">
+            <div class="filter-group filter-actions">
                 <button class="btn-filter" onclick="applyFilter()">
                     <i class="fas fa-filter"></i> Filter
                 </button>
@@ -266,6 +266,9 @@ try {
                 <button class="btn-excel" onclick="exportToExcel()">
                     <i class="fas fa-file-excel"></i> Export Excel
                 </button>
+                <button class="btn-delete-selected" id="btnDeleteSelected" onclick="hapusTerpilih()" disabled>
+                    <i class="fas fa-trash-alt"></i> Hapus (<span id="selectedCount">0</span>)
+                </button>
             </div>
         </div>
 
@@ -273,6 +276,9 @@ try {
             <table id="sensorTable" class="data-table" style="width:100%">
                 <thead>
                     <tr>
+                        <th style="text-align:center; width:40px;">
+                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Pilih Semua">
+                        </th>
                         <th>No</th>
                         <th><i class="fas fa-calendar"></i> Tanggal & Waktu</th>
                         <th><i class="fas fa-smog"></i> Asap</th>
@@ -284,7 +290,6 @@ try {
                         <th><i class="fas fa-wind"></i> Kecepatan Angin (m/s)</th>
                         <th><i class="fas fa-compass"></i> Arah Angin</th>
                         <th><i class="fas fa-skull-crossbones"></i> CO (ppm)</th>
-                        <th style="text-align:center;"><i class="fas fa-trash-alt"></i> Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
