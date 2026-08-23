@@ -232,10 +232,11 @@ function generateDummyTable(count) {
 function applyFilter() {
     const locSelect = document.getElementById('locationSelect');
     const locationVal = locSelect ? locSelect.value : 'LOK-002';
+    const isLive = (locationVal === 'LOK-002' || locationVal === 'IND-002' || locationVal.includes('002') || locationVal.toUpperCase().includes('UTAMA') || locationVal === '2');
 
     const tableBadge = document.getElementById('table-badge');
     if (tableBadge) {
-        if (locationVal === 'LOK-002') {
+        if (isLive) {
             tableBadge.innerHTML = '<i class="fas fa-bolt"></i> Live (Real-Time)';
             tableBadge.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
         } else {
@@ -244,29 +245,103 @@ function applyFilter() {
         }
     }
 
-    let sourceData = [];
-    if (locationVal === 'LOK-002') {
-        sourceData = sensorData.filter(item => !item.is_dummy || item.is_dummy === 0);
-    } else {
-        sourceData = sensorData.filter(item => item.is_dummy === 1);
-        if (sourceData.length === 0) {
-            sourceData = generateDummyTable(50);
-        }
-    }
-
-    let filteredData = [...sourceData];
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
 
-    if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
-    if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
+    // JIKA LOKASI DUMMY
+    if (!isLive) {
+        let sourceData = sensorData.filter(item => item.is_dummy === 1);
+        if (sourceData.length === 0) {
+            sourceData = generateDummyTable(50);
+        }
 
-    filteredData.forEach((item, idx) => item.no = idx + 1);
+        let filteredData = [...sourceData];
+        if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
+        if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
 
-    currentData = filteredData;
-    updateDataTable(currentData);
+        filteredData.forEach((item, idx) => item.no = idx + 1);
 
-    if (filteredData.length === 0) alert('Tidak ada data yang sesuai dengan filter!');
+        currentData = filteredData;
+        updateDataTable(currentData);
+
+        if (filteredData.length === 0) alert('Tidak ada data yang sesuai dengan filter!');
+        return;
+    }
+
+    // JIKA LOKASI ASLI (LIVE): Ambil langsung dari server via AJAX agar tidak terpotong batas LIMIT
+    const btnFilter = document.querySelector('.btn-filter');
+    const originalBtnHTML = btnFilter ? btnFilter.innerHTML : '';
+    if (btnFilter) {
+        btnFilter.disabled = true;
+        btnFilter.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+    }
+
+    const params = new URLSearchParams();
+    if (startDate) params.append('from', startDate);
+    if (endDate) params.append('to', endDate);
+    params.append('is_dummy', '0');
+    params.append('location', locationVal);
+    params.append('with_storage', '1');
+
+    fetch('api_get_table_indoor.php?' + params.toString())
+        .then(response => response.json())
+        .then(res => {
+            if (btnFilter) {
+                btnFilter.disabled = false;
+                btnFilter.innerHTML = originalBtnHTML;
+            }
+
+            if (res.storage) {
+                const realEl = document.getElementById('storageRealVal');
+                const dummyEl = document.getElementById('storageDummyVal');
+                if (realEl && res.storage.real) realEl.textContent = res.storage.real;
+                if (dummyEl && res.storage.dummy) dummyEl.textContent = res.storage.dummy;
+            }
+
+            if (res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+                let mappedData = res.data.map((item, index) => {
+                    let formattedDate = item.tanggal_waktu || '-';
+                    let dateOnly = formattedDate !== '-' ? formattedDate.split(' ')[0] : '';
+                    return {
+                        id: item.id,
+                        no: index + 1,
+                        tanggal_waktu: formattedDate,
+                        tanggal: dateOnly,
+                        api: item.api !== undefined ? item.api : '0',
+                        asap: item.asap !== undefined ? item.asap : '0',
+                        suhu: item.suhu,
+                        kelembapan: item.kelembapan,
+                        tegangan: item.tegangan,
+                        arus: item.arus,
+                        rssi: item.rssi,
+                        is_dummy: parseInt(item.is_dummy || 0)
+                    };
+                });
+
+                currentData = mappedData;
+                updateDataTable(currentData);
+            } else {
+                currentData = [];
+                updateDataTable([]);
+                alert('Tidak ada data yang sesuai dengan filter!');
+            }
+        })
+        .catch(err => {
+            console.error('Error saat memuat data tabel indoor:', err);
+            if (btnFilter) {
+                btnFilter.disabled = false;
+                btnFilter.innerHTML = originalBtnHTML;
+            }
+
+            // Fallback jika fetch gagal
+            let sourceData = sensorData.filter(item => !item.is_dummy || item.is_dummy === 0);
+            let filteredData = [...sourceData];
+            if (startDate) filteredData = filteredData.filter(item => item.tanggal >= startDate);
+            if (endDate) filteredData = filteredData.filter(item => item.tanggal <= endDate);
+            filteredData.forEach((item, idx) => item.no = idx + 1);
+            currentData = filteredData;
+            updateDataTable(currentData);
+        });
 }
 
 function resetFilter() {
@@ -276,28 +351,127 @@ function resetFilter() {
 }
 
 function exportToExcel() {
-    if (currentData.length === 0) { 
+    if (!currentData || currentData.length === 0) { 
         alert('Tidak ada data untuk diexport!'); 
         return; 
     }
-    
-    let csv = "No,Tanggal & Waktu,Api,Asap,Suhu (°C),Kelembapan (%),Tegangan (V),Arus (A),RSSI (dBm)\n";
+
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const locSelect = document.getElementById('locationSelect');
+    const locationText = locSelect ? locSelect.options[locSelect.selectedIndex].text : 'Indoor';
+    const tglExport = new Date().toLocaleString('id-ID', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+
+    let periodeStr = 'Semua Riwayat Data';
+    if (startDate && endDate) {
+        periodeStr = `${startDate} s.d. ${endDate}`;
+    } else if (startDate) {
+        periodeStr = `Mulai ${startDate}`;
+    } else if (endDate) {
+        periodeStr = `Sampai ${endDate}`;
+    }
+
+    let rowsHTML = '';
     currentData.forEach((item, idx) => {
         let statusApi = getStatusText(item.api, 'api');
         let statusAsap = getStatusText(item.asap, 'asap');
-        csv += `"${idx+1}","${item.tanggal_waktu}","${statusApi} (${item.api})","${statusAsap} (${item.asap})","${item.suhu}","${item.kelembapan}","${item.tegangan}","${item.arus}","${item.rssi}"\n`;
+        let bgStyle = (idx % 2 === 0) ? 'background-color: #ffffff;' : 'background-color: #f8f9fa;';
+        
+        let apiStyle = (statusApi === 'Terdeteksi Api') ? 'color: #dc3545; font-weight: bold;' : 'color: #28a745;';
+        let asapStyle = (statusAsap === 'Tinggi') ? 'color: #dc3545; font-weight: bold;' : (statusAsap === 'Sedang' ? 'color: #fd7e14; font-weight: bold;' : 'color: #28a745;');
+
+        rowsHTML += `
+            <tr style="${bgStyle}">
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${idx + 1}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.tanggal_waktu}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px; ${apiStyle}">${statusApi} (${item.api})</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px; ${asapStyle}">${statusAsap} (${item.asap})</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.suhu}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.kelembapan}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.tegangan}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.arus}</td>
+                <td style="text-align: center; border: 1px solid #d3d3d3; padding: 6px;">${item.rssi}</td>
+            </tr>
+        `;
     });
-    
-    const blob = new Blob(["\uFEFF" + csv], { type: 'application/vnd.ms-excel' });
+
+    const excelTemplate = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <!--[if gte mso 9]>
+            <xml>
+                <x:ExcelWorkbook>
+                    <x:ExcelWorksheets>
+                        <x:ExcelWorksheet>
+                            <x:Name>Data Sensor Indoor</x:Name>
+                            <x:WorksheetOptions>
+                                <x:DisplayGridlines/>
+                            </x:WorksheetOptions>
+                        </x:ExcelWorksheet>
+                    </x:ExcelWorksheets>
+                </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11pt; }
+                table { border-collapse: collapse; width: 100%; }
+                th { background-color: #1e3c72; color: #ffffff; font-weight: bold; border: 1px solid #000000; padding: 8px; text-align: center; }
+                td { border: 1px solid #d3d3d3; padding: 6px; vertical-align: middle; }
+                .title-header { font-size: 14pt; font-weight: bold; color: #1e3c72; text-align: left; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr>
+                    <td colspan="9" class="title-header" style="font-size: 14pt; font-weight: bold; color: #1e3c72; border: none;">
+                        LAPORAN DATA SENSOR INDOOR - FIRENETWORK
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="9" style="border: none; color: #555; font-size: 10pt;">
+                        <strong>Lokasi:</strong> ${locationText} | <strong>Periode:</strong> ${periodeStr} | <strong>Waktu Export:</strong> ${tglExport} | <strong>Total Data:</strong> ${currentData.length} Baris
+                    </td>
+                </tr>
+                <tr><td colspan="9" style="border: none; height: 10px;"></td></tr>
+            </table>
+
+            <table border="1" style="border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #1e3c72; color: #ffffff;">
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 50px;">No</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 160px;">Tanggal & Waktu</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 140px;">Status Api</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 140px;">Status Asap</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 100px;">Suhu (°C)</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 110px;">Kelembapan (%)</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 110px;">Tegangan (V)</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 90px;">Arus (A)</th>
+                        <th style="background-color: #1e3c72; color: #ffffff; border: 1px solid #000000; padding: 8px; width: 100px;">RSSI (dBm)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHTML}
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob(["\uFEFF" + excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `data_sensor_indoor_${new Date().toISOString().slice(0,10)}.xls`;
-    document.body.appendChild(a); 
-    a.click(); 
+    const fileSuffix = startDate && endDate ? `${startDate}_sd_${endDate}` : (startDate ? `dari_${startDate}` : new Date().toISOString().slice(0, 10));
+    a.download = `data_sensor_indoor_${fileSuffix}.xls`;
+    document.body.appendChild(a);
+    a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert(`Berhasil mengexport ${currentData.length} data ke Excel!`);
+    alert(`Berhasil mengexport ${currentData.length} data ke Excel dengan format rapi!`);
 }
 
 function hapusBaris(idData) {
@@ -352,10 +526,29 @@ $(document).ready(function() {
     }
 
     function fetchTableDataRealtime() {
-        fetch('get_table_data.php?device=indoor&with_storage=1')
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+
+        // Jika pengguna sedang memfilter tanggal tertentu, jangan timpa data tabel dengan update live!
+        if (startDate || endDate) {
+            fetch('get_table_data.php?device=indoor&with_storage=1')
+                .then(response => response.json())
+                .then(res => {
+                    if (res && res.storage) {
+                        const realEl = document.getElementById('storageRealVal');
+                        const dummyEl = document.getElementById('storageDummyVal');
+                        if (realEl && res.storage.real) realEl.textContent = res.storage.real;
+                        if (dummyEl && res.storage.dummy) dummyEl.textContent = res.storage.dummy;
+                    }
+                })
+                .catch(err => console.error("Error updating storage stats:", err));
+            return;
+        }
+
+        fetch('api_get_table_indoor.php?with_storage=1&is_dummy=0')
             .then(response => response.json())
             .then(res => {
-                let data = Array.isArray(res) ? res : (res.data || []);
+                let data = Array.isArray(res.data) ? res.data : [];
                 
                 if (res && res.storage) {
                     const realEl = document.getElementById('storageRealVal');
@@ -364,12 +557,7 @@ $(document).ready(function() {
                     if (dummyEl && res.storage.dummy) dummyEl.textContent = res.storage.dummy;
                 }
 
-                if (!Array.isArray(data)) return;
-                
-                const startDate = document.getElementById('start_date').value;
-                const endDate = document.getElementById('end_date').value;
-                const locSelect = document.getElementById('locationSelect');
-                const locationVal = locSelect ? locSelect.value : 'LOK-002';
+                if (!Array.isArray(data) || data.length === 0) return;
                 
                 let newData = data.map((item, index) => {
                     let formattedDate = item.tanggal_waktu || '-';
@@ -380,7 +568,7 @@ $(document).ready(function() {
                         tanggal_waktu: formattedDate,
                         tanggal: dateOnly,
                         api: item.api !== undefined ? item.api : '0',
-                        asap: item.asap_raw !== undefined && !isNaN(parseFloat(item.asap_raw)) ? parseFloat(item.asap_raw).toFixed(2) : (item.asap !== undefined ? item.asap : '0'),
+                        asap: item.asap !== undefined ? item.asap : '0',
                         suhu: item.suhu,
                         kelembapan: item.kelembapan,
                         tegangan: item.tegangan,
@@ -391,7 +579,8 @@ $(document).ready(function() {
                 });
 
                 sensorData = newData;
-                applyFilter();
+                currentData = newData;
+                updateDataTable(currentData);
             })
             .catch(err => console.error("Error updating indoor table data:", err));
     }
