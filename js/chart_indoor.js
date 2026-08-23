@@ -349,36 +349,93 @@ function filterData() {
         }
     }
 
-    let sourceData = isLive ? fullData : generateDummyHistory(50);
-
     const fromDate = document.getElementById('dateFrom').value;
     const toDate = document.getElementById('dateTo').value;
 
-    if (!fromDate && !toDate) {
-        filteredData = [...sourceData];
-    } else {
-        filteredData = sourceData.filter(item => {
-            if (!item.waktu) return true;
-            const itemDate = item.waktu.split(' ')[0];
-            let ok = true;
-            if (fromDate && itemDate < fromDate) ok = false;
-            if (toDate && itemDate > toDate) ok = false;
-            return ok;
-        });
-    }
+    // JIKA LOKASI DUMMY
+    if (!isLive) {
+        let sourceData = generateDummyHistory(50);
+        let dummyFiltered = sourceData;
+        if (fromDate || toDate) {
+            dummyFiltered = sourceData.filter(item => {
+                if (!item.waktu) return true;
+                const itemDate = item.waktu.split(' ')[0];
+                let ok = true;
+                if (fromDate && itemDate < fromDate) ok = false;
+                if (toDate && itemDate > toDate) ok = false;
+                return ok;
+            });
+        }
 
-    if (filteredData.length === 0) {
-        createChart([], []);
-        alert('Tidak ada data dalam rentang tanggal tersebut.');
+        if (dummyFiltered.length === 0) {
+            createChart([], []);
+            alert('Tidak ada data dalam rentang tanggal tersebut.');
+            return;
+        }
+
+        filteredData = dummyFiltered;
+        const labels = filteredData.map(d => d.waktu);
+        createChart(labels, filteredData);
+
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab) {
+            setMode(currentMode, activeTab);
+        }
         return;
     }
-    const labels = filteredData.map(d => d.waktu);
-    createChart(labels, filteredData);
 
-    const activeTab = document.querySelector('.tab-btn.active');
-    if (activeTab) {
-        setMode(currentMode, activeTab);
+    // JIKA LOKASI ASLI (LIVE): Ambil langsung dari server via AJAX agar tidak terbatas LIMIT 200
+    const btnFilter = document.getElementById('btnFilter');
+    const originalBtnHTML = btnFilter ? btnFilter.innerHTML : '';
+    if (btnFilter) {
+        btnFilter.disabled = true;
+        btnFilter.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
     }
+
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    params.append('is_dummy', '0');
+    params.append('location', locationVal);
+
+    fetch('api_get_chart_indoor.php?' + params.toString())
+        .then(response => response.json())
+        .then(res => {
+            if (btnFilter) {
+                btnFilter.disabled = false;
+                btnFilter.innerHTML = originalBtnHTML;
+            }
+
+            if (res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+                filteredData = res.data;
+                const labels = filteredData.map(d => d.waktu);
+                createChart(labels, filteredData);
+
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab) {
+                    setMode(currentMode, activeTab);
+                }
+            } else {
+                createChart([], []);
+                alert('Tidak ada data dalam rentang tanggal tersebut.');
+            }
+        })
+        .catch(err => {
+            console.error('Error saat memuat data chart indoor:', err);
+            if (btnFilter) {
+                btnFilter.disabled = false;
+                btnFilter.innerHTML = originalBtnHTML;
+            }
+
+            // Fallback ke data lokal jika ada
+            if (fullData && fullData.length > 0 && !fromDate && !toDate) {
+                filteredData = [...fullData];
+                const labels = filteredData.map(d => d.waktu);
+                createChart(labels, filteredData);
+            } else {
+                alert('Gagal mengambil data dari database. Pastikan koneksi server aktif.');
+            }
+        });
 }
 
 function resetFilter() {
@@ -398,5 +455,12 @@ document.addEventListener('DOMContentLoaded', () => {
         api: typeof row.api === 'number' ? row.api : (parseFloat(row.api) || 0)
     }));
     
-    filterData();
+    // Tampilkan data awal secara instan jika sudah dimuat dari PHP
+    if (fullData && fullData.length > 0) {
+        filteredData = [...fullData];
+        const labels = filteredData.map(d => d.waktu);
+        createChart(labels, filteredData);
+    } else {
+        filterData();
+    }
 });
