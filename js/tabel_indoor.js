@@ -121,12 +121,75 @@ function getStatusText(value, type) {
     return '';
 }
 
+let selectedIds = new Set();
+
+function toggleRowCheckbox(cb) {
+    let id = parseInt(cb.value);
+    if (!id) return;
+    if (cb.checked) {
+        selectedIds.add(id);
+    } else {
+        selectedIds.delete(id);
+    }
+    updateSelectedButton();
+}
+
+function toggleSelectAll(masterCb) {
+    const isChecked = masterCb.checked;
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) {
+            cb.checked = isChecked;
+            let id = parseInt(cb.value);
+            if (id) {
+                if (isChecked) selectedIds.add(id);
+                else selectedIds.delete(id);
+            }
+        }
+    });
+    updateSelectedButton();
+}
+
+function updateSelectedButton() {
+    const count = selectedIds.size;
+    const countEl = document.getElementById('selectedCount');
+    const btn = document.getElementById('btnDeleteSelected');
+    const selectAllCb = document.getElementById('selectAllCheckbox');
+
+    if (countEl) countEl.textContent = count;
+    if (btn) {
+        if (count > 0) {
+            btn.disabled = false;
+            btn.style.cursor = 'pointer';
+            btn.style.opacity = '1';
+        } else {
+            btn.disabled = true;
+            btn.style.cursor = 'not-allowed';
+            btn.style.opacity = '0.6';
+        }
+    }
+
+    // Update state selectAllCheckbox jika semua di halaman tercentang
+    const visibleCheckboxes = document.querySelectorAll('.row-checkbox:not(:disabled)');
+    if (selectAllCb && visibleCheckboxes.length > 0) {
+        const allChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+        selectAllCb.checked = allChecked;
+    } else if (selectAllCb && visibleCheckboxes.length === 0) {
+        selectAllCb.checked = false;
+    }
+}
+
 function createRow(item) {
     let apiText = getStatusText(item.api, 'api');
     let apiNumber = (apiText === "Aman") ? "0" : "100";
     let apiDisplay = `${getStatusIcon(item.api, 'api')} ${apiText} (${apiNumber})`;
+    let isChecked = item.id && selectedIds.has(item.id) ? 'checked' : '';
+    let checkboxHTML = item.id 
+        ? `<input type="checkbox" class="row-checkbox" value="${item.id}" onchange="toggleRowCheckbox(this)" ${isChecked} style="cursor: pointer; width: 16px; height: 16px;">`
+        : `<input type="checkbox" disabled style="opacity: 0.3; width: 16px; height: 16px;">`;
 
     return [
+        checkboxHTML,
         item.no,
         item.tanggal_waktu,
         `<span class="${getStatusClass(item.api, 'api')}">${apiDisplay}</span>`,
@@ -154,16 +217,17 @@ function initDataTable(data) {
     const rows = data.map(createRow);
     
     const tableColumns = [
-        { title: "No" }, 
-        { title: "Tanggal & Waktu" }, 
-        { title: "Api" }, 
-        { title: "Asap" }, 
-        { title: "Suhu (°C)" }, 
-        { title: "Kelembapan (%)" }, 
-        { title: "Tegangan (V)" }, 
-        { title: "Arus (A)" }, 
-        { title: "RSSI (dBm)" },
-        { title: "Aksi" }
+        { title: "<input type='checkbox' id='selectAllCheckbox' onchange='toggleSelectAll(this)' title='Pilih Semua' style='cursor: pointer; width: 16px; height: 16px;'>", orderable: false, width: "4%" },
+        { title: "No", width: "5%" }, 
+        { title: "Tanggal & Waktu", width: "14%" }, 
+        { title: "Api", width: "11%" }, 
+        { title: "Asap", width: "11%" }, 
+        { title: "Suhu (°C)", width: "8%" }, 
+        { title: "Kelembapan (%)", width: "9%" }, 
+        { title: "Tegangan (V)", width: "9%" }, 
+        { title: "Arus (A)", width: "8%" }, 
+        { title: "RSSI (dBm)", width: "8%" }, 
+        { title: "Aksi", orderable: false, width: "12%" }
     ];
 
     dataTable = $('#sensorTable').DataTable({
@@ -175,20 +239,23 @@ function initDataTable(data) {
         },
         pageLength: 10, 
         lengthMenu: [5, 10, 25, 50, 100], 
-        order: [[1, 'desc']], 
+        order: [[2, 'desc']], 
         scrollX: true,
         columnDefs: [
-            { width: "5%", targets: 0 },
-            { width: "14%", targets: 1 },
-            { width: "11%", targets: 2 },
-            { width: "11%", targets: 3 },
-            { width: "9%", targets: 4 },
-            { width: "9%", targets: 5 },
-            { width: "9%", targets: 6 },
-            { width: "9%", targets: 7 },
-            { width: "8%", targets: 8 },
-            { width: "15%", targets: 9, orderable: false }
-        ]
+            { className: "text-center", targets: [0, 1, 9, 10] },
+            { orderable: false, targets: [0, 10] }
+        ],
+        drawCallback: function() {
+            // Sinkronkan state checkbox setelah ganti halaman / render ulang DataTable
+            const visibleCheckboxes = document.querySelectorAll('.row-checkbox');
+            visibleCheckboxes.forEach(cb => {
+                let id = parseInt(cb.value);
+                if (id && selectedIds.has(id)) {
+                    cb.checked = true;
+                }
+            });
+            updateSelectedButton();
+        }
     });
 }
 
@@ -347,6 +414,8 @@ function applyFilter() {
 function resetFilter() {
     document.getElementById('start_date').value = '';
     document.getElementById('end_date').value = '';
+    selectedIds.clear();
+    updateSelectedButton();
     applyFilter();
 }
 
@@ -485,7 +554,15 @@ function hapusBaris(idData) {
         .then(data => {
             if (data.status === 'success') {
                 alert("Data berhasil dihapus!");
-                location.reload();
+                selectedIds.delete(idData);
+                updateSelectedButton();
+                if (data.storage) {
+                    const realEl = document.getElementById('storageRealVal');
+                    const dummyEl = document.getElementById('storageDummyVal');
+                    if (realEl && data.storage.real) realEl.textContent = data.storage.real;
+                    if (dummyEl && data.storage.dummy) dummyEl.textContent = data.storage.dummy;
+                }
+                applyFilter();
             } else {
                 alert("Gagal: " + data.message);
             }
@@ -497,6 +574,70 @@ function hapusBaris(idData) {
     }
 }
 
+function hapusTerpilih() {
+    const idsArray = Array.from(selectedIds);
+    if (idsArray.length === 0) {
+        alert('Silakan pilih data yang ingin dihapus terlebih dahulu.');
+        return;
+    }
+
+    if (confirm(`Apakah Anda yakin ingin menghapus ${idsArray.length} data yang dipilih? Aksi ini permanen.`)) {
+        const btn = document.getElementById('btnDeleteSelected');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+        }
+
+        fetch('api_hapus_baris_indoor.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: idsArray })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i> Hapus (<span id="selectedCount">0</span>)';
+            }
+            if (data.status === 'success') {
+                alert(data.message || 'Data berhasil dihapus!');
+                selectedIds.clear();
+                updateSelectedButton();
+                
+                // Update info storage
+                if (data.storage) {
+                    const realEl = document.getElementById('storageRealVal');
+                    const dummyEl = document.getElementById('storageDummyVal');
+                    if (realEl && data.storage.real) realEl.textContent = data.storage.real;
+                    if (dummyEl && data.storage.dummy) dummyEl.textContent = data.storage.dummy;
+                }
+
+                // Muat ulang data tabel
+                applyFilter();
+            } else {
+                alert('Gagal: ' + data.message);
+                updateSelectedButton();
+            }
+        })
+        .catch(error => {
+            console.error('Error saat hapus massal:', error);
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i> Hapus (<span id="selectedCount">0</span>)';
+                updateSelectedButton();
+            }
+            alert('Terjadi kesalahan sistem saat menghapus data.');
+        });
+    }
+}
+
+// Export fungsi ke window agar dapat dipanggil langsung dari onclick HTML
+window.toggleRowCheckbox = toggleRowCheckbox;
+window.toggleSelectAll = toggleSelectAll;
+window.hapusTerpilih = hapusTerpilih;
+window.hapusBaris = hapusBaris;
+window.applyFilter = applyFilter;
+window.resetFilter = resetFilter;
+window.exportToExcel = exportToExcel;
+
 $(document).ready(function() {
     if (sensorData && sensorData.length > 0) {
         initDataTable(sensorData);
@@ -505,16 +646,17 @@ $(document).ready(function() {
         $('#sensorTable').DataTable({
             data: [],
             columns: [
-                { title: "No" }, 
-                { title: "Tanggal & Waktu" }, 
-                { title: "Api" }, 
-                { title: "Asap" }, 
-                { title: "Suhu (°C)" }, 
-                { title: "Kelembapan (%)" }, 
-                { title: "Tegangan (V)" }, 
-                { title: "Arus (A)" }, 
-                { title: "RSSI (dBm)" },
-                { title: "Aksi" }
+                { title: "<input type='checkbox' id='selectAllCheckbox' onchange='toggleSelectAll(this)' title='Pilih Semua' style='cursor: pointer; width: 16px; height: 16px;'>", orderable: false, width: "4%" },
+                { title: "No", width: "5%" }, 
+                { title: "Tanggal & Waktu", width: "14%" }, 
+                { title: "Api", width: "11%" }, 
+                { title: "Asap", width: "11%" }, 
+                { title: "Suhu (°C)", width: "8%" }, 
+                { title: "Kelembapan (%)", width: "9%" }, 
+                { title: "Tegangan (V)", width: "9%" }, 
+                { title: "Arus (A)", width: "8%" }, 
+                { title: "RSSI (dBm)", width: "8%" }, 
+                { title: "Aksi", orderable: false, width: "12%" }
             ],
             language: { 
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json",
