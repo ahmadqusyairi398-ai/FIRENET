@@ -271,6 +271,9 @@ try {
                 <button class="btn-excel" onclick="exportToExcel()">
                     <i class="fas fa-file-excel"></i> Export Excel
                 </button>
+                <button class="btn-delete-selected" id="btnDeleteSelected" onclick="hapusTerpilih()" disabled style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 5px; font-weight: 600; cursor: not-allowed; opacity: 0.6; display: flex; align-items: center; gap: 6px; transition: all 0.3s;">
+                    <i class="fas fa-trash-alt"></i> Hapus (<span id="selectedCount">0</span>)
+                </button>
             </div>
         </div>
 
@@ -278,6 +281,9 @@ try {
             <table id="sensorTable" class="data-table" style="width:100%">
                 <thead>
                     <tr>
+                        <th style="width: 40px; text-align: center;">
+                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Pilih Semua" style="cursor: pointer; width: 16px; height: 16px;">
+                        </th>
                         <th>No</th>
                         <th><i class="fas fa-calendar"></i> Tanggal & Waktu</th>
                         <th><i class="fas fa-fire"></i> Api</th>
@@ -287,7 +293,7 @@ try {
                         <th><i class="fas fa-bolt"></i> Tegangan (V)</th>
                         <th><i class="fas fa-charging-station"></i> Arus (A)</th>
                         <th><i class="fas fa-signal"></i> RSSI (dBm)</th>
-                        <th><i class="fas fa-cogs"></i> Aksi</th> <!-- TAMBAHAN INI -->
+                        <th><i class="fas fa-cogs"></i> Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>

@@ -72,16 +72,39 @@ var initialRealChartData = cfg.initialRealChartData || {
     labels: [], tegangan: [], arus: [], daya: [], suhu: [], kelembapan: [], angin: [], co: []
 };
 
+// Tentukan lokasi aktif awal secara instan (dari localStorage atau default ID 1)
 var activeSelectedLocationId = 1;
+try {
+    var savedLocId = localStorage.getItem('activeLocationId');
+    if (savedLocId) {
+        var numSavedId = parseInt(savedLocId) || 1;
+        if (allLocations.some(function(l) { return l.id === numSavedId; })) {
+            activeSelectedLocationId = numSavedId;
+        }
+    }
+} catch(e) {}
 
-// Inisialisasi peta
-var map = L.map('map').setView([fixedLat, fixedLng], 14);
+var initialLocObj = allLocations.find(function(l) { return l.id === activeSelectedLocationId; }) || { lat: fixedLat, lng: fixedLng };
+var initCenterLat = initialLocObj.lat || fixedLat;
+var initCenterLng = initialLocObj.lng || fixedLng;
+
+// Inisialisasi peta langsung pada titik lokasi aktif (Instan tanpa jeda)
+var map = L.map('map', {
+    preferCanvas: true,
+    zoomControl: true
+}).setView([initCenterLat, initCenterLng], 15);
+
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 19,
     minZoom: 3
 }).addTo(map);
+
+// Invalidate size cepat agar peta Leaflet merender tile seketika
+setTimeout(function() {
+    map.invalidateSize();
+}, 50);
 
 // Icon marker - AMAN / Standar Lokasi
 var safeIcon = L.divIcon({
@@ -132,7 +155,7 @@ if (allLocations.length > 0) {
 
         if (loc.id === 1) {
             sensorMarker = L.marker([loc.lat, loc.lng], { icon: safeIcon, draggable: false }).addTo(map);
-            sensorMarker.bindPopup(popupContent).openPopup();
+            sensorMarker.bindPopup(popupContent);
             
             dangerZone = L.circle([loc.lat, loc.lng], {
                 color: '#28a745',
@@ -152,6 +175,11 @@ if (allLocations.length > 0) {
             flyToLocation(loc.lat, loc.lng, loc.id);
         });
     });
+
+    // Buka popup untuk lokasi yang sedang aktif
+    if (locationMarkers[activeSelectedLocationId]) {
+        locationMarkers[activeSelectedLocationId].openPopup();
+    }
 }
 
 // Fallback jika tidak ada marker utama
@@ -308,7 +336,7 @@ function flyToLocation(lat, lng, id) {
         scheduleNextUpdate();
         fetchDataFromDB();
     }
-    map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+    map.flyTo([lat, lng], 16, { animate: true, duration: 0.8 });
     if (locationMarkers[id]) {
         locationMarkers[id].openPopup();
     }
@@ -674,20 +702,26 @@ function scheduleNextUpdate() {
     }, intervalMs);
 }
 
+// Inisialisasi status UI untuk lokasi yang aktif saat load
+if (initialLocObj) {
+    var nameElem = document.getElementById('location-name-val');
+    if (nameElem && initialLocObj.nama_lokasi) nameElem.innerText = initialLocObj.nama_lokasi;
+    var idElem = document.getElementById('location-id-val');
+    if (idElem && initialLocObj.id_alat) idElem.innerText = 'ID: ' + initialLocObj.id_alat;
+    var coordElem = document.getElementById('coordinates');
+    if (coordElem) coordElem.innerHTML = `${initCenterLat.toFixed(6)}, ${initCenterLng.toFixed(6)}`;
+
+    document.querySelectorAll('.btn-loc-select').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = '#333';
+    });
+    var activeBtn = document.getElementById('btn-loc-' + activeSelectedLocationId);
+    if (activeBtn) {
+        activeBtn.style.background = 'linear-gradient(135deg, #00b4db, #0083b0)';
+        activeBtn.style.color = 'white';
+    }
+}
+
+// Jalankan pengambilan data pertama kali & jadwalkan pembaruan
 fetchDataFromDB();
 scheduleNextUpdate();
-
-// Restore lokasi aktif dari localStorage jika ada
-try {
-    var savedLocId = localStorage.getItem('activeLocationId');
-    if (savedLocId) {
-        var numSavedId = parseInt(savedLocId) || 1;
-        var foundLoc = allLocations.find(function(l) { return l.id === numSavedId; });
-        if (foundLoc) {
-            flyToLocation(foundLoc.lat, foundLoc.lng, foundLoc.id);
-        }
-    }
-} catch(e) {}
-
-var coordElem = document.getElementById('coordinates');
-if (coordElem) coordElem.innerHTML = `${fixedLat}, ${fixedLng}`;
