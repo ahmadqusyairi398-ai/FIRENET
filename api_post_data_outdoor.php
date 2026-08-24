@@ -91,8 +91,7 @@ try {
         $dateCol = 'timestamp';
     }
 
-    // 4. DINONAKTIFKAN (Agar web menjadi master interval dan tidak ditimpa oleh kiriman alat)
-    /*
+    // 4. Update sinkronisasi interval JIKA ada kiriman dari alat
     if ($interval_dari_alat !== null && $interval_dari_alat > 0) {
         $stmt_intv = $pdo_outdoor->prepare("UPDATE lokasi_alat SET interval_detik = :intv WHERE id_alat = :id_alat");
         $stmt_intv->execute([':intv' => $interval_dari_alat, ':id_alat' => $id_alat]);
@@ -101,7 +100,6 @@ try {
             $stmt_intv_fb->execute([':intv' => $interval_dari_alat]);
         }
     }
-    */
 
     // 5. Simpan data sensor ke tabel data_sensor (Outdoor)
     $sql = "INSERT INTO data_sensor ($dateCol, asap, suhu, kelembapan, tegangan, arus, daya, kecepatan_angin, arah_angin, co, rssi, ip_address, is_dummy)
