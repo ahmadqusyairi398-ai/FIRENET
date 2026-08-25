@@ -490,6 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const labels = filteredData.map(d => d.waktu);
         createChart(labels, filteredData);
     } else {
+        filterData();
+    }
+
     // Event listener langsung saat pengguna selesai memilih kedua tanggal
     function handleDateInputChange() {
         const sEl = document.getElementById('dateFrom');
