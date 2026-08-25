@@ -15,6 +15,13 @@ $_SESSION['dashboard_type'] = 'indoor';
 $user = isset($_SESSION['indoor_username']) ? $_SESSION['indoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
 $role = isset($_SESSION['indoor_role']) ? $_SESSION['indoor_role'] : "admin";
 
+// Sinkronkan sesi admin outdoor agar saat admin beralih ke setting outdoor tidak diminta login lagi
+$_SESSION['login_outdoor'] = true;
+$_SESSION['outdoor_role'] = 'admin';
+if (!isset($_SESSION['outdoor_username'])) {
+    $_SESSION['outdoor_username'] = $user;
+}
+
 // Koneksi Database
 require_once 'koneksi.php';
 
@@ -705,7 +712,19 @@ $totalUsers = count($users);
         <!-- TAB 2: Setting Lokasi Alat -->
         <div id="tab2" class="tab-content">
             <div class="card">
-                <h3><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</h3>
+                <h3>
+                    <div class="setting-title-wrapper">
+                        <i class="fas fa-map-marker-alt"></i> <span>Setting Lokasi Alat</span>
+                        <div class="view-switcher-box">
+                            <a href="setting_indoor.php" class="switcher-btn active" title="Setting Lokasi Indoor">
+                                <i class="fas fa-door-open"></i> Indoor
+                            </a>
+                            <a href="setting.php" class="switcher-btn" title="Buka Setting Lokasi Outdoor">
+                                <i class="fas fa-cloud-sun"></i> Outdoor
+                            </a>
+                        </div>
+                    </div>
+                </h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur koordinat dan interval pengiriman data lokasi monitoring.</p>
 
                 <div style="margin-bottom:20px;">

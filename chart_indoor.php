@@ -176,6 +176,9 @@ $jsonData = json_encode($chartData);
 <!-- Font Awesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <!-- Custom CSS Chart Indoor -->
 <link rel="stylesheet" href="css/chart_indoor.css">
 </head>
@@ -328,7 +331,7 @@ $jsonData = json_encode($chartData);
 <script>
     window.INDOOR_CHART_DATA = <?php echo $jsonData; ?>;
 </script>
-<script src="js/chart_indoor.js"></script>
+<script src="js/chart_indoor.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

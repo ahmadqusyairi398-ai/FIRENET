@@ -162,6 +162,9 @@ try {
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <!-- Custom CSS Tabel Indoor -->
 <link rel="stylesheet" href="css/tabel_indoor.css">
 </head>
@@ -255,11 +258,11 @@ try {
 
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Mulai</label>
-                <input type="date" id="start_date" class="date-filter">
+                <input type="date" id="start_date" class="date-filter" onchange="if(document.getElementById('end_date').value) applyFilter();">
             </div>
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Akhir</label>
-                <input type="date" id="end_date" class="date-filter">
+                <input type="date" id="end_date" class="date-filter" onchange="if(document.getElementById('start_date').value) applyFilter();">
             </div>
             <div class="filter-group" style="display: flex; gap: 8px; margin-top: 22px;">
                 <button class="btn-filter" onclick="applyFilter()">
@@ -350,7 +353,7 @@ try {
 <script>
     window.INDOOR_SENSOR_DATA = <?php echo json_encode($sensorData); ?>;
 </script>
-<script src="js/tabel_indoor.js"></script>
+<script src="js/tabel_indoor.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

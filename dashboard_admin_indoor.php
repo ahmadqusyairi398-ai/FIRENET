@@ -13,6 +13,13 @@ $_SESSION['dashboard_type'] = 'indoor';
 $user = isset($_SESSION['indoor_username']) ? $_SESSION['indoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
 $role = isset($_SESSION['indoor_role']) ? $_SESSION['indoor_role'] : "admin";
 
+// Sinkronkan sesi admin outdoor agar saat admin beralih ke outdoor tidak diminta login lagi
+$_SESSION['login_outdoor'] = true;
+$_SESSION['outdoor_role'] = 'admin';
+if (!isset($_SESSION['outdoor_username'])) {
+    $_SESSION['outdoor_username'] = $user;
+}
+
 // Tentukan tipe dashboard (selalu indoor untuk berkas ini)
 $dashboard_type = 'indoor';
 
@@ -330,8 +337,18 @@ if ($conn) {
     <!-- ============================================================ -->
     <div class="card">
         <h3>
-            <i class="fas fa-building"></i> Data Sensor Real Time (Indoor)
-            <span id="waktu" style="font-size:12px; color:#666;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span>
+            <div class="sensor-title-wrapper">
+                <i class="fas fa-building"></i> <span>Data Sensor Real Time (Indoor)</span>
+                <div class="view-switcher-box">
+                    <a href="dashboard_admin_indoor.php" class="switcher-btn active" title="Tampilan Sensor Indoor">
+                        <i class="fas fa-door-open"></i> Indoor
+                    </a>
+                    <a href="dashboard_admin.php" class="switcher-btn" title="Buka Dashboard Outdoor">
+                        <i class="fas fa-cloud-sun"></i> Outdoor
+                    </a>
+                </div>
+            </div>
+            <span id="waktu" style="font-size:12px; color:#666; margin-left: auto;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span>
         </h3>
         <div class="grid">
             <!-- Indoor Sensors -->

@@ -42,6 +42,13 @@ try {
     $location = trim($_GET['location'] ?? ($_POST['location'] ?? ''));
     $withStorage = isset($_GET['with_storage']) && $_GET['with_storage'] == '1';
 
+    // Pengaman server-side: Koreksi jika rentang tanggal terbalik
+    if (!empty($fromDate) && !empty($toDate) && $fromDate > $toDate) {
+        $temp = $fromDate;
+        $fromDate = $toDate;
+        $toDate = $temp;
+    }
+
     // 4. Susun kolom SELECT
     $selectFields = ['id'];
     if ($dateColumn) {
