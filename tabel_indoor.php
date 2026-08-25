@@ -258,11 +258,11 @@ try {
 
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Mulai</label>
-                <input type="date" id="start_date" class="date-filter">
+                <input type="date" id="start_date" class="date-filter" onchange="if(document.getElementById('end_date').value) applyFilter();">
             </div>
             <div class="filter-group">
                 <label><i class="fas fa-calendar"></i> Tanggal Akhir</label>
-                <input type="date" id="end_date" class="date-filter">
+                <input type="date" id="end_date" class="date-filter" onchange="if(document.getElementById('start_date').value) applyFilter();">
             </div>
             <div class="filter-group" style="display: flex; gap: 8px; margin-top: 22px;">
                 <button class="btn-filter" onclick="applyFilter()">
@@ -353,7 +353,7 @@ try {
 <script>
     window.INDOOR_SENSOR_DATA = <?php echo json_encode($sensorData); ?>;
 </script>
-<script src="js/tabel_indoor.js"></script>
+<script src="js/tabel_indoor.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

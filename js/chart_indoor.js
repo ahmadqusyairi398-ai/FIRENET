@@ -376,6 +376,8 @@ function filterData() {
                 timer: 4500,
                 timerProgressBar: true
             });
+        } else {
+            alert(`Rentang tanggal terbalik (${originalFrom} s/d ${originalTo}). Sistem otomatis memperbaiki menjadi ${fromDate} s/d ${toDate}.`);
         }
     }
 
@@ -488,6 +490,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const labels = filteredData.map(d => d.waktu);
         createChart(labels, filteredData);
     } else {
-        filterData();
+    // Event listener langsung saat pengguna selesai memilih kedua tanggal
+    function handleDateInputChange() {
+        const sEl = document.getElementById('dateFrom');
+        const eEl = document.getElementById('dateTo');
+        if (!sEl || !eEl) return;
+        const sVal = sEl.value;
+        const eVal = eEl.value;
+        if (sVal && eVal && sVal > eVal) {
+            const originalStart = sVal;
+            const originalEnd = eVal;
+            sEl.value = originalEnd;
+            eEl.value = originalStart;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Rentang Tanggal Terbalik',
+                    html: `Anda memasukkan rentang tanggal dari <b>${originalStart}</b> sampai <b>${originalEnd}</b>.<br><br>Sistem otomatis memperbaiki menjadi <b>${originalEnd}</b> sampai <b>${originalStart}</b>.`,
+                    confirmButtonColor: '#0083b0',
+                    confirmButtonText: 'Mengerti',
+                    timer: 4500,
+                    timerProgressBar: true
+                });
+            } else {
+                alert(`Rentang tanggal terbalik (${originalStart} s/d ${originalEnd}). Sistem otomatis memperbaiki menjadi ${originalEnd} s/d ${originalStart}.`);
+            }
+        }
     }
+
+    document.getElementById('dateFrom')?.addEventListener('change', handleDateInputChange);
+    document.getElementById('dateTo')?.addEventListener('change', handleDateInputChange);
 });

@@ -331,7 +331,7 @@ $jsonData = json_encode($chartData);
 <script>
     window.INDOOR_CHART_DATA = <?php echo $jsonData; ?>;
 </script>
-<script src="js/chart_indoor.js"></script>
+<script src="js/chart_indoor.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

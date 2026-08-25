@@ -339,6 +339,8 @@ function applyFilter() {
                 timer: 4500,
                 timerProgressBar: true
             });
+        } else {
+            alert(`Rentang tanggal terbalik (${originalStart} s/d ${originalEnd}). Sistem otomatis memperbaiki menjadi ${startDate} s/d ${endDate}.`);
         }
     }
 
@@ -765,4 +767,35 @@ $(document).ready(function() {
     }
 
     scheduleNextIndoorTableUpdate();
+
+    // Event listener langsung saat pengguna selesai memilih kedua tanggal
+    function handleDateInputChange() {
+        const sEl = document.getElementById('start_date');
+        const eEl = document.getElementById('end_date');
+        if (!sEl || !eEl) return;
+        const sVal = sEl.value;
+        const eVal = eEl.value;
+        if (sVal && eVal && sVal > eVal) {
+            const originalStart = sVal;
+            const originalEnd = eVal;
+            sEl.value = originalEnd;
+            eEl.value = originalStart;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Rentang Tanggal Terbalik',
+                    html: `Anda memasukkan rentang tanggal dari <b>${originalStart}</b> sampai <b>${originalEnd}</b>.<br><br>Sistem otomatis memperbaiki menjadi <b>${originalEnd}</b> sampai <b>${originalStart}</b>.`,
+                    confirmButtonColor: '#0083b0',
+                    confirmButtonText: 'Mengerti',
+                    timer: 4500,
+                    timerProgressBar: true
+                });
+            } else {
+                alert(`Rentang tanggal terbalik (${originalStart} s/d ${originalEnd}). Sistem otomatis memperbaiki menjadi ${originalEnd} s/d ${originalStart}.`);
+            }
+        }
+    }
+
+    document.getElementById('start_date')?.addEventListener('change', handleDateInputChange);
+    document.getElementById('end_date')?.addEventListener('change', handleDateInputChange);
 });
