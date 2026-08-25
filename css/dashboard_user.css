@@ -19,7 +19,7 @@ body::before {
 .sidebar {
     width: 250px;
     height: 100vh;
-    background: linear-gradient(135deg, rgba(30, 60, 114, 0.9), rgba(42, 82, 152, 0.9));
+    background: linear-gradient(135deg, rgba(237, 6, 6, 0.9), rgba(236, 2, 2, 0.9));
     padding: 20px 15px;
     position: sticky;
     top: 0;
