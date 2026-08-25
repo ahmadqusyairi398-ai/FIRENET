@@ -41,6 +41,13 @@ try {
     $isDummyParam = isset($_GET['is_dummy']) ? intval($_GET['is_dummy']) : (isset($_POST['is_dummy']) ? intval($_POST['is_dummy']) : 0);
     $location = trim($_GET['location'] ?? ($_POST['location'] ?? ''));
 
+    // Pengaman server-side: Koreksi jika rentang tanggal terbalik
+    if (!empty($fromDate) && !empty($toDate) && $fromDate > $toDate) {
+        $temp = $fromDate;
+        $fromDate = $toDate;
+        $toDate = $temp;
+    }
+
     // 4. Susun kolom SELECT
     $selectFields = ['id'];
     if ($dateColumn) {

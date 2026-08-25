@@ -349,8 +349,35 @@ function filterData() {
         }
     }
 
-    const fromDate = document.getElementById('dateFrom').value;
-    const toDate = document.getElementById('dateTo').value;
+    let fromDate = document.getElementById('dateFrom').value;
+    let toDate = document.getElementById('dateTo').value;
+
+    // CEK DAN KOREKSI OTOMATIS JIKA TANGGAL TERBALIK (fromDate > toDate)
+    if (fromDate && toDate && fromDate > toDate) {
+        const originalFrom = fromDate;
+        const originalTo = toDate;
+
+        // Tukar nilainya ke urutan yang benar
+        fromDate = originalTo;
+        toDate = originalFrom;
+
+        // Perbaiki nilai di kotak input form secara otomatis
+        document.getElementById('dateFrom').value = fromDate;
+        document.getElementById('dateTo').value = toDate;
+
+        // Tampilkan informasi / peringatan kepada pengguna
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Rentang Tanggal Terbalik',
+                html: `Anda memasukkan rentang tanggal dari <b>${originalFrom}</b> sampai <b>${originalTo}</b>.<br><br>Sistem otomatis memperbaiki dan menampilkan data dari <b>${fromDate}</b> sampai <b>${toDate}</b>.`,
+                confirmButtonColor: '#0083b0',
+                confirmButtonText: 'Mengerti',
+                timer: 4500,
+                timerProgressBar: true
+            });
+        }
+    }
 
     // JIKA LOKASI DUMMY
     if (!isLive) {
