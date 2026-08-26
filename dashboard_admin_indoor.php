@@ -242,7 +242,7 @@ if ($conn) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- Custom CSS Dashboard Admin Indoor -->
-<link rel="stylesheet" href="css/dashboard_admin_indoor.css">
+<link rel="stylesheet" href="css/dashboard_admin_indoor.css?v=<?= time() ?>">
 </head>
 <body>
 

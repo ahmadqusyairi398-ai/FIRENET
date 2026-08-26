@@ -243,7 +243,7 @@ if (!isset($_SESSION['indoor_username'])) {
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- Dashboard Admin Outdoor Custom CSS -->
-<link rel="stylesheet" href="css/dashboard_admin.css">
+<link rel="stylesheet" href="css/dashboard_admin.css?v=<?= time() ?>">
 </head>
 <body>
 
