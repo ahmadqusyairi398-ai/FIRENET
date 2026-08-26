@@ -279,7 +279,7 @@ if (!isset($_SESSION['indoor_username'])) {
     <!-- ============================================================ -->
     <div class="header">
         <div class="header-left">
-            <h2><i class="fas fa-fire-extinguisher"></i> Website Monitoring</h2>
+            <h2><i class="fas fa-fire-extinguisher"></i> Dashboard Monitoring</h2>
             
             <!-- Status Node di dalam Header -->
             <div class="node-status-header">
@@ -445,7 +445,7 @@ if (!isset($_SESSION['indoor_username'])) {
     <!-- ============================================================ -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-map-marker-alt"></i> Temapt Alat Monitoring</h3>
+            <h3 style="margin: 0; padding: 0; border: none;"><i class="fas fa-map-marker-alt"></i> Lokasi Alat Monitoring</h3>
             <span style="font-size: 12px; background: rgba(0, 180, 219, 0.1); color: #0083b0; padding: 4px 12px; border-radius: 20px; font-weight: 600;">
                 Total: <?= count($all_locations) ?> Titik Lokasi
             </span>
