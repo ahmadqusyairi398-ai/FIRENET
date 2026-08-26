@@ -564,7 +564,7 @@ $totalUsers = count($users);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <!-- Custom CSS Setting Indoor -->
-    <link rel="stylesheet" href="css/setting_indoor.css">
+    <link rel="stylesheet" href="css/setting_indoor.css?v=<?= time() ?>">
 </head>
 
 <body>
@@ -716,10 +716,10 @@ $totalUsers = count($users);
                     <div class="setting-title-wrapper">
                         <i class="fas fa-map-marker-alt"></i> <span>Setting Lokasi Alat</span>
                         <div class="view-switcher-box">
-                            <a href="setting_indoor.php" class="switcher-btn active" title="Setting Lokasi Indoor">
+                            <a href="setting_indoor.php?tab=tab2" class="switcher-btn active" title="Setting Lokasi Indoor">
                                 <i class="fas fa-door-open"></i> Indoor
                             </a>
-                            <a href="setting.php" class="switcher-btn" title="Buka Setting Lokasi Outdoor">
+                            <a href="setting.php?tab=tab2" class="switcher-btn" title="Buka Setting Lokasi Outdoor">
                                 <i class="fas fa-cloud-sun"></i> Outdoor
                             </a>
                         </div>

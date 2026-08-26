@@ -11,6 +11,13 @@ $_SESSION['dashboard_type'] = 'outdoor';
 $user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
 $role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
 
+// Sinkronkan sesi admin indoor agar saat admin beralih ke setting indoor tidak diminta login lagi
+$_SESSION['login_indoor'] = true;
+$_SESSION['indoor_role'] = 'admin';
+if (!isset($_SESSION['indoor_username'])) {
+    $_SESSION['indoor_username'] = $user;
+}
+
 // Koneksi Database
 require_once 'koneksi.php';
 
@@ -535,7 +542,7 @@ $totalUsers = count($users);
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <!-- Setting Outdoor Custom CSS -->
-    <link rel="stylesheet" href="css/setting_outdoor.css">
+    <link rel="stylesheet" href="css/setting_outdoor.css?v=<?= time() ?>">
 </head>
 
 <body>
@@ -674,7 +681,19 @@ $totalUsers = count($users);
             </div>
 
             <div class="card">
-                <h3><i class="fas fa-map-marker-alt"></i> Setting Lokasi Alat</h3>
+                <h3>
+                    <div class="setting-title-wrapper">
+                        <i class="fas fa-map-marker-alt"></i> <span>Setting Lokasi Alat</span>
+                        <div class="view-switcher-box">
+                            <a href="setting_indoor.php?tab=tab2" class="switcher-btn" title="Buka Setting Lokasi Indoor">
+                                <i class="fas fa-door-open"></i> Indoor
+                            </a>
+                            <a href="setting.php?tab=tab2" class="switcher-btn active" title="Setting Lokasi Outdoor">
+                                <i class="fas fa-cloud-sun"></i> Outdoor
+                            </a>
+                        </div>
+                    </div>
+                </h3>
                 <p style="margin-bottom:15px; color:#666; font-size:14px;">Atur nama, ID, dan koordinat lokasi monitoring alat.</p>
 
                 <div style="margin-bottom:20px;">
