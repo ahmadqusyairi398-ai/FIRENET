@@ -216,6 +216,13 @@ $_SESSION['dashboard_type'] = 'outdoor';
 
 $user = isset($_SESSION['outdoor_username']) ? $_SESSION['outdoor_username'] : (isset($_SESSION['username']) ? $_SESSION['username'] : "Admin");
 $role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
+
+// Sinkronkan sesi admin indoor agar saat admin beralih ke indoor tidak diminta login lagi
+$_SESSION['login_indoor'] = true;
+$_SESSION['indoor_role'] = 'admin';
+if (!isset($_SESSION['indoor_username'])) {
+    $_SESSION['indoor_username'] = $user;
+}
 ?>
 
 <!DOCTYPE html>
@@ -341,10 +348,20 @@ $role = isset($_SESSION['outdoor_role']) ? $_SESSION['outdoor_role'] : "admin";
     <!-- ============================================================ -->
     <div class="card">
         <h3>
-            <i class="fas fa-solar-panel"></i> Data Sensor 
-            <span id="data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
-                <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
-            </span>
+            <div class="sensor-title-wrapper">
+                <i class="fas fa-solar-panel"></i> <span>Data Sensor Real Time (Outdoor)</span>
+                <div class="view-switcher-box">
+                    <a href="dashboard_admin_indoor.php" class="switcher-btn" title="Buka Dashboard Indoor">
+                        <i class="fas fa-door-open"></i> Indoor
+                    </a>
+                    <a href="dashboard_admin.php" class="switcher-btn active" title="Tampilan Sensor Outdoor">
+                        <i class="fas fa-cloud-sun"></i> Outdoor
+                    </a>
+                </div>
+                <span id="data-type-tag" class="data-type-badge <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'dummy-badge' : 'realtime-badge' ?>">
+                    <i class="fas <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'fa-flask' : 'fa-satellite-dish' ?>"></i> <?= (($latest_sensor['is_dummy'] ?? 0) == 1) ? 'Data Dummy' : 'Data Real Time' ?>
+                </span>
+            </div>
             <span id="waktu" style="font-size:12px; color:#666; margin-left: auto;"><i class="far fa-clock"></i> <?= htmlspecialchars($latest_sensor['waktu']) ?></span>
         </h3>
         <div class="grid">
