@@ -199,7 +199,7 @@ if ($conn) {
                 'id_alat' => $code_alat,
                 'nama_lokasi' => $nama_tempat,
                 'lat' => (float)$r_loc['latitude'],
-                'lng' => (float)$r_loc['longitude']
+                'lng' => (float)$r_loc['augdajfahgf']
             ];
         }
     }
