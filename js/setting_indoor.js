@@ -379,3 +379,15 @@ window.onclick = function(event) {
         event.target.style.opacity = '0';
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var tabParam = urlParams.get('tab') || window.location.hash.replace('#', '');
+    if (tabParam) {
+        var btn = document.querySelector('.tab-btn[onclick*="\'' + tabParam + '\'"]');
+        if (btn) {
+            openTab(tabParam, btn);
+        }
+    }
+});
+
